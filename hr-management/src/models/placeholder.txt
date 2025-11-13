@@ -1,0 +1,2 @@
+This is file is placed to push the models folder
+Here, create a folder with your part's name (ex. recruitement-models) and place your models inside
