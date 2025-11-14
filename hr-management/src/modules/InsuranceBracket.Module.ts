@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { InsuranceBracket, InsuranceBracketSchema } from '../models/payroll-models/InsuranceBracket.Schema';
+import {
+  InsuranceBracket,
+  InsuranceBracketSchema,
+} from '../models/payroll-models/InsuranceBracket.Schema';
 
 @Module({
   imports: [

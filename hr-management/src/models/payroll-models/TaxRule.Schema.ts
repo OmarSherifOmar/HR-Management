@@ -1,46 +1,33 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-
-export type TaxRuleDocument = TaxRule & Document;
+import { Document } from 'mongoose';
 
 @Schema({ timestamps: true, collection: 'tax_rules' })
-export class TaxRule {
+export class TaxRule extends Document {
   @Prop({ required: true })
-  country: string;
+  taxRate: number;
+
+  @Prop({ required: true })
+  exemptionAmount: number;
+
+  @Prop({ required: true })
+  threshold: number;
+
+  // compliance fields
+  @Prop({ required: true, enum: ['draft', 'published'], default: 'draft' })
+  status: 'draft' | 'published';
 
   @Prop({
     required: true,
-    enum: ['Income', 'SocialSecurity', 'VAT', 'LocalTax'],
+    enum: ['payroll_manager', 'hr_manager'],
+    default: 'payroll_manager',
   })
-  taxType: 'Income' | 'SocialSecurity' | 'VAT' | 'LocalTax';
+  needsApprovalBy: 'payroll_manager' | 'hr_manager';
 
-  @Prop({
-    required: true,
-    enum: ['Percentage', 'FixedAmount', 'ProgressiveBracket'],
-  })
-  rateType: 'Percentage' | 'FixedAmount' | 'ProgressiveBracket';
+  @Prop({ default: false })
+  approved: boolean;
 
-  @Prop()
-  rateValue?: number; // null for brackets
-
-  @Prop({ required: true })
-  effectiveFrom: Date;
-
-  @Prop()
-  effectiveTo?: Date;
-
-  @Prop({ required: true })
-  createdBy: string;
-
-  @Prop({ required: true, default: 1 })
-  version: number;
-
-  @Prop({
-    required: true,
-    enum: ['Draft', 'PendingApproval', 'Active', 'Archived'],
-    default: 'Draft',
-  })
-  status: 'Draft' | 'PendingApproval' | 'Active' | 'Archived';
+  @Prop({ type: Date, default: null })
+  approvedAt: Date | null;
 }
 
 export const TaxRuleSchema = SchemaFactory.createForClass(TaxRule);

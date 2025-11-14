@@ -1,19 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema({ timestamps: true, collection: 'insurance_brackets' })
-export class InsuranceBracket extends Document {
+@Schema({ timestamps: true, collection: 'legal_rules' })
+export class LegalRule extends Document {
   @Prop({ required: true })
-  salaryFrom: number;
+  lawTitle: string;
 
   @Prop({ required: true })
-  salaryTo: number;
+  description: string;
 
   @Prop({ required: true })
-  employerPercentage: number;
-
-  @Prop({ required: true })
-  employeePercentage: number;
+  effectiveDate: Date;
 
   // compliance fields
   @Prop({ required: true, enum: ['draft', 'published'], default: 'draft' })
@@ -33,5 +30,4 @@ export class InsuranceBracket extends Document {
   approvedAt: Date | null;
 }
 
-export const InsuranceBracketSchema =
-  SchemaFactory.createForClass(InsuranceBracket);
+export const LegalRuleSchema = SchemaFactory.createForClass(LegalRule);

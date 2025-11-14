@@ -1,4 +1,3 @@
-// tax-rule.module.ts
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TaxRule, TaxRuleSchema } from '../models/payroll-models/TaxRule.Schema';
