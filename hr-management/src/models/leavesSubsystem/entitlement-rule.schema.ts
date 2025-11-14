@@ -16,9 +16,7 @@ export enum EligibilityCriteria {
 export enum ContractType {
   FULL_TIME = 'FULL_TIME',
   PART_TIME = 'PART_TIME',
-  CONTRACT = 'CONTRACT',
-  INTERN = 'INTERN',
-  CONSULTANT = 'CONSULTANT',
+  INTERN = 'INTERN'
 }
 
 @Schema({ timestamps: true })
@@ -50,9 +48,6 @@ export class EntitlementRule {
   @Prop({ type: [mongoose.Schema.Types.ObjectId] })
   departmentIds: mongoose.Types.ObjectId[];
 
-  @Prop({ type: [mongoose.Schema.Types.ObjectId] })
-  positionIds: mongoose.Types.ObjectId[];
-
   @Prop({ required: true })
   entitledDays: number;
 
@@ -77,14 +72,11 @@ export class EntitlementRule {
   @Prop({ default: 1 })
   priority: number;
 
-  @Prop({ type: Object })
-  customCriteria: Record<string, any>;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  createdBy: mongoose.Types.ObjectId;
 
-  @Prop()
-  createdBy: string;
-
-  @Prop()
-  updatedBy: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  updatedBy: mongoose.Types.ObjectId;
 }
 
 export const EntitlementRuleSchema = SchemaFactory.createForClass(EntitlementRule);

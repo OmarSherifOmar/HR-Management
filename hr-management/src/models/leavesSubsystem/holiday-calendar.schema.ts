@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose from 'mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export type HolidayCalendarDocument = HydratedDocument<HolidayCalendar>;
@@ -29,9 +30,6 @@ export class HolidayCalendar {
   @Prop({ default: false })
   isRecurring: boolean;
 
-  @Prop()
-  recurringPattern: string;
-
   @Prop({ type: [String] })
   applicableRegions: string[];
 
@@ -41,14 +39,11 @@ export class HolidayCalendar {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ type: Object })
-  metadata: Record<string, any>;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  createdBy: mongoose.Types.ObjectId;
 
-  @Prop()
-  createdBy: string;
-
-  @Prop()
-  updatedBy: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  updatedBy: mongoose.Types.ObjectId;
 }
 
 export const HolidayCalendarSchema = SchemaFactory.createForClass(HolidayCalendar);
