@@ -27,7 +27,6 @@ import { Connection } from 'mongoose';
         },
       }),
     }),
-    DatabaseModule,
     // Other modules can be imported here
   ],
   controllers: [AppController],
