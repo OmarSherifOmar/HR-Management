@@ -2,12 +2,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule, MongooseModuleOptions } from '@nestjs/mongoose';
+import { EmployeeModule } from './employee/employee.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule,EmployeeModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService): MongooseModuleOptions => {
         const uri = configService.get<string>('MONGO_URI');
