@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LeaveBalanceTransaction, LeaveBalanceTransactionSchema } from '../../models/leavesSubsystem/leave-balance-transaction.schema';
+import { LeaveBalanceTransaction, LeaveBalanceTransactionSchema } from '../models/leave-balance-transaction.schema';
 
 @Module({
   imports: [

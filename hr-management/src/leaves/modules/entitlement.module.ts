@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { EntitlementRule, EntitlementRuleSchema } from '../../models/leavesSubsystem/entitlement-rule.schema';
-import { EmployeeEntitlement, EmployeeEntitlementSchema } from '../../models/leavesSubsystem/employee-entitlement.schema';
+import { EntitlementRule, EntitlementRuleSchema } from '../models/entitlement-rule.schema';
+import { EmployeeEntitlement, EmployeeEntitlementSchema } from '../models/employee-entitlement.schema';
 
 @Module({
   imports: [

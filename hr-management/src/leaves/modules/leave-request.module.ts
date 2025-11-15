@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LeaveRequest, LeaveRequestSchema } from '../../models/leavesSubsystem/leave-request.schema';
+import { LeaveRequest, LeaveRequestSchema } from '../models/leave-request.schema';
 
 @Module({
   imports: [

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Delegation, DelegationSchema } from '../../models/leavesSubsystem/delegation.schema';
+import { Delegation, DelegationSchema } from '../models/delegation.schema';
 
 @Module({
   imports: [

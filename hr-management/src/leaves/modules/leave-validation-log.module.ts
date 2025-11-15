@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LeaveValidationLog, LeaveValidationLogSchema } from '../../models/leavesSubsystem/leave-validation-log.schema';
+import { LeaveValidationLog, LeaveValidationLogSchema } from '../models/leave-validation-log.schema';
 
 @Module({
   imports: [

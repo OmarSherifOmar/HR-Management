@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LeavesSubsystemModule } from './modules/leavesSubsystem/leaves-subsystem.module';
+import { LeavesModule } from './leaves/leaves.module';
 
 @Module({
   imports: [
@@ -28,7 +28,7 @@ import { LeavesSubsystemModule } from './modules/leavesSubsystem/leaves-subsyste
         },
       }),
     }),
-    LeavesSubsystemModule,
+    LeavesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

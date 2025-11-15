@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LeaveAttachment, LeaveAttachmentSchema } from '../../models/leavesSubsystem/leave-attachment.schema';
+import { LeaveAttachment, LeaveAttachmentSchema } from '../models/leave-attachment.schema';
 
 @Module({
   imports: [
