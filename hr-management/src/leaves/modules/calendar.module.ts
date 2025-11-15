@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { HolidayCalendar, HolidayCalendarSchema } from '../../models/leavesSubsystem/holiday-calendar.schema';
-import { BlockedPeriod, BlockedPeriodSchema } from '../../models/leavesSubsystem/blocked-period.schema';
+import { HolidayCalendar, HolidayCalendarSchema } from '../models/holiday-calendar.schema';
+import { BlockedPeriod, BlockedPeriodSchema } from '../models/blocked-period.schema';
 
 @Module({
   imports: [

@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LeaveType, LeaveTypeSchema } from '../../models/leavesSubsystem/leave-type.schema';
+import { LeaveRequest, LeaveRequestSchema } from '../models/leave-request.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: LeaveType.name, schema: LeaveTypeSchema },
+      { name: LeaveRequest.name, schema: LeaveRequestSchema },
     ]),
   ],
   exports: [MongooseModule],
 })
-export class LeaveTypeModule {}
+export class LeaveRequestModule {}

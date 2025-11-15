@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose from 'mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export type LeaveTypeDocument = HydratedDocument<LeaveType>;
@@ -80,14 +81,11 @@ export class LeaveType {
   @Prop()
   payrollPayCode: string;
 
-  @Prop({ type: Object })
-  metadata: Record<string, any>;
+  @Prop({type: mongoose.Schema.Types.ObjectId, required: true})
+  createdBy: mongoose.Types.ObjectId;
 
-  @Prop()
-  createdBy: string;
-
-  @Prop()
-  updatedBy: string;
+  @Prop({type: mongoose.Schema.Types.ObjectId, required: true})
+  updatedBy: mongoose.Types.ObjectId;
 }
 
 export const LeaveTypeSchema = SchemaFactory.createForClass(LeaveType);

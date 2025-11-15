@@ -37,12 +37,7 @@ export class EmployeeEntitlement {
   @Prop({ default: 0 })
   manualAdjustment: number;
 
-  @Prop()
-  remaining: number;
-
-  @Prop({ default: false })
-  isPaused: boolean;
-
+  // Accrual pause (BR-11: pause during unpaid leave or suspension)
   @Prop()
   pausedFrom: Date;
 
@@ -64,14 +59,11 @@ export class EmployeeEntitlement {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ type: Object })
-  metadata: Record<string, any>;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  createdBy: mongoose.Types.ObjectId;
 
-  @Prop()
-  createdBy: string;
-
-  @Prop()
-  updatedBy: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  updatedBy: mongoose.Types.ObjectId;
 }
 
 export const EmployeeEntitlementSchema = SchemaFactory.createForClass(EmployeeEntitlement);

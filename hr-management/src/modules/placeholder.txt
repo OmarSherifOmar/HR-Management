@@ -1,2 +1,0 @@
-This is file is placed to push the modules folder
-Here, create a folder with your part's name (ex. recruitement-modules) and place your modules inside

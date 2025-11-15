@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ApprovalWorkflow, ApprovalWorkflowSchema } from '../../models/leavesSubsystem/approval-workflow.schema';
+import { ApprovalWorkflow, ApprovalWorkflowSchema } from '../models/approval-workflow.schema';
 
 @Module({
   imports: [
