@@ -14,8 +14,7 @@ export enum ApprovalLevel {
 export enum ApprovalAction {
   APPROVE = 'APPROVE',
   REJECT = 'REJECT',
-  DELEGATE = 'DELEGATE',
-  REQUEST_INFO = 'REQUEST_INFO',
+  DELEGATE = 'DELEGATE'
 }
 
 @Schema()
@@ -30,16 +29,7 @@ export class WorkflowLevel {
   isMandatory: boolean;
 
   @Prop({ default: 48 })
-  autoEscalationHours: number;
-
-  @Prop({ default: true })
-  allowDelegation: boolean;
-
-  @Prop({ default: false })
-  requiresDocumentVerification: boolean;
-
-  @Prop({ default: false })
-  canOverridePreviousLevel: boolean;
+  autoEscalationHours: number; // BR-28: auto-escalate after 48 hours
 }
 
 @Schema({ timestamps: true })
@@ -68,14 +58,11 @@ export class ApprovalWorkflow {
   @Prop({ default: 1 })
   priority: number;
 
-  @Prop({ type: Object })
-  metadata: Record<string, any>;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  createdBy: mongoose.Types.ObjectId;
 
-  @Prop()
-  createdBy: string;
-
-  @Prop()
-  updatedBy: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  updatedBy: mongoose.Types.ObjectId;
 }
 
 export const ApprovalWorkflowSchema = SchemaFactory.createForClass(ApprovalWorkflow);

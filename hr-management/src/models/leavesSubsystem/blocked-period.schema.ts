@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument } from 'mongoose';
 
 export type BlockedPeriodDocument = HydratedDocument<BlockedPeriod>;
 
@@ -23,8 +23,8 @@ export class BlockedPeriod {
   @Prop({ type: [String] })
   applicablePositions: string[];
 
-  @Prop({ type: [String] })
-  exemptEmployeeIds: string[];
+  @Prop({ type: [mongoose.Schema.Types.ObjectId] })
+  exemptEmployeeIds: mongoose.Types.ObjectId[];
 
   @Prop({ default: false })
   isFullBlock: boolean;
@@ -38,11 +38,11 @@ export class BlockedPeriod {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop()
-  createdBy: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  createdBy: mongoose.Types.ObjectId;
 
-  @Prop()
-  updatedBy: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  updatedBy: mongoose.Types.ObjectId;
 }
 
 export const BlockedPeriodSchema = SchemaFactory.createForClass(BlockedPeriod);
