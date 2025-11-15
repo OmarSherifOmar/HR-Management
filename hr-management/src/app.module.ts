@@ -1,10 +1,26 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule, MongooseModuleOptions } from '@nestjs/mongoose';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): MongooseModuleOptions => {
+        const uri = configService.get<string>('MONGO_URI');
+        if (!uri) {
+          throw new Error('MONGO_URI is not defined in environment');
+        }
+        return ({
+          uri,
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        } as unknown) as MongooseModuleOptions;
+      },
+    }),
+  ],
 })
 export class AppModule {}
