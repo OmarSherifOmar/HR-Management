@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+// Inputs from other subsystems: None (N/A)
 
 @Schema({ timestamps: true, collection: 'pay_types' })
 export class PayType extends Document {

@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+// Input dependency: Onboarding (Contract details / bonus eligibility flags)
 
 @Schema({ timestamps: true, collection: 'bonuses' })
 export class Bonus extends Document {
