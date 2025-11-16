@@ -1,5 +1,7 @@
 import { IsString, IsNotEmpty, IsOptional, IsEnum, IsDateString, MinLength,IsEmail,IsUrl } from 'class-validator';
-import { ContractType, RoleType, AccStatus } from '../../employee/models/employee.schema';
+import { AccStatus } from '../models/acc-status.enum';
+import { ContractType } from '../models/contract-type.enum';
+import { RoleType } from '../models/role-type.enum';
 
 export class CreateEmployeeDto {
   @IsOptional()

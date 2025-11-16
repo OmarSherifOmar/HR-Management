@@ -1,15 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
-
-export enum GovernedField {
-  AccStatus = "accStatus",
-  JobTitle = "jobTitle",
-  NationalId = "NationalId",
-  Department = "department",
-  ContractType = "contractType",
-  DateOfHire = "dateOfHire",
-  DateOfContractExpiration = "dateOfContractExpiration",
-  PayRate = "payRate",
-}
+import { GovernedField } from '../models/governed-fields.enum';
 
 export class RequestChangeDto {
 

@@ -2,8 +2,11 @@ import { Optional } from '@nestjs/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MSchema, Types } from 'mongoose';
 import { min } from 'rxjs';
+import { ContractType } from './contract-type.enum';
+import { AccStatus } from '../models/acc-status.enum';
+import { RoleType } from './role-type.enum';
 import "reflect-metadata";
-
+import { PERMISSION_MODEL } from 'src/auth/models/permission.schema';
 export const GOVERNED_METADATA_KEY = "governedField";
 
 export function Governed() {
@@ -14,21 +17,6 @@ export function isFieldGoverned(target: any, propertyKey: string) {
   return Reflect.getMetadata(GOVERNED_METADATA_KEY, target, propertyKey) === true;
 }
 
-export enum RoleType {
-  Employee = "Employee",
-  Manager = "Manager",
-  HRAdmin = "HRAdmin"
-}
-export enum ContractType {
-  PartTime = "PartTime",
-  FullTime = "FullTime",
-  InternShip = "InternShip"
-}
-export enum AccStatus {
-  Active = "Active",
-  Suspended = "Suspended"
-  
-}
 
 @Schema()
 
@@ -77,6 +65,11 @@ export class Employee{
 
 
 @Governed()
+@Prop({ type: [{ type: Types.ObjectId, ref: PERMISSION_MODEL || 'Permission' }] })
+
+
+directPermissions?: Types.ObjectId[];
+@Governed()
  @Prop({
  type:String,
  enum:AccStatus,
@@ -121,6 +114,12 @@ accStatus:AccStatus;
  })
  department:Object;
 
+ @Prop({
+     type:Date,
+     required:true
+ })
+ DOB:Date;
+
 ///////////////////////////////////// to sync with onboarding
 @Governed()
   @Prop({
@@ -129,6 +128,10 @@ accStatus:AccStatus;
   required:true
  })
  contractType:ContractType;
+
+@Governed()
+@Prop({ type: [String], default: [] })
+reportingPath?: string[]; // array of employeeIds or user ids (consistent with manager id type)
 
 @Governed()
  @Prop({
