@@ -10,10 +10,7 @@ export enum LeaveCategory {
   SICK = 'SICK',
   ANNUAL = 'ANNUAL',
   MATERNITY = 'MATERNITY',
-  PATERNITY = 'PATERNITY',
-  MISSION = 'MISSION',
   MARRIAGE = 'MARRIAGE',
-  COMPASSIONATE = 'COMPASSIONATE',
   STUDY = 'STUDY',
   OTHER = 'OTHER',
 }
@@ -48,13 +45,13 @@ export class LeaveType {
   @Prop()
   documentationRequiredAfterDays: number;
 
-  @Prop({ default: false })
+  @Prop({required: true, default: false })
   deductFromAnnualBalance: boolean;
 
-  @Prop({ default: true })
+  @Prop({required: true, default: true })
   isPaidLeave: boolean;
 
-  @Prop({ enum: AccrualFrequency, default: AccrualFrequency.NONE })
+  @Prop({required: true, enum: AccrualFrequency, default: AccrualFrequency.NONE })
   accrualFrequency: AccrualFrequency;
 
   @Prop()
@@ -72,19 +69,19 @@ export class LeaveType {
   @Prop()
   maxConsecutiveDays: number;
 
-  @Prop({ default: false })
+  @Prop({ default: true })
   excludeWeekends: boolean;
 
-  @Prop({ default: false })
-  excludePublicHolidays: boolean;
+  @Prop({ default: true })
+  excludeHolidays: boolean;
 
   @Prop()
   payrollPayCode: string;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId, required: true})
+  @Prop({type: mongoose.Schema.Types.ObjectId, required: true, ref : 'User'})
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId, required: true})
+  @Prop({type: mongoose.Schema.Types.ObjectId, required: true, ref : 'User'})
   updatedBy: mongoose.Types.ObjectId;
 }
 

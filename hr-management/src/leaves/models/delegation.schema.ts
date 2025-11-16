@@ -12,11 +12,11 @@ export enum DelegationStatus {
 @Schema({ timestamps: true })
 export class Delegation {
   // Manager who is delegating their approval authority (e.g., on leave/absent)
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
   managerId: mongoose.Types.ObjectId;
 
   // Person who will approve on behalf of the manager
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
   delegateId: mongoose.Types.ObjectId;
 
   @Prop({ required: true })
@@ -25,22 +25,17 @@ export class Delegation {
   @Prop({ required: true })
   endDate: Date;
 
-  @Prop({ enum: DelegationStatus, default: DelegationStatus.ACTIVE })
+  @Prop({ required: true, enum: DelegationStatus, default: DelegationStatus.ACTIVE })
   status: DelegationStatus;
 
-  @Prop({ required: true })
+  @Prop()
   reason: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({type: mongoose.Schema.Types.ObjectId })
   updatedBy: mongoose.Types.ObjectId;
 }
 
 export const DelegationSchema = SchemaFactory.createForClass(Delegation);
-
-// Create indexes for efficient querying
-DelegationSchema.index({ managerId: 1, status: 1 });
-DelegationSchema.index({ delegateId: 1, status: 1 });
-DelegationSchema.index({ startDate: 1, endDate: 1, status: 1 });

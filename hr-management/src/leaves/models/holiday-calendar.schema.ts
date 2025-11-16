@@ -27,16 +27,10 @@ export class HolidayCalendar {
   @Prop({ required: true })
   year: number;
 
-  @Prop({ default: false })
+  @Prop({ required: true, default: false })
   isRecurring: boolean;
 
-  @Prop({ type: [String] })
-  applicableRegions: string[];
-
-  @Prop({ type: [String] })
-  applicableDepartments: string[];
-
-  @Prop({ default: true })
+  @Prop({ required: true, default: true })
   isActive: boolean;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId })

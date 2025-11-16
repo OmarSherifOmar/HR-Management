@@ -14,8 +14,8 @@ export enum ValidationType {
 
 @Schema({ timestamps: true })
 export class LeaveValidationLog {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveRequest', required: true, index: true })
-  leaveRequestId: mongoose.Types.ObjectId | LeaveRequestDocument;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveRequest', required: true})
+  leaveRequestId: mongoose.Types.ObjectId;
 
   @Prop({ required: true, enum: ValidationType })
   validationType: ValidationType;
@@ -34,5 +34,3 @@ export class LeaveValidationLog {
 }
 
 export const LeaveValidationLogSchema = SchemaFactory.createForClass(LeaveValidationLog);
-
-LeaveValidationLogSchema.index({ leaveRequestId: 1 });

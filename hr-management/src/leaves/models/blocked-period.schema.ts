@@ -18,19 +18,13 @@ export class BlockedPeriod {
   endDate: Date;
 
   @Prop({ type: [String] })
-  applicableDepartments: string[];
-
-  @Prop({ type: [String] })
   applicablePositions: string[];
 
-  @Prop({ type: [mongoose.Schema.Types.ObjectId] })
+  @Prop({ required: true, type: [mongoose.Schema.Types.ObjectId] })
   exemptEmployeeIds: mongoose.Types.ObjectId[];
 
-  @Prop({ default: false })
-  isFullBlock: boolean;
-
-  @Prop()
-  maxLeavesAllowed: number;
+  @Prop({ required: true, default: 0 })
+  maxLeavesAllowed: number; // 0 = full block, >0 = partial block with limit
 
   @Prop()
   reason: string;
@@ -38,10 +32,10 @@ export class BlockedPeriod {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({type: mongoose.Schema.Types.ObjectId })
   updatedBy: mongoose.Types.ObjectId;
 }
 

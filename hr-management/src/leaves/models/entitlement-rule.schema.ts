@@ -39,14 +39,11 @@ export class EntitlementRule {
   @Prop()
   maxTenureMonths: number;
 
-  @Prop({ type: [String], enum: ContractType })
+  @Prop({type: [String], enum: ContractType })
   contractTypes: ContractType[];
 
-  @Prop({ type: [String] })
+  @Prop({type: [String] })
   grades: string[];
-
-  @Prop({ type: [mongoose.Schema.Types.ObjectId] })
-  departmentIds: mongoose.Types.ObjectId[];
 
   @Prop({ required: true })
   entitledDays: number;
@@ -57,19 +54,19 @@ export class EntitlementRule {
   @Prop()
   maxCarryOverCap: number;
 
-  @Prop({ default: true })
+  @Prop({ required: true, default: true })
   allowProration: boolean;
 
-  @Prop()
+  @Prop({default: '01-01'})
   resetDate: string;
 
-  @Prop({ enum: ['HIRE_DATE', 'WORK_RECEIVING_DATE', 'FISCAL_YEAR'] })
+  @Prop({ required: true, enum: ['HIRE_DATE', 'WORK_RECEIVING_DATE', 'FISCAL_YEAR'] })
   resetCriterion: string;
 
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ default: 1 })
+  @Prop({ required: true, default: 1 })
   priority: number;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId })
