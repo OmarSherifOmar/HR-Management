@@ -17,19 +17,15 @@ export enum ChangeRequestStatus {
 
 @Schema({ timestamps: true })
 export class ChangeRequest {
-  /** Type of change requested */
   @Prop({ required: true, enum: Object.values(ChangeRequestType) })
   type: ChangeRequestType;
 
-  /** JSON payload describing the requested change */
   @Prop({ type: Object, required: true })
   payload: Record<string, any>;
 
-  /** The employee (usually manager) who submits the request */
   @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   requestedBy: Types.ObjectId;
 
-  /** Approval status */
   @Prop({
     type: String,
     enum: Object.values(ChangeRequestStatus),
@@ -37,11 +33,9 @@ export class ChangeRequest {
   })
   status: ChangeRequestStatus;
 
-  /** The HR/Admin user who reviewed the request */
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   reviewedBy?: Types.ObjectId | null;
 
-  /** Timestamp of review */
   @Prop({ type: Date, default: null })
   reviewedAt?: Date | null;
 

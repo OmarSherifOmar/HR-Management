@@ -1,11 +1,9 @@
 import { IsString, IsOptional, IsMongoId, IsBoolean, IsDateString } from 'class-validator';
 
 export class UpdatePositionDto {
-  @IsOptional()
   @IsString()
   title?: string;
 
-  @IsOptional()
   @IsMongoId()
   department?: string;
 
@@ -17,7 +15,6 @@ export class UpdatePositionDto {
   @IsMongoId()
   filledBy?: string | null;
 
-  @IsOptional()
   @IsBoolean()
   active?: boolean;
 
@@ -25,7 +22,6 @@ export class UpdatePositionDto {
   @IsDateString()
   closedOn?: string | null;
 
-  @IsOptional()
   @IsMongoId()
   createdBy?: string;
 

@@ -8,7 +8,6 @@ export class CreateNotificationDto {
   @IsString()
   message: string;
 
-  @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;
 

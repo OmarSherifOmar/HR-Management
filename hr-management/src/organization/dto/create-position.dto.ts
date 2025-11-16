@@ -15,7 +15,6 @@ export class CreatePositionDto {
   @IsMongoId()
   filledBy?: string;
 
-  @IsOptional()
   @IsBoolean()
   active?: boolean;
 
