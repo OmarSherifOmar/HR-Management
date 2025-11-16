@@ -22,4 +22,4 @@ import { AppraisalAssignmentSchema } from './models/appraisal-assignment.schema'
   
   exports: [MongooseModule],
 })
-export class AppraisalModule {}
+export class PerformanceModule {}
