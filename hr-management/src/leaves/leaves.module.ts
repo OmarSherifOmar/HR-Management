@@ -8,6 +8,8 @@ import { DelegationModule } from './modules/delegation.module';
 import { LeaveAttachmentModule } from './modules/leave-attachment.module';
 import { LeaveBalanceTransactionModule } from './modules/leave-balance-transaction.module';
 import { LeaveValidationLogModule } from './modules/leave-validation-log.module';
+import { LeaveAdjustmentModule } from './modules/leave-adjustment.module';
+import { LeaveEncashmentModule } from './modules/leave-encashment.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { LeaveValidationLogModule } from './modules/leave-validation-log.module'
     LeaveAttachmentModule,
     LeaveBalanceTransactionModule,
     LeaveValidationLogModule,
+    LeaveAdjustmentModule,
+    LeaveEncashmentModule,
   ],
   exports: [
     LeaveTypeModule,
@@ -31,6 +35,8 @@ import { LeaveValidationLogModule } from './modules/leave-validation-log.module'
     LeaveAttachmentModule,
     LeaveBalanceTransactionModule,
     LeaveValidationLogModule,
+    LeaveAdjustmentModule,
+    LeaveEncashmentModule,
   ],
 })
 export class LeavesModule {}

@@ -7,13 +7,13 @@ export type EmployeeEntitlementDocument = HydratedDocument<EmployeeEntitlement>;
 
 @Schema({ timestamps: true })
 export class EmployeeEntitlement {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
   employeeId: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType', required: true })
   leaveTypeId: mongoose.Types.ObjectId | LeaveTypeDocument;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'EntitlementRule' })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'EntitlementRule', required:true })
   entitlementRuleId: mongoose.Types.ObjectId | EntitlementRuleDocument;
 
   @Prop({ required: true })
@@ -22,7 +22,7 @@ export class EmployeeEntitlement {
   @Prop({ required: true, default: 0 })
   totalEntitled: number;
 
-  @Prop({ default: 0 })
+  @Prop({ required: true, default: 0 })
   accrued: number;
 
   @Prop({ default: 0 })
@@ -31,9 +31,9 @@ export class EmployeeEntitlement {
   @Prop({ default: 0 })
   pending: number;
 
-  @Prop({ default: 0 })
+  @Prop({ required: true, default: 0 })
   carriedOver: number;
-
+  
   @Prop({ default: 0 })
   manualAdjustment: number;
 
@@ -47,10 +47,13 @@ export class EmployeeEntitlement {
   @Prop()
   pauseReason: string;
 
-  @Prop()
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'TimeManagement'})  
+  LeavePeriodsId: string; // link to Time Management unpaid leave record (lowkey questioning it)
+
+  @Prop({ required: true })
   lastAccrualDate: Date;
 
-  @Prop()
+  @Prop({ required: true })
   nextAccrualDate: Date;
 
   @Prop()
@@ -67,6 +70,3 @@ export class EmployeeEntitlement {
 }
 
 export const EmployeeEntitlementSchema = SchemaFactory.createForClass(EmployeeEntitlement);
-
-// Create compound index for unique employee + leave type + year
-EmployeeEntitlementSchema.index({ employeeId: 1, leaveTypeId: 1, year: 1 }, { unique: true });

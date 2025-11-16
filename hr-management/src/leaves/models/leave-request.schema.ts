@@ -14,11 +14,11 @@ export enum LeaveRequestStatus {
 
 @Schema({ timestamps: true })
 export class LeaveRequest {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
   employeeId: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType', required: true })
-  leaveTypeId: mongoose.Types.ObjectId | LeaveTypeDocument;
+  leaveTypeId: mongoose.Types.ObjectId;
 
   @Prop({ required: true })
   startDate: Date;
@@ -30,16 +30,16 @@ export class LeaveRequest {
   totalDays: number;
 
   @Prop({ default: 0 })
-  unpaidDays: number; // Excess days converted to unpaid due to insufficient balance (BR-29)
-
+  unpaidDays: number; // if extra days are taken 
+  
   @Prop({ required: true })
   reason: string;
 
-  @Prop({ enum: LeaveRequestStatus, default: LeaveRequestStatus.PENDING_MANAGER })
+  @Prop({required: true,enum: LeaveRequestStatus, default: LeaveRequestStatus.PENDING_MANAGER })
   status: LeaveRequestStatus;
 
   // Manager approval
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
   managerId: mongoose.Types.ObjectId;
 
   @Prop()
@@ -49,6 +49,9 @@ export class LeaveRequest {
   managerComments: string;
 
   // HR approval
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  hrApprovedBy: mongoose.Types.ObjectId;
+
   @Prop()
   hrApprovedAt: Date;
 
@@ -58,7 +61,7 @@ export class LeaveRequest {
   @Prop({ default: false })
   documentsVerified: boolean;
 
-  // Post-leave (REQ-031)
+  // Post-leave
   @Prop({ default: false })
   isPostLeave: boolean;
 
@@ -81,21 +84,32 @@ export class LeaveRequest {
   @Prop()
   rejectionReason: string;
 
-  // Cancellation (User story #4)
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
-  cancelledBy: mongoose.Types.ObjectId;
 
   @Prop()
   cancelledAt: Date;
 
   @Prop()
   cancellationReason: string;
+
+  // Modification tracking
+  @Prop()
+  lastModifiedAt: Date;
+
+  @Prop({ type: [String], default: [] })
+  modificationHistory: string[];
+
+  // Flag for irregular patterns
+  @Prop({ default: false })
+  flaggedAsIrregular: boolean;
+
+  @Prop()
+  irregularityReason: string;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  flaggedIrregularBy: mongoose.Types.ObjectId;
+
+  @Prop()
+  flaggedIrregularAt: Date;
 }
 
 export const LeaveRequestSchema = SchemaFactory.createForClass(LeaveRequest);
-
-// Indexes
-LeaveRequestSchema.index({ employeeId: 1, status: 1 });
-LeaveRequestSchema.index({ managerId: 1, status: 1 });
-LeaveRequestSchema.index({ startDate: 1, endDate: 1 });
-

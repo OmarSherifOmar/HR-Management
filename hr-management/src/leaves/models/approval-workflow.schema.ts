@@ -40,12 +40,9 @@ export class ApprovalWorkflow {
   @Prop()
   description: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType' })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType' })
   leaveTypeId: mongoose.Types.ObjectId | LeaveTypeDocument;
-
-  @Prop({ type: [String] })
-  applicableDepartments: string[];
-
+  
   @Prop({ type: [String] })
   applicablePositions: string[];
 
@@ -58,10 +55,10 @@ export class ApprovalWorkflow {
   @Prop({ default: 1 })
   priority: number;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({type: mongoose.Schema.Types.ObjectId })
   updatedBy: mongoose.Types.ObjectId;
 }
 

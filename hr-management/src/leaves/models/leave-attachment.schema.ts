@@ -7,7 +7,7 @@ export type LeaveAttachmentDocument = HydratedDocument<LeaveAttachment>;
 @Schema({ timestamps: true })
 export class LeaveAttachment {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveRequest', required: true, index: true })
-  leaveRequestId: mongoose.Types.ObjectId | LeaveRequestDocument;
+  leaveRequestId: mongoose.Types.ObjectId;
 
   @Prop({ required: true })
   documentType: string;
@@ -27,7 +27,7 @@ export class LeaveAttachment {
   @Prop()
   description: string;
 
-  // HR verification (REQ-028)
+  // HR verification
   @Prop({ default: false })
   isVerified: boolean;
 

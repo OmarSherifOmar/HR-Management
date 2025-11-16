@@ -15,14 +15,14 @@ export enum TransactionType {
 
 @Schema({ timestamps: true })
 export class LeaveBalanceTransaction {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
   employeeId: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeEntitlement', required: true })
-  entitlementId: mongoose.Types.ObjectId | EmployeeEntitlementDocument;
+  entitlementId: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveRequest' })
-  leaveRequestId: mongoose.Types.ObjectId | LeaveRequestDocument;
+  leaveRequestId: mongoose.Types.ObjectId;
 
   @Prop({ required: true, enum: TransactionType })
   transactionType: TransactionType;
@@ -42,20 +42,15 @@ export class LeaveBalanceTransaction {
   @Prop()
   description: string;
 
-  // Retroactive deduction (BR-19)
+  // Retroactive deduction
   @Prop({ default: false })
   isRetroactive: boolean;
 
   @Prop()
   retroactiveReason: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
   processedBy: mongoose.Types.ObjectId;
 }
 
 export const LeaveBalanceTransactionSchema = SchemaFactory.createForClass(LeaveBalanceTransaction);
-
-// Indexes for audit trail queries
-LeaveBalanceTransactionSchema.index({ employeeId: 1, transactionDate: -1 });
-LeaveBalanceTransactionSchema.index({ entitlementId: 1, transactionDate: -1 });
-LeaveBalanceTransactionSchema.index({ leaveRequestId: 1 });
