@@ -5,7 +5,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
-import { PayrollConfigModule } from './payroll-config/payroll-config.module';
+import { PayrollModule } from './payroll/payroll.module';
+import { PayrollController } from './payroll/payroll.controller';
+import { PayrollService } from './payroll/payroll.service';
+
+import { Connection } from 'mongoose';
 
 @Module({
   imports: [
@@ -16,14 +20,14 @@ import { PayrollConfigModule } from './payroll-config/payroll-config.module';
     MongooseModule.forRootAsync({
       useFactory: () => ({
         uri: process.env.MONGODB_URI || '',
-        connectionFactory: (connection) => {
+        connectionFactory: (connection: Connection) => {
           connection.on('connected', () => {
-            console.log('🟢 MongoDB Connected Successfully');
-            console.log(`🗄️  Database: ${connection.name}`);
+            console.log('✅ MongoDB Connected Successfully');
+            console.log(`📊 Database: ${connection.name}`);
           });
 
           connection.on('disconnected', () => {
-            console.log('🔴 MongoDB Disconnected');
+            console.log('❌ MongoDB Disconnected');
           });
 
           connection.on('error', (error) => {
@@ -35,10 +39,10 @@ import { PayrollConfigModule } from './payroll-config/payroll-config.module';
       }),
     }),
 
-    PayrollConfigModule,
+    PayrollModule,
   ],
 
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, PayrollController],
+  providers: [AppService, PayrollService],
 })
 export class AppModule {}
