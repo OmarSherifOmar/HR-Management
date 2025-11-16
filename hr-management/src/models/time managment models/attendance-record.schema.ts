@@ -5,7 +5,7 @@ export type AttendanceRecordDocument = HydratedDocument<AttendanceRecord>;
 
 @Schema({ timestamps: true })
 export class AttendanceRecord {
-
+// References Employee Profile Module
   @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
 
@@ -34,8 +34,13 @@ export class AttendanceRecord {
   })
   status: string;
 
+  // HR/Admin/Manager who approved or validated the attendanc
   @Prop({ type: Types.ObjectId, ref: 'User' })
   validatedBy?: Types.ObjectId;
+
+  // Reference to associated leave request if status is 'OnLeave'
+  @Prop({ type: Types.ObjectId, ref: 'LeaveRequest' })
+leaveRequestId?: Types.ObjectId;
 
   @Prop()
   notes?: string;
