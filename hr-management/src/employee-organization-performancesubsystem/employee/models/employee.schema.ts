@@ -3,10 +3,10 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MSchema, Types } from 'mongoose';
 import { min } from 'rxjs';
 import { ContractType } from './contract-type.enum';
-import { AccStatus } from '../models/acc-status.enum';
+import { AccStatus } from './acc-status.enum';
 import { RoleType } from './role-type.enum';
 import "reflect-metadata";
-import { PERMISSION_MODEL } from 'src/employee/models/permission.schema';
+import { PERMISSION_MODEL } from 'src/employee-organization-performancesubsystem/employee/models/permission.schema';
 export const GOVERNED_METADATA_KEY = "governedField";
 
 export function Governed() {
@@ -94,7 +94,8 @@ accStatus:AccStatus;
 //////////////////////////////////////to be exported from the organizational department
 @Governed()
  @Prop({
- type:String,
+ type:Types.ObjectId,
+ ref:"position",
  required:true
  })
  jobTitle:String;
@@ -110,6 +111,7 @@ accStatus:AccStatus;
  @Governed()
  @Prop({
   type:Types.ObjectId,
+  ref:"department",
   required:true
  })
  department:Object;
@@ -119,7 +121,10 @@ accStatus:AccStatus;
      required:true
  })
  DOB:Date;
-
+ 
+@Governed()
+@Prop({ type: [String], default: [] })
+reportingPath?: string[]; // array of employeeIds or user ids (consistent with manager id type)
 ///////////////////////////////////// to sync with onboarding
 @Governed()
   @Prop({
@@ -129,9 +134,7 @@ accStatus:AccStatus;
  })
  contractType:ContractType;
 
-@Governed()
-@Prop({ type: [String], default: [] })
-reportingPath?: string[]; // array of employeeIds or user ids (consistent with manager id type)
+
 
 @Governed()
  @Prop({
