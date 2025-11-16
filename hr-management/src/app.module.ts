@@ -7,7 +7,7 @@ import { MongooseModule, MongooseModuleOptions } from '@nestjs/mongoose';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule,EmployeeModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService): MongooseModuleOptions => {
         const uri = configService.get<string>('MONGO_URI');
