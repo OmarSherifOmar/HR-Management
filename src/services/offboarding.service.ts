@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { OffboardingRequest, OffboardingRequestDocument } from './models/offboarding-request.schema';
-import { CreateOffboardingRequestDto, UpdateOffboardingRequestDto, ApprovalDto } from './dto';
-import { OffboardingStatus, ApprovalDecision } from './enums';
+import { OffboardingRequest, OffboardingRequestDocument } from '../schemas/offboarding-request.schema';
+import { CreateOffboardingRequestDto, UpdateOffboardingRequestDto, ApprovalDto } from '../dtos';
+import { OffboardingStatus, ApprovalDecision } from '../enums';
 
 @Injectable()
 export class OffboardingService {

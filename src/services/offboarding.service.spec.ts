@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { OffboardingService } from './offboarding.service';
-import { OffboardingRequest, OffboardingRequestDocument } from './models/offboarding-request.schema';
-import { OffboardingType, OffboardingStatus, ApprovalDecision } from './enums';
+import { OffboardingRequest, OffboardingRequestDocument } from '../schemas/offboarding-request.schema';
+import { OffboardingType, OffboardingStatus, ApprovalDecision } from '../enums';
 import { CreateOffboardingRequestDto } from './dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 

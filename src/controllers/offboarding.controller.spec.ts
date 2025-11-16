@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OffboardingController } from './offboarding.controller';
-import { OffboardingService } from './offboarding.service';
+import { OffboardingService } from '../services/offboarding.service';
 import { CreateOffboardingRequestDto, UpdateOffboardingRequestDto, ApprovalDto } from './dto';
-import { OffboardingType, OffboardingStatus, ApprovalDecision } from './enums';
+import { OffboardingType, OffboardingStatus, ApprovalDecision } from '../enums';
 
 describe('OffboardingController', () => {
   let controller: OffboardingController;

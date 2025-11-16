@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { OffboardingController } from './offboarding.controller';
-import { OffboardingService } from './offboarding.service';
-import { OffboardingRequest, OffboardingRequestSchema } from './models/offboarding-request.schema';
+import { OffboardingController } from '../controllers/offboarding.controller';
+import { OffboardingService } from '../services/offboarding.service';
+import { OffboardingRequest, OffboardingRequestSchema } from '../schemas/offboarding-request.schema';
 
 @Module({
   imports: [

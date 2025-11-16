@@ -10,9 +10,9 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { OffboardingService } from './offboarding.service';
-import { CreateOffboardingRequestDto, UpdateOffboardingRequestDto, ApprovalDto } from './dto';
-import { OffboardingStatus } from './enums';
+import { OffboardingService } from '../services/offboarding.service';
+import { CreateOffboardingRequestDto, UpdateOffboardingRequestDto, ApprovalDto } from '../dtos';
+import { OffboardingStatus } from '../enums';
 
 @Controller('offboarding')
 export class OffboardingController {
