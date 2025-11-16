@@ -172,7 +172,7 @@ export class OffboardingService {
   private areAllApprovalsComplete(request: OffboardingRequestDocument): boolean {
     // This is a simple check - you might want to implement more complex logic
     // based on your business requirements (e.g., required approval roles)
-    return request.approvals.some(
+    return request.approvals.every(
       (approval) => approval.decision === ApprovalDecision.APPROVED,
     );
   }
