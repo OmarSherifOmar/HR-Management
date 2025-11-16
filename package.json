@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.9",
+    "@types/jest": "^30.0.0",
+    "@types/mongoose": "^5.11.96"
+  },
+  "dependencies": {
+    "@nestjs/mongoose": "^11.0.3",
+    "class-validator": "^0.14.2",
+    "mongoose": "^8.19.4",
+    "reflect-metadata": "^0.2.2"
+  }
+}
