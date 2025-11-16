@@ -128,7 +128,11 @@ export class HREventProcessing {
   @Prop({ required: true, enum: ['new_hire', 'termination', 'resignation', 'rehire'] })
   eventType!: HREventType;
 
-  @Prop({ required: true, enum: ['pending', 'in_progress', 'completed', 'failed'], default: 'pending' })
+  @Prop({
+    required: true,
+    enum: ['pending', 'in_progress', 'completed', 'failed'],
+    default: 'pending',
+  })
   status!: HRProcessStatus;
 
   @Prop()
