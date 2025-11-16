@@ -4,6 +4,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { Connection } from 'mongoose';
+import { PayrollController } from './payroll/payroll.controller';
+import { PayrollService } from './payroll/payroll.service';
+import { PayrollModule } from './payroll/payroll.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -27,9 +30,10 @@ import { Connection } from 'mongoose';
         },
       }),
     }),
+    PayrollModule,
     // Other modules can be imported here
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, PayrollController],
+  providers: [AppService, PayrollService],
 })
 export class AppModule {}

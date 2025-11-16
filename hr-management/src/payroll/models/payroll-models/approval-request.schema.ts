@@ -33,4 +33,5 @@ export class ApprovalRequest extends Document {
   decisionNote?: string;
 }
 
-export const ApprovalRequestSchema = SchemaFactory.createForClass(ApprovalRequest);
+export const ApprovalRequestSchema =
+  SchemaFactory.createForClass(ApprovalRequest);
