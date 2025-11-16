@@ -5,6 +5,14 @@ export type PolicyEnforcementDocument = HydratedDocument<PolicyEnforcement>;
 
 @Schema({timestamps: true})
 export class PolicyEnforcement {
+    @Prop({type: Types.ObjectId, ref: 'Organization', required: true})
+    organizationId: Types.ObjectId;
+
+    @Prop({type: Types.ObjectId, ref: 'Employee', required: true})
+    employeeId: Types.ObjectId;
+
+    //I wasn't sure if we reference Organization or Employee in this one tbh
+
     @Prop({default: 0})
     overtime: number;
 
@@ -37,3 +45,6 @@ export class PolicyEnforcement {
 }
 
 export const PolicyEnforcementSchema = SchemaFactory.createForClass(PolicyEnforcement);
+
+//Going to reference from the Organization Schema (and maybe employee NOT SURE)
+//Going to reference from the attendance schema

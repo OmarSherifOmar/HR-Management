@@ -9,8 +9,13 @@ export class WorkFlow {
     @Prop({type: Types.ObjectId, ref: 'Employee', required: true})
     employeeId: Types.ObjectId;
 
-    @Prop({type: String, enum: ['Correction', 'Permission', 'Overtime']})
-    correctionRequest: string;
+    @Prop({types: Types.ObjectId, ref: 'Employee', required: true})
+    requestedBy: Types.ObjectId;
+
+    @Prop({type: String, 
+        enum: ['Correction', 'Permission', 'Overtime'], 
+        required: true})
+    requestType: string;
 
     @Prop({
         type: {
@@ -21,47 +26,30 @@ export class WorkFlow {
     })
     requestDetails: {date: Date; reason?: string;};
 
-    @Prop({type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending'}) //related to correction request
+    @Prop({type: Types.ObjectId, ref: 'Shift'})
+    shiftId?: Types.ObjectId;
+
+    @Prop({type: Types.ObjectId, ref: 'Attendance'})
+    attendanceId?: Types.ObjectId;
+
+    @Prop({type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending'}) //related to request type
     status: string;
 
     @Prop()
     automaticEscalationDate?: Date;
 
-    @Prop({default: false})
-    escalationTrack: boolean; //not sure if needed but I thought it would be useful to avoid duplicates
-    
-    @Prop({ //not sure if making a schema for holiday itself would be better
-        type:[{
-            date: Date,
-            name: String,
-            recurringYearly: Boolean
-        }],
-        default: []
-    })
-    holidayCalendar: {date: Date; name: string; recurringYearly: boolean;}[];
+    @Prop({type: Types.ObjectId, ref: 'Employee'})
+    escalatedTo?: Types.ObjectId;
 
-    @Prop({ type: [String],
-        enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        default: ['Friday', 'Saturday']})
-    weekendDays: string[];
+    @Prop({default: 0})
+    escalationLevel: number;
 
     @Prop({default: false})
     payrollIntegration: boolean;
 
     @Prop({
         type: [{
-            startDate: Date,
-            endDate: Date,
-            type: {type: String},
-            status: {type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending'}
-        }],
-        default: [],
-    })
-    leaveRequests: {startDate: Date; endDate: Date; type: string; status: string;}[];
-
-    @Prop({
-        type: [{
-            status: {type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending'},
+            status: String,
             approvedBy: {type: Types.ObjectId, ref: 'Employee'},
             changedAt: {type: Date, default: Date.now}
         }],
@@ -75,5 +63,11 @@ export class WorkFlow {
 }
 
 export const WorkFlowSchema = SchemaFactory.createForClass(WorkFlow);
+
+//Going to reference from the Shift Schema and holiday calendar schema
+//Going to reference from the schedule schema
+//Going to reference from the attendance schema
+//Going to need reference from the payroll I THINK because according to the excel sheet it says for escalation,
+//needed inputs from "payroll and time management"
 
     
