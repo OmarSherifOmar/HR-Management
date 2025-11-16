@@ -6,7 +6,7 @@ import { ContractType } from './contract-type.enum';
 import { AccStatus } from '../models/acc-status.enum';
 import { RoleType } from './role-type.enum';
 import "reflect-metadata";
-import { PERMISSION_MODEL } from 'src/auth/models/permission.schema';
+import { PERMISSION_MODEL } from 'src/employee/models/permission.schema';
 export const GOVERNED_METADATA_KEY = "governedField";
 
 export function Governed() {

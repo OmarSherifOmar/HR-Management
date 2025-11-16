@@ -1,5 +1,8 @@
 export enum RoleType {
   Employee = "Employee",
   Manager = "Manager",
-  HRAdmin = "HRAdmin"
+  HREmployee = "HREmployee",
+  HRAdmin = "HRAdmin",
+  SystemAdmin = "System Admin",
+  LineManager = "Line Manager"
 }
