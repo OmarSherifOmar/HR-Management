@@ -10,6 +10,9 @@ import { SeparationBenefitModule } from './modules/separation-benefit.module';
 import { ConfigDraftModule } from './modules/config-draft.module';
 import { ApprovalRequestModule } from './modules/approval-request.module';
 import { ApprovalEventModule } from './modules/approval-event.module';
+import { CompanySettingsModule } from './modules/company-settings.module';
+import { BackupPolicyModule } from './modules/backup-policy.module';
+
 
 @Module({
   imports: [
@@ -23,6 +26,8 @@ import { ApprovalEventModule } from './modules/approval-event.module';
     ConfigDraftModule,
     ApprovalRequestModule,
     ApprovalEventModule,
+    CompanySettingsModule,
+    BackupPolicyModule,
   ],
   exports: [
     AllowanceModule,
@@ -35,6 +40,8 @@ import { ApprovalEventModule } from './modules/approval-event.module';
     ConfigDraftModule,
     ApprovalRequestModule,
     ApprovalEventModule,
+    CompanySettingsModule,
+    BackupPolicyModule,
   ],
 })
 export class PayrollConfigModule {}
