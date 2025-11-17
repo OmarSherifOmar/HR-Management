@@ -7,3 +7,4 @@ export class UpdateCompanySettingsDto {
   status?: CompanySettingsStatus;
   updatedBy?: string;
 }
+ 

@@ -3,4 +3,4 @@ export class UpdatePayGradeDto {
   title?: string;
   grossMonthly?: number;
   allowedPayTypes?: string[];
-}
+} 

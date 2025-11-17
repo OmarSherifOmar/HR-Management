@@ -34,3 +34,4 @@ export class CompanySettings extends Document {
 }
 
 export const CompanySettingsSchema = SchemaFactory.createForClass(CompanySettings);
+ 

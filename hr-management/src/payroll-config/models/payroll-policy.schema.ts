@@ -55,3 +55,4 @@ export class PayrollPolicy extends Document {
 }
 
 export const PayrollPolicySchema = SchemaFactory.createForClass(PayrollPolicy);
+ 

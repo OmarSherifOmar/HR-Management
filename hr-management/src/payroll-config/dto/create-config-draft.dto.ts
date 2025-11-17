@@ -12,3 +12,4 @@ export class CreateConfigDraftDto {
   submittedBy: string;
   submittedAt: Date;
 }
+ 

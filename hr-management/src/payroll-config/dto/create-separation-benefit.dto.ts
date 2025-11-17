@@ -6,3 +6,4 @@ export class CreateSeparationBenefitDto {
   formula: SeparationFormula;
   value: number;
 }
+ 

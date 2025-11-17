@@ -7,3 +7,4 @@ export class CreateAllowanceDto {
   value: number;
   taxable: boolean;
 }
+  

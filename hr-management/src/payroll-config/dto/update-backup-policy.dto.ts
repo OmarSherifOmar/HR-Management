@@ -6,3 +6,4 @@ export class UpdateBackupPolicyDto {
   status?: BackupPolicyStatus;
   updatedBy?: string;
 }
+ 

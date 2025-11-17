@@ -6,3 +6,4 @@ export class CreateDeductionDto {
   calcType: DeductionCalcType;
   value: number;
 }
+ 
