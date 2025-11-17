@@ -30,3 +30,4 @@ export class LegalRule extends Document {
 }
 
 export const LegalRuleSchema = SchemaFactory.createForClass(LegalRule);
+    

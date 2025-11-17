@@ -8,3 +8,4 @@ import { LegalRule, LegalRuleSchema } from '../models/legal-rule.schema';
   ],
 })
 export class LegalRuleModule {}
+    
