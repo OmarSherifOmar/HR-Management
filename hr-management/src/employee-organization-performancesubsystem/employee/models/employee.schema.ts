@@ -1,6 +1,7 @@
 import { Optional } from '@nestjs/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MSchema, Types } from 'mongoose';
+import { Department } from 'src/employee-organization-performancesubsystem/organization/models/department.schema';
 import { min } from 'rxjs';
 import { ContractType } from './contract-type.enum';
 import { AccStatus } from './acc-status.enum';
