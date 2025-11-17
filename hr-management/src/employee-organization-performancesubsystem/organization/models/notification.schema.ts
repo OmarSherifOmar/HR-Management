@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { NotificationType } from './notification-types.enum';
-import { Employee } from './employee.schema';
+import { Employee } from '../../employee/models/employee.schema';
 import { ChangeRequest } from './change-request.schema';
 
 

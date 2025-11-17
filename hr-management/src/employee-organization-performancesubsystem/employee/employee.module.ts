@@ -5,7 +5,7 @@ import {AuditLogSchema} from './models/audit.schema';
 import { PermissionSchema } from 'src/employee-organization-performancesubsystem/employee/models/permission.schema';
 import { NotificationModule } from '../organization/notification.module';
 import { PositionModule } from '../organization/position.module';
-import {DepatmentModule} from '../organization/Department.module'
+import {DepartmentModule} from '../organization/department.module'
 @Module({
   imports: [
     MongooseModule.forFeature([

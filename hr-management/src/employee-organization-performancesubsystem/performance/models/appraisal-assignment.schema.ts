@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { Employee } from './employee.schema';
+import { Employee } from '../../employee/models/employee.schema';
 import { AppraisalCycleSchema } from './appraisal-cycle.schema';
 import { AppraisalTemplateSchema } from './appraisal-template.schema';
 
