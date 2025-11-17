@@ -7,6 +7,14 @@ export enum SeparationFormula {
   PER_YEAR = 'PER_YEAR',
 }
 
+export enum SeparationBenefitStatus {
+  DRAFT = 'DRAFT',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  ACTIVE = 'ACTIVE',
+}
+
 @Schema({ timestamps: true, collection: 'separation_benefits' })
 export class SeparationBenefit extends Document {
   @Prop({ unique: true, required: true })
@@ -20,6 +28,13 @@ export class SeparationBenefit extends Document {
 
   @Prop({ required: true, min: 0 })
   value: number;
+
+  @Prop({ 
+    required: true, 
+    enum: Object.values(SeparationBenefitStatus),
+    default: SeparationBenefitStatus.DRAFT 
+  })
+  status: SeparationBenefitStatus;
 }
 
 export const SeparationBenefitSchema = SchemaFactory.createForClass(SeparationBenefit);

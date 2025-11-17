@@ -1,8 +1,9 @@
-import { DeductionCalcType } from '../models/deduction.schema';
+import { DeductionCalcType, DeductionStatus } from '../models/deduction.schema';
 
 export class CreateDeductionDto {
   code: string;
   name: string;
   calcType: DeductionCalcType;
   value: number;
-} 
+  status: DeductionStatus;
+}

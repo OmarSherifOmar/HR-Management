@@ -7,6 +7,14 @@ export enum AllowanceCalcType {
   PERCENT = 'PERCENT',
 }
 
+export enum AllowanceStatus {
+  DRAFT = 'DRAFT',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  ACTIVE = 'ACTIVE',
+}
+
 @Schema({ timestamps: true, collection: 'allowances' })
 export class Allowance extends Document {
   @Prop({ unique: true, required: true })
@@ -23,6 +31,13 @@ export class Allowance extends Document {
 
   @Prop({ required: true })
   taxable: boolean;
+
+  @Prop({ 
+    required: true, 
+    enum: Object.values(AllowanceStatus),
+    default: AllowanceStatus.DRAFT 
+  })
+  status: AllowanceStatus;
 }
 
 export const AllowanceSchema = SchemaFactory.createForClass(Allowance);

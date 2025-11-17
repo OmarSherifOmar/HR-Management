@@ -1,4 +1,4 @@
-import { AllowanceCalcType } from '../models/allowance.schema';
+import { AllowanceCalcType, AllowanceStatus } from '../models/allowance.schema';
 
 export class CreateAllowanceDto {
   code: string;
@@ -6,4 +6,5 @@ export class CreateAllowanceDto {
   calcType: AllowanceCalcType;
   value: number;
   taxable: boolean;
-} 
+  status: AllowanceStatus;
+}

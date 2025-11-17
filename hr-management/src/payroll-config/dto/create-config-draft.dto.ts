@@ -1,7 +1,4 @@
-import {
-  TargetType,
-  DraftOp,
-} from '../models/config-draft.schema';
+import { TargetType, DraftOp, DraftStatus } from '../models/config-draft.schema';
 
 export class CreateConfigDraftDto {
   refCode?: string;
@@ -9,6 +6,7 @@ export class CreateConfigDraftDto {
   targetId?: string | null;
   op: DraftOp;
   changeSet: Record<string, any>;
+  status: DraftStatus;
   submittedBy: string;
   submittedAt: Date;
-} 
+}

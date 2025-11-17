@@ -6,4 +6,4 @@ export class CreateApprovalEventDto {
   action: ApprovalAction;
   at: Date;
   note?: string;
-} 
+}
