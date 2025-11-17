@@ -66,3 +66,4 @@ export class ConfigDraft extends Document {
 }
 
 export const ConfigDraftSchema = SchemaFactory.createForClass(ConfigDraft);
+ 

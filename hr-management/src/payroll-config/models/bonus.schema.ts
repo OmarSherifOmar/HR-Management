@@ -14,4 +14,4 @@ export class Bonus extends Document {
   amount: number;
 }
 
-export const BonusSchema = SchemaFactory.createForClass(Bonus);
+export const BonusSchema = SchemaFactory.createForClass(Bonus); 

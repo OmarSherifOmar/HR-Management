@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { BackupPolicy, BackupPolicySchema } from '../models/backup-policy.schema';
+import { Allowance, AllowanceSchema } from '../models/allowance.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: BackupPolicy.name, schema: BackupPolicySchema },
+      { name: Allowance.name, schema: AllowanceSchema },
     ]),
   ],
   exports: [MongooseModule],
 })
-export class BackupPolicyModule {}
+export class AllowanceModule {}
  

@@ -6,3 +6,4 @@ export class CreateCompanySettingsDto {
   currency: string;
   createdBy: string;
 }
+ 

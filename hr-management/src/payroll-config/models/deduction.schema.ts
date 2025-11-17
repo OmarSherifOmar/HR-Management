@@ -23,3 +23,4 @@ export class Deduction extends Document {
 }
 
 export const DeductionSchema = SchemaFactory.createForClass(Deduction);
+ 

@@ -17,4 +17,4 @@ export class PayGrade extends Document {
   allowedPayTypes: string[];
 }
 
-export const PayGradeSchema = SchemaFactory.createForClass(PayGrade);
+export const PayGradeSchema = SchemaFactory.createForClass(PayGrade); 

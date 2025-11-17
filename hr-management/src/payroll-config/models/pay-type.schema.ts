@@ -14,4 +14,4 @@ export class PayType extends Document {
   taxable: boolean;
 }
 
-export const PayTypeSchema = SchemaFactory.createForClass(PayType);
+export const PayTypeSchema = SchemaFactory.createForClass(PayType); 

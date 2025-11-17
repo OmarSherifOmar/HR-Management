@@ -26,3 +26,4 @@ export class Allowance extends Document {
 }
 
 export const AllowanceSchema = SchemaFactory.createForClass(Allowance);
+ 
