@@ -13,9 +13,15 @@ import { ApprovalEventModule } from './modules/approval-event.module';
 import { CompanySettingsModule } from './modules/company-settings.module';
 import { BackupPolicyModule } from './modules/backup-policy.module';
 
+import { LegalRuleModule } from './modules/legal-rule.module';
+import { InsuranceBracketModule } from './modules/insurance-bracket.module';
+import { TaxRuleModule } from './modules/tax-rule.module';
 
 @Module({
   imports: [
+    LegalRuleModule,
+    InsuranceBracketModule,
+    TaxRuleModule,
     AllowanceModule,
     DeductionModule,
     PayTypeModule,
@@ -30,6 +36,9 @@ import { BackupPolicyModule } from './modules/backup-policy.module';
     BackupPolicyModule,
   ],
   exports: [
+    LegalRuleModule,
+    InsuranceBracketModule,
+    TaxRuleModule,
     AllowanceModule,
     DeductionModule,
     PayTypeModule,
