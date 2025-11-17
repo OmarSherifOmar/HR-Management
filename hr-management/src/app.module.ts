@@ -44,4 +44,4 @@ import { PayrollModule } from './payroll/payroll.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {} 

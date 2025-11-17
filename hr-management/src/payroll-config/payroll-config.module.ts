@@ -53,4 +53,4 @@ import { TaxRuleModule } from './modules/tax-rule.module';
     BackupPolicyModule,
   ],
 })
-export class PayrollConfigModule {}
+export class PayrollConfigModule {} 
