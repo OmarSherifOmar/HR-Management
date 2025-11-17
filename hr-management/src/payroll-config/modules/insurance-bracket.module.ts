@@ -1,0 +1,16 @@
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import {
+  InsuranceBracket,
+  InsuranceBracketSchema,
+} from '../models/insurance-bracket.schema';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([
+      { name: InsuranceBracket.name, schema: InsuranceBracketSchema }
+    ]),
+  ],
+})
+export class InsuranceBracketModule {}
+   
