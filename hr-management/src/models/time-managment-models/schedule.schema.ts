@@ -5,10 +5,10 @@ export type ScheduleDocument = HydratedDocument<Schedule>;
 
 @Schema({ timestamps: true })
 export class Schedule {
-
+// References Employee Profile Module
   @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
-
+// // References shift template defined in Time Management Subsystem
   @Prop({ type: Types.ObjectId, ref: 'Shift', required: true })
   shiftId: Types.ObjectId;
 
