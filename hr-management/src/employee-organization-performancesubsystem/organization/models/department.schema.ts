@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Employee } from './employee.schema';
+import { Department } from 'src/employee-organization-performancesubsystem/organization/models/department.schema';
+
 
 export type DepartmentDocument = Department & Document;
 
