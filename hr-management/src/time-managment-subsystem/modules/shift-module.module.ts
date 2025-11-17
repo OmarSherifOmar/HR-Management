@@ -8,5 +8,6 @@ import { ShiftSchema } from '../models/shift.schema';
 			{ name: 'Shift', schema: ShiftSchema },
 		]),
 	],
+	exports: [MongooseModule],
 })
 export class ShiftModuleModule {}

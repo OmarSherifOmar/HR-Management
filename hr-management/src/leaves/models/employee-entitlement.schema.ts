@@ -3,7 +3,7 @@ import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveType, LeaveTypeDocument } from './leave-type.schema';
 import { EntitlementRule, EntitlementRuleDocument } from './entitlement-rule.schema';
 import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
-
+import { AttendanceRecord } from '../../time-managment-subsystem/models/attendance-record.schema';
 export type EmployeeEntitlementDocument = HydratedDocument<EmployeeEntitlement>;
 
 @Schema({ timestamps: true })
@@ -48,8 +48,8 @@ export class EmployeeEntitlement {
   @Prop()
   pauseReason: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'TimeManagement'})  
-  LeavePeriodsId: string; // link to Time Management unpaid leave record (lowkey questioning it)
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'AttendanceRecord'})  
+  AttendanceId: string; // link to Time Management unpaid leave record (lowkey questioning it)
 
   @Prop({ required: true })
   lastAccrualDate: Date;
