@@ -4,7 +4,7 @@ import { FinalAppraisalRecord, FinalAppraisalRecordSchema } from './models/final
 import { EmployeeAppraisalHistory, EmployeeAppraisalHistorySchema } from './models/employee-appraisal-history.schema';
 import { FinalAppraisalService } from './final-appraisal.service';
 import { FinalAppraisalController } from './final-appraisal.controller';
-
+import { EmployeeModule } from '../employee/employee.module';
 @Module({
   imports: [
     MongooseModule.forFeature([

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
+import { AppraisalTemplateSchema } from './appraisal-template.schema';
 export type AppraisalCycleDocument = AppraisalCycle & Document;
 
 @Schema({ timestamps: true })

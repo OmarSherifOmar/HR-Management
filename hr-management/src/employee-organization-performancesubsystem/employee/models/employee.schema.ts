@@ -1,10 +1,13 @@
 import { Optional } from '@nestjs/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MSchema, Types } from 'mongoose';
+import { Department } from 'src/employee-organization-performancesubsystem/organization/models/department.schema';
 import { min } from 'rxjs';
 import { ContractType } from './contract-type.enum';
 import { AccStatus } from './acc-status.enum';
 import { RoleType } from './role-type.enum';
+//import {PayRole} from '../../models/Payrole.schema';
+import {Position} from '../../organization/models/position.schema';
 import "reflect-metadata";
 import { PERMISSION_MODEL } from 'src/employee-organization-performancesubsystem/employee/models/permission.schema';
 export const GOVERNED_METADATA_KEY = "governedField";
