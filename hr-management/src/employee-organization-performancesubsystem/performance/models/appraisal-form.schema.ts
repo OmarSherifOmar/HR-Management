@@ -1,5 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { AppraisalCycle } from './appraisal-cycle.schema';
+import { AppraisalTemplate } from './appraisal-template.schema';
+import { Employee } from 'src/employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type AppraisalFormDocument = AppraisalForm & Document;
 
