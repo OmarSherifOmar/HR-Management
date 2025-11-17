@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { OnboardingModule } from './modules/onboarding.module';
-import { OffboardingModule } from './modules/offboarding.module';
+import { OnboardingModule } from './Recruitment/modules/onboarding.module';
+import { OffboardingModule } from './Recruitment/modules/offboarding.module';
 
 @Module({
   imports: [

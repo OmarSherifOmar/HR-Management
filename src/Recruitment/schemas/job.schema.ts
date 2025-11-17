@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
-import { Department } from '../schemas/department.schema';
-import { Position } from '../common/schemas/position.schema';
+
 
 
 export type JobDocument = HydratedDocument<Job>;
@@ -17,20 +16,20 @@ title: string;
 description?: string;
 
 
-@Prop({
-type: mongoose.Schema.Types.ObjectId,
-ref: Department.name,
-required: true,
-})
-department: mongoose.Schema.Types.ObjectId;
+// @Prop({
+// type: mongoose.Schema.Types.ObjectId,
+// ref: Department.name,
+// required: true,
+// })
+// department: mongoose.Schema.Types.ObjectId;
 
 
-@Prop({
-type: mongoose.Schema.Types.ObjectId,
-ref: Position.name,
-required: true,
-})
-position: mongoose.Schema.Types.ObjectId;
+// @Prop({
+// type: mongoose.Schema.Types.ObjectId,
+// ref: Position.name,
+// required: true,
+// })
+// position: mongoose.Schema.Types.ObjectId;
 
 
 @Prop({ enum: ['Full-time', 'Part-time', 'Intern', 'Contract'], default: 'Full-time' })

@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { OffboardingRequest, OffboardingRequestDocument } from '../schemas/offboarding-request.schema';
 import { CreateOffboardingRequestDto, UpdateOffboardingRequestDto, ApprovalDto } from '../dtos';
-import { OffboardingStatus, ApprovalDecision } from '../enums';
+import { OffboardingStatus, ApprovalDecision } from '../schemas/offboarding-request.schema';
 
 @Injectable()
 export class OffboardingService {

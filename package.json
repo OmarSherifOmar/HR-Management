@@ -27,6 +27,12 @@
     "@nestjs/platform-express": "^11.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "glob": "^11.0.3",
+    "iterare": "^1.2.1",
+    "minipass": "^7.1.2",
+    "node-emoji": "^2.2.0",
+    "path-scurry": "^2.0.1",
+    "readdirp": "^4.1.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
