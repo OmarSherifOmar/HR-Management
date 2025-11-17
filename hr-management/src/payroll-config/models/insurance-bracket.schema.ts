@@ -15,9 +15,6 @@ export class InsuranceBracket extends Document {
   @Prop({ required: true })
   employeePercentage: number;
 
-  @Prop({ required: true, enum: ['draft', 'published'], default: 'draft' })
-  status: 'draft' | 'published';
-
   @Prop({
     required: true,
     enum: ['payroll_manager', 'hr_manager'],
@@ -30,6 +27,21 @@ export class InsuranceBracket extends Document {
 
   @Prop({ type: Date, default: null })
   approvedAt: Date | null;
+// Phase 5
+   @Prop({ enum: ['draft', 'approved', 'rejected'], default: 'draft' })
+  approvalStatus: 'draft' | 'approved' | 'rejected';
+
+  @Prop({ type: String, default: null })
+  hrReviewComment: string | null;
+
+  @Prop({ type: String, default: null })
+  approvedBy: string | null;
+
+  @Prop({ type: Date, default: null })
+  rejectedAt: Date | null;
+
+  @Prop({ type: String, default: null })
+  updatedBy: string | null;
 }
 
 export const InsuranceBracketSchema =
