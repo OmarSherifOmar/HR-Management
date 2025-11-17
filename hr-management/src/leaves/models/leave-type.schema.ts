@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { HydratedDocument } from 'mongoose';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type LeaveTypeDocument = HydratedDocument<LeaveType>;
 
@@ -78,10 +79,10 @@ export class LeaveType {
   @Prop()
   payrollPayCode: string;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId, required: true, ref : 'User'})
+  @Prop({type: mongoose.Schema.Types.ObjectId, required: true, ref : 'Employee'})
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId, required: true, ref : 'User'})
+  @Prop({type: mongoose.Schema.Types.ObjectId, required: true, ref : 'Employee'})
   updatedBy: mongoose.Types.ObjectId;
 }
 

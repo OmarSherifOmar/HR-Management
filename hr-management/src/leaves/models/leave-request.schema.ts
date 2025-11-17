@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveType, LeaveTypeDocument } from './leave-type.schema';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type LeaveRequestDocument = HydratedDocument<LeaveRequest>;
 
@@ -14,7 +15,7 @@ export enum LeaveRequestStatus {
 
 @Schema({ timestamps: true })
 export class LeaveRequest {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true})
   employeeId: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType', required: true })
@@ -39,7 +40,7 @@ export class LeaveRequest {
   status: LeaveRequestStatus;
 
   // Manager approval
-  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   managerId: mongoose.Types.ObjectId;
 
   @Prop()
@@ -49,7 +50,7 @@ export class LeaveRequest {
   managerComments: string;
 
   // HR approval
-  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   hrApprovedBy: mongoose.Types.ObjectId;
 
   @Prop()
@@ -69,13 +70,13 @@ export class LeaveRequest {
   postLeaveSubmissionDate: Date;
 
   // Final decision
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   approvedBy: mongoose.Types.ObjectId;
 
   @Prop()
   approvedAt: Date;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   rejectedBy: mongoose.Types.ObjectId;
 
   @Prop()
@@ -105,7 +106,7 @@ export class LeaveRequest {
   @Prop()
   irregularityReason: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   flaggedIrregularBy: mongoose.Types.ObjectId;
 
   @Prop()

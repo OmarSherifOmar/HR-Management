@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveType, LeaveTypeDocument } from './leave-type.schema';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type ApprovalWorkflowDocument = HydratedDocument<ApprovalWorkflow>;
 
@@ -55,10 +56,10 @@ export class ApprovalWorkflow {
   @Prop({ default: 1 })
   priority: number;
 
-  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref:'Employee' })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId })
+  @Prop({type: mongoose.Schema.Types.ObjectId, ref:'Employee' })
   updatedBy: mongoose.Types.ObjectId;
 }
 

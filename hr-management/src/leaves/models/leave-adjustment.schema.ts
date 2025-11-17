@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveType, LeaveTypeDocument } from './leave-type.schema';
 import { EmployeeEntitlement, EmployeeEntitlementDocument } from './employee-entitlement.schema';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type LeaveAdjustmentDocument = HydratedDocument<LeaveAdjustment>;
 
@@ -28,7 +29,7 @@ export class LeaveAdjustment {
   @Prop({ required: true })
   reason: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Employee' })
   adjustedBy: mongoose.Types.ObjectId;
 
   @Prop({ required: true })

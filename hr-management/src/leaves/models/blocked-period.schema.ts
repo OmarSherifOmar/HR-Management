@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type BlockedPeriodDocument = HydratedDocument<BlockedPeriod>;
 
@@ -20,7 +21,7 @@ export class BlockedPeriod {
   @Prop({ type: [String] })
   applicablePositions: string[];
 
-  @Prop({ required: true, type: [mongoose.Schema.Types.ObjectId] })
+  @Prop({ required: true, type: [mongoose.Schema.Types.ObjectId], ref: 'Employee', default: [] })
   exemptEmployeeIds: mongoose.Types.ObjectId[];
 
   @Prop({ required: true, default: 0 })
@@ -32,10 +33,10 @@ export class BlockedPeriod {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId })
+  @Prop({type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   updatedBy: mongoose.Types.ObjectId;
 }
 

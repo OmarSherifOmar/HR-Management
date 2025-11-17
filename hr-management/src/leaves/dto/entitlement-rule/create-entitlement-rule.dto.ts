@@ -1,5 +1,6 @@
 import { IsString, IsEnum, IsOptional, IsNumber, IsBoolean, IsArray, IsMongoId } from 'class-validator';
-import { EligibilityCriteria, ContractType } from '../../models/entitlement-rule.schema';
+import { EligibilityCriteria } from '../../models/entitlement-rule.schema';
+import { ContractType } from '../../../employee-organization-performancesubsystem/employee/models/contract-type.enum';
 
 export class CreateEntitlementRuleDto {
   @IsString()

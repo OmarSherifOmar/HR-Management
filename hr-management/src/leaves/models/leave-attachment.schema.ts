@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveRequest, LeaveRequestDocument } from './leave-request.schema';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type LeaveAttachmentDocument = HydratedDocument<LeaveAttachment>;
 
@@ -31,7 +32,7 @@ export class LeaveAttachment {
   @Prop({ default: false })
   isVerified: boolean;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   verifiedBy: mongoose.Types.ObjectId;
 
 
@@ -42,7 +43,7 @@ export class LeaveAttachment {
   @Prop()
   verificationNotes: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   uploadedBy: mongoose.Types.ObjectId;
 }
 

@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { HydratedDocument } from 'mongoose';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type HolidayCalendarDocument = HydratedDocument<HolidayCalendar>;
 
@@ -33,10 +34,10 @@ export class HolidayCalendar {
   @Prop({ required: true, default: true })
   isActive: boolean;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   updatedBy: mongoose.Types.ObjectId;
 }
 

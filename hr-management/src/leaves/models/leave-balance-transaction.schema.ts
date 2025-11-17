@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveRequest, LeaveRequestDocument } from './leave-request.schema';
 import { EmployeeEntitlement, EmployeeEntitlementDocument } from './employee-entitlement.schema';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type LeaveBalanceTransactionDocument = HydratedDocument<LeaveBalanceTransaction>;
 
@@ -15,7 +16,7 @@ export enum TransactionType {
 
 @Schema({ timestamps: true })
 export class LeaveBalanceTransaction {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true})
   employeeId: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeEntitlement', required: true })
@@ -49,7 +50,7 @@ export class LeaveBalanceTransaction {
   @Prop()
   retroactiveReason: string;
 
-  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   processedBy: mongoose.Types.ObjectId;
 }
 
