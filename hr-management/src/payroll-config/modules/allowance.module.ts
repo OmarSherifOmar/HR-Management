@@ -10,4 +10,4 @@ import { Allowance, AllowanceSchema } from '../models/allowance.schema';
   ],
   exports: [MongooseModule],
 })
-export class AllowanceModule {}
+export class AllowanceModule {} 

@@ -5,4 +5,4 @@ export class CreateDeductionDto {
   name: string;
   calcType: DeductionCalcType;
   value: number;
-}
+} 

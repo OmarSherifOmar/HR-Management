@@ -6,4 +6,4 @@ export class UpdateConfigDraftDto {
   decisionBy?: string;
   decisionAt?: Date;
   decisionNote?: string;
-}
+} 

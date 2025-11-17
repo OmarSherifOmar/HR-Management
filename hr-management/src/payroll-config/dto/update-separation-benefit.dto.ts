@@ -5,4 +5,4 @@ export class UpdateSeparationBenefitDto {
   name?: string;
   formula?: SeparationFormula;
   value?: number;
-}
+} 

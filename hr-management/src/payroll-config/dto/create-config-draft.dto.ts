@@ -11,4 +11,4 @@ export class CreateConfigDraftDto {
   changeSet: Record<string, any>;
   submittedBy: string;
   submittedAt: Date;
-}
+} 

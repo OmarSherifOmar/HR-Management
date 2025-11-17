@@ -5,4 +5,4 @@ export class CreateSeparationBenefitDto {
   name: string;
   formula: SeparationFormula;
   value: number;
-}
+} 

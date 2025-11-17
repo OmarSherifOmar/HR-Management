@@ -41,4 +41,4 @@ import { PayrollConfigModule } from './payroll-config/payroll-config.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {} 

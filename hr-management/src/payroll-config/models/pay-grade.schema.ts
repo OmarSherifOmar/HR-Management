@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-// Input dependency: Organizational Structure (Job Grade/Band)
+// Input dependency: Organizational Structure (Job Grade/Band) 
 
 @Schema({ timestamps: true, collection: 'pay_grades' })
 export class PayGrade extends Document {

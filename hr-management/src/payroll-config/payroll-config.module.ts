@@ -37,4 +37,4 @@ import { ApprovalEventModule } from './modules/approval-event.module';
     ApprovalEventModule,
   ],
 })
-export class PayrollConfigModule {}
+export class PayrollConfigModule {} 

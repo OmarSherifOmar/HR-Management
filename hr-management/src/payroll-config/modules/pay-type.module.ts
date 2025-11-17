@@ -10,4 +10,4 @@ import { PayType, PayTypeSchema } from '../models/pay-type.schema';
   ],
   exports: [MongooseModule],
 })
-export class PayTypeModule {}
+export class PayTypeModule {} 

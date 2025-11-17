@@ -6,4 +6,4 @@ export class CreateAllowanceDto {
   calcType: AllowanceCalcType;
   value: number;
   taxable: boolean;
-}
+} 

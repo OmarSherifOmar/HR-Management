@@ -11,4 +11,4 @@ export class CreatePolicyDto {
   fixedAmount?: number;
   threshold?: number;
   applicability?: string[];
-}
+} 

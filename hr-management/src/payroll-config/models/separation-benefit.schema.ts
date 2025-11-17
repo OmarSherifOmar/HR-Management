@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-// Input dependency: Offboarding (Severance rules/terms, legal formulas)
+// Input dependency: Offboarding (Severance rules/terms, legal formulas) 
 
 export enum SeparationFormula {
   FIXED = 'FIXED',

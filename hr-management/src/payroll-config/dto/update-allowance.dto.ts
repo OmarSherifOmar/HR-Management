@@ -6,4 +6,4 @@ export class UpdateAllowanceDto {
   calcType?: AllowanceCalcType;
   value?: number;
   taxable?: boolean;
-}
+} 

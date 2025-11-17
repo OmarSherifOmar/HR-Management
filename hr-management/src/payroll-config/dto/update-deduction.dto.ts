@@ -5,4 +5,4 @@ export class UpdateDeductionDto {
   name?: string;
   calcType?: DeductionCalcType;
   value?: number;
-}
+} 

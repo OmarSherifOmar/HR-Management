@@ -5,4 +5,4 @@ export class UpdateApprovalRequestDto {
   decisionBy?: string;
   decisionAt?: Date;
   decisionNote?: string;
-}
+} 

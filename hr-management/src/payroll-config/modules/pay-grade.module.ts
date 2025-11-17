@@ -10,4 +10,4 @@ import { PayGrade, PayGradeSchema } from '../models/pay-grade.schema';
   ],
   exports: [MongooseModule],
 })
-export class PayGradeModule {}
+export class PayGradeModule {} 

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-// Inputs from other subsystems: None (N/A)
+// Inputs from other subsystems: None (N/A) 
 
 export enum AllowanceCalcType {
   FIXED = 'FIXED',

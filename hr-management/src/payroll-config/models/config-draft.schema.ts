@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-// Inputs from other subsystems: None directly (works over local config entities)
+// Inputs from other subsystems: None directly (works over local config entities) 
 
 export enum TargetType {
   PayrollPolicy = 'PayrollPolicy',

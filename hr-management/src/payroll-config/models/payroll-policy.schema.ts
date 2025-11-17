@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-// Inputs from other subsystems: None (N/A) at configuration time
+// Inputs from other subsystems: None (N/A) at configuration time 
 
 export enum PolicyType {
   MISCONDUCT = 'MISCONDUCT',

@@ -10,4 +10,4 @@ import { Deduction, DeductionSchema } from '../models/deduction.schema';
   ],
   exports: [MongooseModule],
 })
-export class DeductionModule {}
+export class DeductionModule {} 
