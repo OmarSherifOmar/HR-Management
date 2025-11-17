@@ -1,36 +1,37 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule, MongooseModuleOptions } from '@nestjs/mongoose';
+import { EmployeeModule } from './employee-organization-performancesubsystem/employee/employee.module';
+import { DepartmentModule } from './employee-organization-performancesubsystem/organization/department.module';
+import { PositionModule } from './employee-organization-performancesubsystem/organization/position.module';
+import { NotificationModule } from './employee-organization-performancesubsystem/organization/notification.module';
+import { ChangeRequest } from './employee-organization-performancesubsystem/organization/models/change-request.schema';
+import { AppraisalDisputeModule } from './employee-organization-performancesubsystem/performance/appraisal-dispute.module';
+import { AppraisalProgressModule } from './employee-organization-performancesubsystem/performance/appraisal-progress.module';
+import { FinalAppraisalModule } from './employee-organization-performancesubsystem/performance/final-appraisal.module';
+import { PerformanceModule } from './employee-organization-performancesubsystem/performance/performance.module';
+import { LeavesModule } from './leaves/leaves.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LeavesModule } from './leaves/leaves.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
-      useFactory: () => ({
-        uri: process.env.MONGODB_URI || '',
-        connectionFactory: (connection) => {
-          connection.on('connected', () => {
-            console.log('✅ MongoDB Connected Successfully');
-            console.log(`📊 Database: ${connection.name}`);
-          });
-          connection.on('disconnected', () => {
-            console.log('❌ MongoDB Disconnected');
-          });
-          connection.on('error', (error) => {
-            console.error('❌ MongoDB Connection Error:', error);
-          });
-          return connection;
-        },
-      }),
+      imports: [ConfigModule,EmployeeModule,DepartmentModule,PositionModule,NotificationModule,ChangeRequest,AppraisalDisputeModule,AppraisalProgressModule,FinalAppraisalModule,PerformanceModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): MongooseModuleOptions => {
+        const uri = configService.get<string>('MONGO_URI');
+        if (!uri) {
+          throw new Error('MONGO_URI is not defined in environment');
+        }
+        return ({
+          uri,
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        } as unknown) as MongooseModuleOptions;
+      },
     }),
-    LeavesModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
