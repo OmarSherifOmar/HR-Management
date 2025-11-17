@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ShiftModel } from '../../models/time-managment-models/shift-model/shift.schema';
+import { Shift } from '../../models/time-managment-models/shift.schema';
 
 class SplitSegmentDto {
   @IsString()
