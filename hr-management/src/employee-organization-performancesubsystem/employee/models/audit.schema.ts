@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Employee } from './employee.schema';
+import { Employee } from './employee.schema';
+import { Notification } from 'src/employee-organization-performancesubsystem/organization/models/notification.schema';
+
 export type AuditLogDocument = AuditLog & Document;
 
 @Schema({ timestamps: true, versionKey: false })
