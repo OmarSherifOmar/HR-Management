@@ -39,19 +39,10 @@ import { Connection } from 'mongoose';
         },
       }),
     }),
-<<<<<<< HEAD
     
     // Other modules can be imported here
   ],
   controllers: [AppController],
   providers: [AppService],
-=======
-
-    PayrollModule,
-  ],
-
-  controllers: [AppController, PayrollController],
-  providers: [AppService, PayrollService],
->>>>>>> origin/wahsh
 })
 export class AppModule {}
