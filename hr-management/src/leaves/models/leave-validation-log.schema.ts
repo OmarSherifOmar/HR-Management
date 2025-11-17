@@ -15,7 +15,7 @@ export enum ValidationType {
 @Schema({ timestamps: true })
 export class LeaveValidationLog {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveRequest', required: true})
-  leaveRequestId: mongoose.Types.ObjectId;
+  leaveRequestId: mongoose.Types.ObjectId | LeaveRequestDocument;
 
   @Prop({ required: true, enum: ValidationType })
   validationType: ValidationType;

@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type DelegationDocument = HydratedDocument<Delegation>;
 
@@ -12,11 +13,11 @@ export enum DelegationStatus {
 @Schema({ timestamps: true })
 export class Delegation {
   // Manager who is delegating their approval authority (e.g., on leave/absent)
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true})
   managerId: mongoose.Types.ObjectId;
 
   // Person who will approve on behalf of the manager
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true})
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true})
   delegateId: mongoose.Types.ObjectId;
 
   @Prop({ required: true })
@@ -31,10 +32,10 @@ export class Delegation {
   @Prop()
   reason: string;
 
-  @Prop({required: true, type: mongoose.Schema.Types.ObjectId })
+  @Prop({required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({type: mongoose.Schema.Types.ObjectId })
+  @Prop({type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   updatedBy: mongoose.Types.ObjectId;
 }
 

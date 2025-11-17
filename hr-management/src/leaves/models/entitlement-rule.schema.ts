@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { LeaveType, LeaveTypeDocument } from './leave-type.schema';
-
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
+import { ContractType } from "../../employee-organization-performancesubsystem/employee/models/contract-type.enum";
 export type EntitlementRuleDocument = HydratedDocument<EntitlementRule>;
 
 export enum EligibilityCriteria {
@@ -11,12 +12,6 @@ export enum EligibilityCriteria {
   DEPARTMENT = 'DEPARTMENT',
   POSITION = 'POSITION',
   CUSTOM = 'CUSTOM',
-}
-
-export enum ContractType {
-  FULL_TIME = 'FULL_TIME',
-  PART_TIME = 'PART_TIME',
-  INTERN = 'INTERN'
 }
 
 @Schema({ timestamps: true })
@@ -69,10 +64,10 @@ export class EntitlementRule {
   @Prop({ required: true, default: 1 })
   priority: number;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   createdBy: mongoose.Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
   updatedBy: mongoose.Types.ObjectId;
 }
 
