@@ -14,4 +14,10 @@ export class UpdateInsuranceBracketDto {
   needsApprovalBy?: 'payroll_manager' | 'hr_manager';
   approved?: boolean;
   approvedAt?: Date | null;
+  // Phase 5 fields
+  approvalStatus?: 'draft' | 'approved' | 'rejected';
+  hrReviewComment?: string | null;
+  approvedBy?: string | null;
+  rejectedAt?: Date | null;
+  updatedBy?: string | null;
 }
