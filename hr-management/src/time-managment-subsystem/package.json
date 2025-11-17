@@ -11,7 +11,11 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "test": "echo \"No tests for this subsystem yet\" && exit 0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@nestjs/mongoose": "^10.0.0",
+    "@nestjs/config": "^3.0.0",
+    "mongoose": "^7.6.0"
+  },
   "devDependencies": {
     "typescript": "^5.1.6",
     "ts-node": "^10.9.1",
