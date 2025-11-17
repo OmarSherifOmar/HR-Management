@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
-import { PayrollReportService } from 'src/payroll-tracking/payroll-report/payroll-report.service';
+import { PayrollReportService } from 'src/payroll-Transparency/payroll-report/payroll-report.service';
 
 @Controller('payroll-reports')
 export class PayrollReportController {
