@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { FinalAppraisalRecordSchema } from './final-appraisal-record.schema';
 
 export type EmployeeAppraisalHistoryDocument = EmployeeAppraisalHistory & Document;
 
