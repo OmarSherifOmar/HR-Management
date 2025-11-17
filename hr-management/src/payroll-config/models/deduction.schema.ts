@@ -7,6 +7,14 @@ export enum DeductionCalcType {
   PERCENT = 'PERCENT',
 }
 
+export enum DeductionStatus {
+  DRAFT = 'DRAFT',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  ACTIVE = 'ACTIVE',
+}
+
 @Schema({ timestamps: true, collection: 'deductions' })
 export class Deduction extends Document {
   @Prop({ unique: true, required: true })
@@ -20,6 +28,13 @@ export class Deduction extends Document {
 
   @Prop({ required: true, min: 0 })
   value: number;
+
+  @Prop({ 
+    required: true, 
+    enum: Object.values(DeductionStatus),
+    default: DeductionStatus.DRAFT 
+  })
+  status: DeductionStatus;
 }
 
 export const DeductionSchema = SchemaFactory.createForClass(Deduction);

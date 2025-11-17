@@ -1,14 +1,15 @@
-import { PolicyType } from '../models/payroll-policy.schema';
+import { PolicyType, PolicyStatus } from '../models/payroll-policy.schema';
 
-export class CreatePolicyDto {
-  code: string;
-  name: string;
-  type: PolicyType;
-  description: string;
-  effectiveDate: Date | string;
+export class UpdatePayrollPolicyDto {
+  code?: string;
+  name?: string;
+  type?: PolicyType;
+  description?: string;
+  effectiveDate?: Date;
   lawReference?: string;
   percentage?: number;
   fixedAmount?: number;
   threshold?: number;
   applicability?: string[];
-} 
+  status?: PolicyStatus;
+}
