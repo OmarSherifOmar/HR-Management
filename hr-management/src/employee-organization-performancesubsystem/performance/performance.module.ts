@@ -6,6 +6,7 @@ import { AppraisalFormSchema } from './models/appraisal-form.schema';
 import { AppraisalTemplateSchema } from './models/appraisal-template.schema';
 import { AppraisalCycleSchema } from './models/appraisal-cycle.schema';
 import { AppraisalAssignmentSchema } from './models/appraisal-assignment.schema';
+import { EmployeeModule } from '../employee/employee.module';
 // import { PerformanceService } from './performance.service';
 // import { PerformanceController } from './performance.controller';
 
