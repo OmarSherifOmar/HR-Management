@@ -10,9 +10,15 @@ import { SeparationBenefitModule } from './modules/separation-benefit.module';
 import { ConfigDraftModule } from './modules/config-draft.module';
 import { ApprovalRequestModule } from './modules/approval-request.module';
 import { ApprovalEventModule } from './modules/approval-event.module';
+import { LegalRuleModule } from './modules/legal-rule.module';
+import { InsuranceBracketModule } from './modules/insurance-bracket.module';
+import { TaxRuleModule } from './modules/tax-rule.module';
 
 @Module({
   imports: [
+    LegalRuleModule,
+    InsuranceBracketModule,
+    TaxRuleModule,
     AllowanceModule,
     DeductionModule,
     PayTypeModule,
@@ -25,6 +31,9 @@ import { ApprovalEventModule } from './modules/approval-event.module';
     ApprovalEventModule,
   ],
   exports: [
+    LegalRuleModule,
+    InsuranceBracketModule,
+    TaxRuleModule,
     AllowanceModule,
     DeductionModule,
     PayTypeModule,
