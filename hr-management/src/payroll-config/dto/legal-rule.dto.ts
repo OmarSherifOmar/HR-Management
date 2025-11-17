@@ -13,3 +13,4 @@ export class UpdateLegalRuleDto {
   approved?: boolean;
   approvedAt?: Date | null;
 }
+   

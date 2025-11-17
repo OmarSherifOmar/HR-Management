@@ -30,3 +30,4 @@ export class TaxRule extends Document {
 }
 
 export const TaxRuleSchema = SchemaFactory.createForClass(TaxRule);
+    

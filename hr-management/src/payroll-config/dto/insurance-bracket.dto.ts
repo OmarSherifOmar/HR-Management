@@ -21,3 +21,4 @@ export class UpdateInsuranceBracketDto {
   rejectedAt?: Date | null;
   updatedBy?: string | null;
 }
+   

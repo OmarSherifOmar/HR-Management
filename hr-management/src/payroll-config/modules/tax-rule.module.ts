@@ -8,3 +8,4 @@ import { TaxRule, TaxRuleSchema } from '../models/tax-rule.schema';
   ],
 })
 export class TaxRuleModule {}
+    

@@ -13,3 +13,4 @@ export class UpdateTaxRuleDto {
   approved?: boolean;
   approvedAt?: Date | null;
 }
+   

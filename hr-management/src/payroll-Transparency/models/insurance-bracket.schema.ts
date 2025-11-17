@@ -46,3 +46,4 @@ export class InsuranceBracket extends Document {
 
 export const InsuranceBracketSchema =
   SchemaFactory.createForClass(InsuranceBracket);
+   

@@ -34,6 +34,7 @@ import { TaxRuleModule } from './modules/tax-rule.module';
     ApprovalEventModule,
     CompanySettingsModule,
     BackupPolicyModule,
+   
   ],
   exports: [
     LegalRuleModule,
