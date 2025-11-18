@@ -4,7 +4,7 @@ import { EntitlementRule, EntitlementRuleSchema } from '../models/entitlement-ru
 import { EmployeeEntitlement, EmployeeEntitlementSchema } from '../models/employee-entitlement.schema';
 import { LeaveTypeModule } from './leave-type.module';
 import { EmployeeModule } from '../../employee-organization-performancesubsystem/employee/employee.module';
-
+import { AttendanceRecord } from '../../time-managment-subsystem/models/attendance-record.schema';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -13,6 +13,7 @@ import { EmployeeModule } from '../../employee-organization-performancesubsystem
     ]),
     LeaveTypeModule,
     EmployeeModule,
+    AttendanceRecord,
   ],
   exports: [MongooseModule],
 })
