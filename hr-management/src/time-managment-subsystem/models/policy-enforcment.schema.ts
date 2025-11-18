@@ -1,12 +1,14 @@
 import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
 import {HydratedDocument, Types} from 'mongoose';
+import {Employee} from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
+import {Department} from '../../employee-organization-performancesubsystem/organization/models/department.schema';
 
 export type PolicyEnforcementDocument = HydratedDocument<PolicyEnforcement>;
 
 @Schema({timestamps: true})
 export class PolicyEnforcement {
-    @Prop({type: Types.ObjectId, ref: 'Organization', required: true})
-    organizationId: Types.ObjectId;
+    @Prop({type: Types.ObjectId, ref: 'Department', required: true})
+    departmentId: Types.ObjectId;
 
     @Prop({type: Types.ObjectId, ref: 'Employee', required: true})
     employeeId: Types.ObjectId;

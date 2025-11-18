@@ -8,5 +8,6 @@ import { HolidayCalendarSchema } from '../models/holiday-calendar.schema';
 			{ name: 'HolidayCalendar', schema: HolidayCalendarSchema },
 		]),
 	],
+	exports: [MongooseModule],
 })
 export class HolidayCalendarModuleModule {}
