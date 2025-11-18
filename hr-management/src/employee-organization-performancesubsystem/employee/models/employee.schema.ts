@@ -10,6 +10,7 @@ import { RoleType } from './role-type.enum';
 import {Position} from '../../organization/models/position.schema';
 import "reflect-metadata";
 import { PERMISSION_MODEL } from 'src/employee-organization-performancesubsystem/employee/models/permission.schema';
+//should import date of hire / date of expiration from onboarding module 
 export const GOVERNED_METADATA_KEY = "governedField";
 
 export function Governed() {
