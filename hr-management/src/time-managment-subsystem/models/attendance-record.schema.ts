@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
-
+import { LeaveRequest } from '../../leaves/models/leave-request.schema';
 export type AttendanceRecordDocument = HydratedDocument<AttendanceRecord>;
 
 @Schema({ timestamps: true })
