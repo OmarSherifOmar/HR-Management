@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
-import { Payslip } from './payslip.schema';
+import { Payslip } from '../../payroll-processing/models/payslip.schema';
 export type DisputeStatus =
   | 'PENDING'
   | 'UNDER_REVIEW'
