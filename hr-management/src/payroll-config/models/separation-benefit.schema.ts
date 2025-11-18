@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { OffboardingRequest } from 'src/recruitment/schemas/offboarding-request.schema';
 // Input dependency: Offboarding (Severance rules/terms, legal formulas) 
 
 export enum SeparationFormula {
@@ -35,6 +36,9 @@ export class SeparationBenefit extends Document {
     default: SeparationBenefitStatus.DRAFT 
   })
   status: SeparationBenefitStatus;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: OffboardingRequest.name }] })
+  OffboardingRequestId: Types.ObjectId;
 }
 
 export const SeparationBenefitSchema = SchemaFactory.createForClass(SeparationBenefit);

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 // Input dependency: Onboarding (Contract details / bonus eligibility flags) 
 
 export enum BonusStatus {
@@ -27,6 +27,9 @@ export class Bonus extends Document {
     default: BonusStatus.DRAFT 
   })
   status: BonusStatus;
+  
+  @Prop ({ type: mongoose.Schema.Types.ObjectId, ref: 'Onboarding', required: true })
+  onboardingId: mongoose.Types.ObjectId;
 }
 
 export const BonusSchema = SchemaFactory.createForClass(Bonus); 

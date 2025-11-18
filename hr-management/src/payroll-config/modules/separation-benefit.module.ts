@@ -4,12 +4,14 @@ import {
   SeparationBenefit,
   SeparationBenefitSchema,
 } from '../models/separation-benefit.schema';
+import { OffboardingModule } from '../../recruitment/modules/offboarding.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: SeparationBenefit.name, schema: SeparationBenefitSchema },
     ]),
+    OffboardingModule,
   ],
   exports: [MongooseModule],
 })

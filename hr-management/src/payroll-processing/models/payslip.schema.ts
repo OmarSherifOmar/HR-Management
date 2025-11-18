@@ -1,11 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
+import { PayGrade } from 'src/payroll-config/models/pay-grade.schema';
+import { Employee } from 'src/employee-organization-performancesubsystem/employee/models/employee.schema';
 export type PayslipStatus = 'PROCESSED' | 'PENDING' | 'DISPUTED';
 
 @Schema({ timestamps: true, collection: 'payslips' })
 export class Payslip extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'HrEmployee', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -91,8 +92,8 @@ export class Payslip extends Document {
   @Prop({ type: [Types.ObjectId], ref: 'PayrollException' })
   disputeRefs?: Types.ObjectId[];
 
-  @Prop()
-  processedBy?: string;
+  @Prop({ type: Types.ObjectId, ref: 'HrEmployee' })
+  processedBy?: Types.ObjectId;
 
   @Prop()
   processedAt?: Date;

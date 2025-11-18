@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
+import { PayrollRun } from './run.schema';
 
 export type PayrollFreezeDocument = HydratedDocument<PayrollFreeze>;
 

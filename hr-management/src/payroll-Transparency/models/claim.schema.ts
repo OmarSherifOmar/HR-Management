@@ -5,7 +5,7 @@ export type ClaimStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 @Schema({ timestamps: true, collection: 'claims' })
 export class Claim extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'HrEmployee', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -32,7 +32,7 @@ export class Claim extends Document {
   @Prop([
     {
       role: { type: String, required: true },
-      approverId: { type: Types.ObjectId, ref: 'HrEmployee' },
+      approverId: { type: Types.ObjectId, ref: 'Employee' },
       status: {
         type: String,
         enum: ['PENDING', 'APPROVED', 'REJECTED'],
@@ -60,8 +60,8 @@ export class Claim extends Document {
   @Prop()
   submittedAt?: Date;
 
-  @Prop()
-  submittedBy?: string;
+  @Prop({ type: Types.ObjectId, ref: 'Employee' })
+  submittedBy?: Types.ObjectId;
 
   @Prop()
   notes?: string;

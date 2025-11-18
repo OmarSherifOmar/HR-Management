@@ -16,10 +16,10 @@ export class Department {
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   manager?: Types.ObjectId | null;
 
-  @Prop({ default: true })
+  @Prop({ type: Boolean, default: true })
   active: boolean;
 
-  @Prop({ default: null })
+  @Prop({type: Date, default: null })
   closedOn?: Date | null;
 
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
@@ -28,7 +28,7 @@ export class Department {
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   updatedBy?: Types.ObjectId | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   costCenter?: string | null;
 }
 

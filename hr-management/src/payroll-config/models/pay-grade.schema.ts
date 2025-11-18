@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Mongoose} from 'mongoose';
+import mongoose, { HydratedDocument } from 'mongoose';
+import { Position } from 'src/employee-organization-performancesubsystem/organization/models/position.schema';
 // Input dependency: Organizational Structure (Job Grade/Band) 
 
 export enum PayGradeStatus {
@@ -21,6 +23,8 @@ export class PayGrade extends Document {
   @Prop({ required: true, min: 0 })
   grossMonthly: number;
 
+  @Prop({})
+
   @Prop({ required: true, type: [String] })
   allowedPayTypes: string[];
 
@@ -30,6 +34,11 @@ export class PayGrade extends Document {
     default: PayGradeStatus.DRAFT 
   })
   status: PayGradeStatus;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Position', required: true })
+  positionId: mongoose.Types.ObjectId;
+
+
 }
 
 export const PayGradeSchema = SchemaFactory.createForClass(PayGrade); 

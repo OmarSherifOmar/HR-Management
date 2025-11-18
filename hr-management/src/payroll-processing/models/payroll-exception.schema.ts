@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
-
+import mongoose, { HydratedDocument } from 'mongoose';
+import { Employee } from 'src/employee-organization-performancesubsystem/employee/models/employee.schema';
+import { PayrollRun } from './run.schema';
 export type PayrollExceptionType =
   | 'missing_bank_account'
   | 'negative_salary'
@@ -14,8 +15,8 @@ export type PayrollExceptionSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 @Schema({ _id: false })
 export class SalaryValidationSnapshot {
-  @Prop()
-  previousPayrollRunId?: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'PayrollRun' })
+  previousPayrollRunId?: mongoose.Types.ObjectId;
 
   @Prop({ default: 0 })
   previousAmount!: number;
@@ -51,11 +52,11 @@ export const ValidationEngineMetadataSchema = SchemaFactory.createForClass(Valid
 
 @Schema({ timestamps: true, collection: 'payroll_exceptions' })
 export class PayrollException {
-  @Prop({ required: true })
-  payrollRunId!: string;
+  @Prop({ required: true , type: mongoose.Schema.Types.ObjectId, ref: 'PayrollRun' })
+  payrollRunId!: mongoose.Types.ObjectId;
 
-  @Prop({ required: true })
-  employeeId!: string;
+  @Prop({ required: true , type: mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  employeeId!: mongoose.Types.ObjectId;
 
   @Prop()
   employeeNumber?: string;

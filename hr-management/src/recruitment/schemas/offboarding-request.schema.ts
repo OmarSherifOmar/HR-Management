@@ -109,6 +109,9 @@ export class OffboardingRequest {
   })
   submittedBy?: MongooseSchema.Types.ObjectId;
 
+  @Prop({type: String})
+  SeveranceRules: string;
+
   @Prop({ type: Object })
   metadata?: {
     finalSettlementId?: string;

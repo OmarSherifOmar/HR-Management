@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { DraftEntry, PayrollDra } from './models/draft-entry.schema';
 import { PayrollRunModule } from './run.module';
+import { PayrollFreeze, PayrollFreezeSchema } from './models/freeze.schema';
 
 @Module({
     imports: [
-        MongooseModule.forFeature([{ name: DraftEntry.name, schema: PayrollDra }]),
+        MongooseModule.forFeature([{ name: PayrollFreeze.name, schema: PayrollFreezeSchema }]),
         PayrollRunModule,
     ],
     exports: [MongooseModule],
 })
-export class PayrollDraftEntryModule {}
+export class PayrollFreezeModule {}

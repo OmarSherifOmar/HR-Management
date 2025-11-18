@@ -1,11 +1,15 @@
-// import { Module } from '@nestjs/common';
-// import { PayslipService } from '../services/payslip.service';
-// import { PayslipController } from '../controllers/payslip.controller';
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { PayslipSchema, Payslip } from './models/payslip.schema';
+import { EmployeeModule } from 'src/employee-organization-performancesubsystem/employee/employee.module';
+import { PayGradeModule } from 'src/payroll-config/modules/pay-grade.module';
 
-
-// @Module({
-//   controllers: [PayslipController],
-//   providers: [PayslipService],
-//   exports: [PayslipService],
-// })
-// export class PayslipModule {}
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Payslip.name, schema: PayslipSchema }]),
+    EmployeeModule,
+    PayGradeModule,
+  ],
+  exports: [MongooseModule],
+})
+export class PayslipModule {}

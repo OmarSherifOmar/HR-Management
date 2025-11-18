@@ -22,7 +22,7 @@ export class AuditLog {
   @Prop({ required: false })
   actorType?: string; // 'User' | 'System' | 'Scheduler' etc
   
-  @Prop()
+  @Prop({ type: Object })
   details?: Record<string, any>; 
 
   @Prop({ default: Date.now })

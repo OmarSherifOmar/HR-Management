@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Department } from 'src/employee-organization-performancesubsystem/organization/models/department.schema';
 
 @Schema({ timestamps: true, collection: 'payroll_reports' })
 export class PayrollReport extends Document {
