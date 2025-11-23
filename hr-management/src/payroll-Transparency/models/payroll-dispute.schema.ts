@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
+import { Payslip } from '../../payroll-processing/models/payslip.schema';
 export type DisputeStatus =
   | 'PENDING'
   | 'UNDER_REVIEW'
@@ -10,7 +11,7 @@ export type DisputeStatus =
 
 @Schema({ timestamps: true, collection: 'payroll_disputes' })
 export class PayrollDispute extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'HrEmployee', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Payslip', required: true })

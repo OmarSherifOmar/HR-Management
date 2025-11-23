@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument } from 'mongoose';
+import { PayrollRun } from './run.schema';
 
 export type PayrollApprovalStage = 'specialist' | 'manager' | 'finance';
 export type PayrollApprovalWorkflowStatus =
@@ -36,8 +37,8 @@ export const PayrollApprovalWorkflowEventSchema =
 
 @Schema({ timestamps: true, collection: 'payroll_approval_workflows' })
 export class PayrollApprovalWorkflow {
-  @Prop({ required: true })
-  payrollRunId!: string;
+  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'PayrollRun' })
+  payrollRunId!: mongoose.Types.ObjectId;
 
   @Prop({ required: true, enum: ['specialist', 'manager', 'finance'], default: 'specialist' })
   currentStage!: PayrollApprovalStage;

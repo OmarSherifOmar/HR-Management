@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { Employee } from 'src/employee-organization-performancesubsystem/employee/models/employee.schema';
 
 export type PayrollPeriodDocument = HydratedDocument<PayrollPeriod>;
 

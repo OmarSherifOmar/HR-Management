@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
-import { PayrollDraftEntry } from './draft-entry.schema';
-import { PayrollException } from './exception.schema';
-import { PayrollApproval } from './approval.schema';
+import { DraftEntry } from './draft-entry.schema';
+import { PayrollException } from './payroll-exception.schema';
+import { PayrollApprovalWorkflow } from './payroll-approval-workflow.schema';
 import { Payslip } from './payslip.schema';
 
 export type PayrollRunDocument = HydratedDocument<PayrollRun>;
@@ -18,14 +18,14 @@ export class PayrollRun {
   @Prop({ default: 'pending' })
   status: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'PayrollDraftEntry' }] })
-  draftEntries?: any[];
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'DraftEntry' }] })
+  draftEntries?: DraftEntry[];
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'PayrollException' }] })
   exceptions?: PayrollException[];
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'PayrollApproval' }] })
-  approvals?: PayrollApproval[];
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'PayrollApprovalWorkflow' }] })
+  approvals?: PayrollApprovalWorkflow[];
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Payslip' }] })
   payslips?: Payslip[];

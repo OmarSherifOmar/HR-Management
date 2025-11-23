@@ -1,15 +1,39 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { BankFile, BankFileSchema } from './models/bank-file.schema';
-import mongoose from 'mongoose';
+import { BankFileModule } from './bank-file.module';
+import { PayrollDraftEntryModule } from './draft-entry.module';
+import { PayrollFreezeModule } from './freeze.module';
+import { HREventProcessingModule } from './hr-employee-processing.module';
+import { PayrollApprovalWorkflowModule } from './payroll-approval-workflow.module';
+import { PayrollCompanyModule } from './payroll-company.module';
+import { PayrollExceptionModule } from './payroll-exception.module';
+import { PayslipModule } from './payslip.module';
+import { PayrollPeriodModule } from './period.module';
+import { PayrollRunModule } from './run.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: BankFile.name, schema: BankFileSchema },
-    ]),
+    BankFileModule,
+    PayrollDraftEntryModule,
+    PayrollFreezeModule,
+    HREventProcessingModule,
+    PayrollApprovalWorkflowModule,
+    PayrollCompanyModule,
+    PayrollExceptionModule,
+    PayslipModule,
+    PayrollPeriodModule,
+    PayrollRunModule,
   ],
-  
-  exports: [mongoose.Schema],
+  exports: [
+    BankFileModule,
+    PayrollDraftEntryModule,
+    PayrollFreezeModule,
+    HREventProcessingModule,
+    PayrollApprovalWorkflowModule,
+    PayrollCompanyModule,
+    PayrollExceptionModule,
+    PayslipModule,
+    PayrollPeriodModule,
+    PayrollRunModule,
+  ],
 })
 export class PayrollProcessingModule {}

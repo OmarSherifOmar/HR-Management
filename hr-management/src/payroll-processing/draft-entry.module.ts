@@ -1,10 +1,13 @@
-// import { Module } from '@nestjs/common';
-// import { PayrollDraftEntryService } from '../services/draft-entry.service';
-// import { PayrollDraftEntryController } from '../controllers/draft-entry.controller';
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { DraftEntry, PayrollDra } from './models/draft-entry.schema';
+import { PayrollRunModule } from './run.module';
 
-// @Module({
-//   controllers: [PayrollDraftEntryController],
-//   providers: [PayrollDraftEntryService],
-//   exports: [PayrollDraftEntryService],
-// })
-// export class PayrollDraftEntryModule {}
+@Module({
+    imports: [
+        MongooseModule.forFeature([{ name: DraftEntry.name, schema: PayrollDra }]),
+        PayrollRunModule,
+    ],
+    exports: [MongooseModule],
+})
+export class PayrollDraftEntryModule {}

@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import * as Mongoose from 'mongoose';
+import {PayrollRun} from './run.schema';
+import {Employee} from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
+import {Department} from '../../employee-organization-performancesubsystem/organization/models/department.schema';
 
 export type HREventType = 'new_hire' | 'termination' | 'resignation' | 'rehire';
 export type HRProcessStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
@@ -16,8 +20,8 @@ export class SigningBonusDetails {
   @Prop()
   eligibilityReason?: string;
 
-  @Prop()
-  approvedBy?: string;
+  @Prop({ type: Mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  approvedBy?: Mongoose.Types.ObjectId;
 
   @Prop({ default: false })
   disbursed!: boolean;
@@ -51,8 +55,8 @@ export class ResignationBenefitDetails {
   @Prop()
   processedAt?: Date;
 
-  @Prop()
-  approvedBy?: string;
+  @Prop({ type: Mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  approvedBy?: Mongoose.Types.ObjectId;
 }
 
 export const ResignationBenefitDetailsSchema =
@@ -81,8 +85,8 @@ export class TerminationBenefitDetails {
   @Prop()
   processedAt?: Date;
 
-  @Prop()
-  approvedBy?: string;
+  @Prop({ type: Mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  approvedBy?: Mongoose.Types.ObjectId;
 }
 
 export const TerminationBenefitDetailsSchema =
@@ -116,11 +120,11 @@ export const EmployeeFetchSnapshotSchema = SchemaFactory.createForClass(Employee
 
 @Schema({ timestamps: true, collection: 'hr_event_processing' })
 export class HREventProcessing {
-  @Prop({ required: true })
-  payrollRunId!: string;
+  @Prop({ required: true, type: Mongoose.Schema.Types.ObjectId, ref: 'PayrollRun' })
+  payrollRunId!: Mongoose.Types.ObjectId;
 
-  @Prop({ required: true })
-  employeeId!: string;
+  @Prop({ required: true, type: Mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  employeeId!: Mongoose.Types.ObjectId;
 
   @Prop()
   employeeNumber?: string;
@@ -141,11 +145,11 @@ export class HREventProcessing {
   @Prop()
   lastWorkingDate?: Date;
 
-  @Prop()
-  departmentId?: string;
+  @Prop({ type: Mongoose.Schema.Types.ObjectId, ref: 'Department' })
+  departmentId?: Mongoose.Types.ObjectId;
 
-  @Prop()
-  managerId?: string;
+  @Prop({ type: Mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  managerId?: Mongoose.Types.ObjectId;
 
   @Prop({ type: EmployeeFetchSnapshotSchema, default: () => ({}) })
   employeeFetch!: EmployeeFetchSnapshot;
@@ -156,8 +160,8 @@ export class HREventProcessing {
   @Prop()
   detectedAt?: Date;
 
-  @Prop()
-  processedBy?: string;
+  @Prop({ type: Mongoose.Schema.Types.ObjectId, ref: 'Employee' })
+  processedBy?: Mongoose.Types.ObjectId;
 
   @Prop()
   processedAt?: Date;

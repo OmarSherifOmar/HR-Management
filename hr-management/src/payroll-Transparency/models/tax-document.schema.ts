@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
+import { Employee } from '../../employee-organization-performancesubsystem/employee/models/employee.schema';
 @Schema({ timestamps: true, collection: 'tax_documents' })
 export class TaxDocument extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'HrEmployee', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
 
   @Prop({ required: true })
