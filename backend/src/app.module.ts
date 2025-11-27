@@ -14,11 +14,14 @@ import { PayrollConfigurationModule } from './payroll-configuration/payroll-conf
 import { PayrollExecutionModule } from './payroll-execution/payroll-execution.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModuleOptions } from '@nestjs/mongoose';
+import { AuthModule } from './auth/auth.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true,
       envFilePath: ['.env'],
      }),
+    AuthModule,
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -27,10 +30,26 @@ import { MongooseModuleOptions } from '@nestjs/mongoose';
         if (!uri) {
           throw new Error('MONGO_URI is not defined in environment');
         }
+        // Log minimal connection info (mask credentials)
+        try {
+          const masked = uri.replace(/:\/\/.+?:.+?@/, '://****:****@');
+          // eslint-disable-next-line no-console
+          console.log('MongoDB connecting to', masked);
+        } catch {}
+
         return ({
           uri,
           useNewUrlParser: true,
           useUnifiedTopology: true,
+          connectionFactory: (connection) => {
+            // eslint-disable-next-line no-console
+            connection.on('connected', () => console.log('MongoDB connected:', connection.name));
+            // eslint-disable-next-line no-console
+            connection.on('error', (err) => console.error('MongoDB connection error:', err?.message ?? err));
+            // eslint-disable-next-line no-console
+            connection.on('disconnected', () => console.warn('MongoDB disconnected'));
+            return connection;
+          },
         } as unknown) as MongooseModuleOptions;
       },
     }),
