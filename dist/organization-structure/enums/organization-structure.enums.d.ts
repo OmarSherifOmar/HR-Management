@@ -1,0 +1,32 @@
+export declare enum AssignmentStatus {
+    ACTIVE = "ACTIVE",
+    ENDED = "ENDED",
+    ON_HOLD = "ON_HOLD"
+}
+export declare enum StructureRequestType {
+    NEW_DEPARTMENT = "NEW_DEPARTMENT",
+    UPDATE_DEPARTMENT = "UPDATE_DEPARTMENT",
+    NEW_POSITION = "NEW_POSITION",
+    UPDATE_POSITION = "UPDATE_POSITION",
+    CLOSE_POSITION = "CLOSE_POSITION"
+}
+export declare enum StructureRequestStatus {
+    DRAFT = "DRAFT",
+    SUBMITTED = "SUBMITTED",
+    UNDER_REVIEW = "UNDER_REVIEW",
+    APPROVED = "APPROVED",
+    REJECTED = "REJECTED",
+    CANCELED = "CANCELED",
+    IMPLEMENTED = "IMPLEMENTED"
+}
+export declare enum ApprovalDecision {
+    PENDING = "PENDING",
+    APPROVED = "APPROVED",
+    REJECTED = "REJECTED"
+}
+export declare enum ChangeLogAction {
+    CREATED = "CREATED",
+    UPDATED = "UPDATED",
+    DEACTIVATED = "DEACTIVATED",
+    REASSIGNED = "REASSIGNED"
+}
