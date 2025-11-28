@@ -16,5 +16,5 @@ export class RegisterRequestDto {
   password: string
 
   @IsString()
-  role: string = "Employee";
+  role: string = "department employee";
 }
