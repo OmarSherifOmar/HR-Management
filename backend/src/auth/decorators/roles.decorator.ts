@@ -1,11 +1,23 @@
+
 import { SetMetadata } from '@nestjs/common';
-import { UserRole } from '../enums/user-role.enum';
 
 export const ROLES_KEY = 'roles';
 
-/**
- * Decorator to specify required roles for a route
- * @param roles - Array of roles that can access the route
- * @example @Roles(UserRole.HR_ADMIN, UserRole.ADMIN)
- */
-export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
+export const Roles = (...roles: Role[]) =>SetMetadata(ROLES_KEY, roles);
+
+
+export enum Role {
+  DEPARTMENT_EMPLOYEE = 'department employee',
+  DEPARTMENT_HEAD = 'department head',
+  HR_MANAGER = 'HR Manager',
+  HR_EMPLOYEE = 'HR Employee',
+  PAYROLL_SPECIALIST = 'Payroll Specialist',
+  SYSTEM_ADMIN = 'System Admin',
+  LEGAL_POLICY_ADMIN = 'Legal & Policy Admin',
+  RECRUITER = 'Recruiter',
+  FINANCE_STAFF = 'Finance Staff',
+  JOB_CANDIDATE = 'Job Candidate',
+  HR_ADMIN = 'HR Admin',
+  Payroll_MANAGER = 'Payroll Manager',
+  }
+  

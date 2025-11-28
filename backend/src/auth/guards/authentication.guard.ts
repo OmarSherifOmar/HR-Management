@@ -1,43 +1,63 @@
 import {
+  Injectable,
   CanActivate,
   ExecutionContext,
-  Injectable,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
-export class AuthenticationGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+export class AuthGuard implements CanActivate {
+  constructor(
+    private reflector: Reflector,
+    private jwtService: JwtService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    // Check if route is marked as public
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
+    if (isPublic) return true;
 
-    if (isPublic) {
-      return true;
+    const req = context.switchToHttp().getRequest();
+    
+    // Extract token from cookie or Authorization header
+    const token = req.cookies?.token || req.headers['authorization']?.split(' ')[1];
+    
+    if (!token) {
+      throw new UnauthorizedException('Authentication token missing');
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
-
-    if (!user) {
-      throw new UnauthorizedException('Authentication required. Please log in.');
+    try {
+      const payload = await this.jwtService.verifyAsync(token);
+      req['user'] = payload; // Attach decoded payload to request
+    } catch (err) {
+      throw new UnauthorizedException('Invalid or expired token');
     }
 
-    // Validate user session/token is still valid
-    if (user.isBlocked) {
-      throw new UnauthorizedException('Your account has been blocked.');
-    }
+    // Check roles if required
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
-    if (user.sessionExpired) {
-      throw new UnauthorizedException('Your session has expired. Please log in again.');
-    }
+    if (!requiredRoles || requiredRoles.length === 0) return true;
 
+    const user = req['user'];
+    const userRoles: string[] = Array.isArray(user.roles)
+      ? user.roles
+      : user.role
+      ? [user.role]
+      : [];
+
+    const allowed = userRoles.some((r) => requiredRoles.includes(r));
+    if (!allowed) throw new ForbiddenException('User does not have required role(s)');
+    
     return true;
   }
 }
