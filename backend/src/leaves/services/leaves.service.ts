@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { LeavePolicy, LeavePolicyDocument } from './models/leave-policy.schema';
-import { LeaveType, LeaveTypeDocument } from './models/leave-type.schema';
-import { LeaveCategory, LeaveCategoryDocument } from './models/leave-category.schema';
-import { Calendar, CalendarDocument } from './models/calendar.schema';
+import { LeavePolicy, LeavePolicyDocument } from '../models/leave-policy.schema';
+import { LeaveType, LeaveTypeDocument } from '../models/leave-type.schema';
+import { LeaveCategory, LeaveCategoryDocument } from '../models/leave-category.schema';
+import { Calendar, CalendarDocument } from '../models/calendar.schema';
 import {
   CreateLeavePolicyDto,
   UpdateLeavePolicyDto,
@@ -14,7 +14,7 @@ import {
   UpdateLeaveCategoryDto,
   CreateHolidayDto,
   UpdateHolidayDto,
-} from './dto/leave-config.dto';
+} from '../dto/leave-config.dto';
 
 @Injectable()
 export class LeavesService {

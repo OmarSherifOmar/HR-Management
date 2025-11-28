@@ -1,6 +1,6 @@
-import { Injectable, NestMiddleware, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import type { AuthService } from '../auth.service.js';
+import { AuthService } from '../auth.service.js';
 
 // Extend Express Request to include user
 declare global {

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { LeavesController } from './leaves.controller';
-import { LeavesService } from './leaves.service';
+import { LeavesController } from './controllers/leaves.controller';
+import { LeavesService } from './services/leaves.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LeaveType, LeaveTypeSchema } from './models/leave-type.schema';
 import { LeaveRequest, LeaveRequestSchema } from './models/leave-request.schema';

@@ -8,8 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { LeavesService } from './leaves.service';
-import { AuthenticationGuard, AuthorizationGuard, Roles, UserRole } from '../auth';
+import { LeavesService } from '../services/leaves.service';
 import {
   CreateLeavePolicyDto,
   UpdateLeavePolicyDto,
@@ -19,11 +18,9 @@ import {
   UpdateLeaveCategoryDto,
   CreateHolidayDto,
   UpdateHolidayDto,
-} from './dto/leave-config.dto';
+} from '../dto/leave-config.dto';
 
 @Controller('leaves')
-@UseGuards(AuthenticationGuard, AuthorizationGuard)
-@Roles(UserRole.HR_ADMIN, UserRole.ADMIN)
 export class LeavesController {
   constructor(private readonly leavesService: LeavesService) {}
 
