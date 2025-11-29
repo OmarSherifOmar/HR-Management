@@ -25,7 +25,7 @@ export class CalendarController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('year/:year')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async createCalendar(@Param('year') year: string) {
     return this.calendarService.createCalendar(parseInt(year, 10));
   }
@@ -41,7 +41,7 @@ export class CalendarController {
   }
 
   @Delete('year/:year')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   @HttpCode(HttpStatus.OK)
   async deleteCalendar(@Param('year') year: string) {
     return this.calendarService.deleteCalendar(parseInt(year, 10));
@@ -57,7 +57,7 @@ export class CalendarController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('year/:year/holidays')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async addHoliday(
     @Param('year') year: string,
     @Body() body: { from: Date; to: Date; reason: string },
@@ -71,7 +71,7 @@ export class CalendarController {
   }
 
   @Put('year/:year/holidays/:index')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async updateHoliday(
     @Param('year') year: string,
     @Param('index') index: string,
@@ -81,7 +81,7 @@ export class CalendarController {
   }
 
   @Delete('year/:year/holidays/:index')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   @HttpCode(HttpStatus.OK)
   async removeHoliday(
     @Param('year') year: string,
@@ -91,7 +91,7 @@ export class CalendarController {
   }
 
   @Post('year/:year/holidays/bulk')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async bulkAddHolidays(
     @Param('year') year: string,
     @Body() body: { holidays: { from: Date; to: Date; reason: string }[] },
@@ -104,7 +104,7 @@ export class CalendarController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('year/:year/blocked-periods')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async addBlockedPeriod(
     @Param('year') year: string,
     @Body() body: { from: Date; to: Date; reason: string },
@@ -118,7 +118,7 @@ export class CalendarController {
   }
 
   @Put('year/:year/blocked-periods/:index')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async updateBlockedPeriod(
     @Param('year') year: string,
     @Param('index') index: string,
@@ -128,7 +128,7 @@ export class CalendarController {
   }
 
   @Delete('year/:year/blocked-periods/:index')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   @HttpCode(HttpStatus.OK)
   async removeBlockedPeriod(
     @Param('year') year: string,

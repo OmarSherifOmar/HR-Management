@@ -34,7 +34,7 @@ export class LeaveYearConfigController {
   // ─────────────────────────────────────────────────────────────
 
   @Put()
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async updateConfig(@Body() body: Partial<LeaveYearConfig>) {
     return this.leaveYearConfigService.updateConfig(body);
   }
@@ -44,7 +44,7 @@ export class LeaveYearConfigController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('reset-to-default')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async resetToDefault() {
     return this.leaveYearConfigService.resetToDefault();
   }
@@ -98,7 +98,7 @@ export class LeaveYearConfigController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('reset/employee/:employeeId')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async executeYearEndReset(
     @Param('employeeId') employeeId: string,
     @Body() body?: { hireDate?: string },
@@ -112,7 +112,7 @@ export class LeaveYearConfigController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('reset/bulk')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async executeBulkYearEndReset() {
     return this.leaveYearConfigService.executeBulkYearEndReset();
   }
@@ -132,7 +132,7 @@ export class LeaveYearConfigController {
   // ─────────────────────────────────────────────────────────────
 
   @Put('employee/:employeeId/leave-type/:leaveTypeId/reset-date')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async setEmployeeResetDate(
     @Param('employeeId') employeeId: string,
     @Param('leaveTypeId') leaveTypeId: string,

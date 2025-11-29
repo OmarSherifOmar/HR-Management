@@ -57,6 +57,12 @@ export class CalendarService {
       throw new BadRequestException('from date must be before or equal to to date');
     }
 
+    // Check for duplicate holiday
+    const isDuplicate = this.isHolidayDuplicate(calendar.holidays, holiday);
+    if (isDuplicate) {
+      throw new BadRequestException(`Holiday already exists: ${holiday.reason} (${holiday.from} - ${holiday.to})`);
+    }
+
     calendar.holidays.push(holiday);
     await calendar.save();
     return calendar;
@@ -109,11 +115,25 @@ export class CalendarService {
     const calendar = await this.calendarModel.findOne({ year }).exec();
     if (!calendar) throw new NotFoundException(`Calendar for year ${year} not found`);
 
+    const addedHolidays: { from: Date; to: Date; reason: string }[] = [];
+    const skippedHolidays: string[] = [];
+
     for (const h of holidays) {
       if (new Date(h.from) > new Date(h.to)) {
         throw new BadRequestException(`Invalid holiday: from date must be before or equal to to date for "${h.reason}"`);
       }
+
+      // Check for duplicate in existing holidays and newly added ones
+      const isDuplicateExisting = this.isHolidayDuplicate(calendar.holidays, h);
+      const isDuplicateNew = this.isHolidayDuplicate(addedHolidays, h);
+
+      if (isDuplicateExisting || isDuplicateNew) {
+        skippedHolidays.push(h.reason);
+        continue;
+      }
+
       calendar.holidays.push(h);
+      addedHolidays.push(h);
     }
 
     await calendar.save();
@@ -134,6 +154,12 @@ export class CalendarService {
 
     const calendar = await this.calendarModel.findOne({ year }).exec();
     if (!calendar) throw new NotFoundException(`Calendar for year ${year} not found`);
+
+    // Check for duplicate blocked period
+    const isDuplicate = this.isBlockedPeriodDuplicate(calendar.blockedPeriods, period);
+    if (isDuplicate) {
+      throw new BadRequestException(`Blocked period already exists: ${period.reason} (${period.from} - ${period.to})`);
+    }
 
     calendar.blockedPeriods.push(period);
     await calendar.save();
@@ -272,5 +298,44 @@ export class CalendarService {
       totalHolidayDays,
       totalBlockedDays,
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // HELPER METHODS: Duplicate Detection
+  // ─────────────────────────────────────────────────────────────
+
+  private isSameDateRange(
+    date1From: Date,
+    date1To: Date,
+    date2From: Date,
+    date2To: Date,
+  ): boolean {
+    const from1 = new Date(date1From).toISOString().split('T')[0];
+    const to1 = new Date(date1To).toISOString().split('T')[0];
+    const from2 = new Date(date2From).toISOString().split('T')[0];
+    const to2 = new Date(date2To).toISOString().split('T')[0];
+    return from1 === from2 && to1 === to2;
+  }
+
+  private isHolidayDuplicate(
+    existingHolidays: { from: Date; to: Date; reason: string }[],
+    newHoliday: { from: Date; to: Date; reason: string },
+  ): boolean {
+    return existingHolidays.some(
+      (h) =>
+        this.isSameDateRange(h.from, h.to, newHoliday.from, newHoliday.to) ||
+        h.reason.toLowerCase() === newHoliday.reason.toLowerCase(),
+    );
+  }
+
+  private isBlockedPeriodDuplicate(
+    existingPeriods: { from: Date; to: Date; reason: string }[],
+    newPeriod: { from: Date; to: Date; reason: string },
+  ): boolean {
+    return existingPeriods.some(
+      (bp) =>
+        this.isSameDateRange(bp.from, bp.to, newPeriod.from, newPeriod.to) ||
+        bp.reason.toLowerCase() === newPeriod.reason.toLowerCase(),
+    );
   }
 }

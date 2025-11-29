@@ -24,7 +24,7 @@ export class SpecialAbsenceController {
   // ─────────────────────────────────────────────────────────────
 
   @Post()
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async createSpecialAbsenceType(
     @Body()
     body: {
@@ -43,7 +43,7 @@ export class SpecialAbsenceController {
   // ─────────────────────────────────────────────────────────────
 
   @Post('from-template')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async createFromTemplate(
     @Body()
     body: {
@@ -91,7 +91,7 @@ export class SpecialAbsenceController {
   // ─────────────────────────────────────────────────────────────
 
   @Put(':leaveTypeId/rule')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   async updateSpecialAbsenceRule(
     @Param('leaveTypeId') leaveTypeId: string,
     @Body() rule: Partial<SpecialAbsenceRule>,
@@ -104,7 +104,7 @@ export class SpecialAbsenceController {
   // ─────────────────────────────────────────────────────────────
 
   @Delete(':leaveTypeId')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN)
   @HttpCode(HttpStatus.OK)
   async deleteSpecialAbsenceType(@Param('leaveTypeId') leaveTypeId: string) {
     return this.specialAbsenceService.deleteSpecialAbsenceType(leaveTypeId);
