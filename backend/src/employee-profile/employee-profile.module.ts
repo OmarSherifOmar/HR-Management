@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { EmployeeProfileController } from './employee-profile.controller';
-import { EmployeeProfileService } from './employee-profile.service';
+import { EmployeeController } from './employee-profile.controller';
+import { EmployeeService } from './employee-profile.service';
 import { Candidate, CandidateSchema } from './models/candidate.schema';
 import {
   EmployeeProfile,
@@ -33,7 +33,13 @@ import {
       { name: EmployeeQualification.name, schema: EmployeeQualificationSchema },
     ]),
   ],
-  controllers: [EmployeeProfileController],
-  providers: [EmployeeProfileService],
+  controllers: [EmployeeController],
+  providers: [EmployeeService],
+    exports: [EmployeeService], 
+
 })
-export class EmployeeProfileModule {}
+export class EmployeeProfileModule {
+   constructor() {
+    console.log('EmployeeProfileModule loaded');
+  }
+}
