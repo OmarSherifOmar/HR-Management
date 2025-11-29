@@ -1,5 +1,6 @@
 export enum ClaimStatus {
     UNDER_REVIEW = 'under review',
+    PENDING_MANAGER_APPROVAL = 'pending payroll Manager approval',
     APPROVED = 'approved',
     REJECTED = 'rejected'
 }
