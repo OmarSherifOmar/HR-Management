@@ -1,5 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
+
+export interface HolidayPeriod {
+  from: Date;
+  to: Date;
+  reason: string;
+}
+
+export interface BlockedPeriod {
+  from: Date;
+  to: Date;
+  reason: string;
+}
 
 export type CalendarDocument = HydratedDocument<Calendar>;
 
@@ -9,16 +21,16 @@ export class Calendar {
   year: number;
 
   @Prop({
-    type: [{ type: Types.ObjectId, ref: 'Holiday' }],
+    type: [{ from: Date, to: Date, reason: String }],
     default: [],
   })
-  holidays: Types.ObjectId[];
-
+  holidays: HolidayPeriod[];
+  
   @Prop({
     type: [{ from: Date, to: Date, reason: String }],
     default: [],
   })
-  blockedPeriods: { from: Date; to: Date; reason: string }[];
+  blockedPeriods: BlockedPeriod[];
 }
 
 export const CalendarSchema = SchemaFactory.createForClass(Calendar);
