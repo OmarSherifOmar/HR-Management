@@ -1,32 +1,35 @@
-# compiled output
-/dist
-/node_modules
-/build
+# macOS
+.DS_Store
+**/.DS_Store
 
-# Logs
-logs
-*.log
+# Node
+node_modules/
+dist/
+build/
+out/
+package-lock.json
 npm-debug.log*
-pnpm-debug.log*
 yarn-debug.log*
-yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
-# OS
-.DS_Store
+# Environment variables
+.env
+.env.local
+.env.*.local
 
-# Tests
-/coverage
-/.nyc_output
+# Logs
+logs/
+*.log
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Test coverage
+coverage/
+.nyc_output/
+
+# Cache and temp
+.cache/
+tmp/
+temp/
 
 # IDE - VSCode
 .vscode/*
@@ -35,22 +38,8 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# IDE - JetBrains (optional)
+.idea/
 
-# temp directory
-.temp
-.tmp
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Diagnostic reports (https://nodejs.org/api/report.html)
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+# OS metadata
+Thumbs.db
