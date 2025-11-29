@@ -5,17 +5,18 @@ import { AppService } from './app.service';
 import { TimeManagementModule } from './time-management/time-management.module';
 import { RecruitmentModule } from './recruitment/recruitment.module';
 import { LeavesModule } from './leaves/leaves.module';
-
 import { PayrollTrackingModule } from './payroll-tracking/payroll-tracking.module';
 import { EmployeeProfileModule } from './employee-profile/employee-profile.module';
 import { OrganizationStructureModule } from './organization-structure/organization-structure.module';
 import { PerformanceModule } from './performance/performance.module';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './auth/guards/authentication.guard';
+import { authorizationGuard } from './auth/guards/authorization.guard';
 import { PayrollConfigurationModule } from './payroll-configuration/payroll-configuration.module';
 import { PayrollExecutionModule } from './payroll-execution/payroll-execution.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModuleOptions } from '@nestjs/mongoose';
-// import { AuthModule } from './auth/auth.module';
-
+import { AuthModule } from './auth/auth.module';  
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true,
@@ -30,26 +31,10 @@ import { MongooseModuleOptions } from '@nestjs/mongoose';
         if (!uri) {
           throw new Error('MONGO_URI is not defined in environment');
         }
-        // Log minimal connection info (mask credentials)
-        try {
-          const masked = uri.replace(/:\/\/.+?:.+?@/, '://****:****@');
-          // eslint-disable-next-line no-console
-          console.log('MongoDB connecting to', masked);
-        } catch {}
-
         return ({
           uri,
           useNewUrlParser: true,
           useUnifiedTopology: true,
-          connectionFactory: (connection) => {
-            // eslint-disable-next-line no-console
-            connection.on('connected', () => console.log('MongoDB connected:', connection.name));
-            // eslint-disable-next-line no-console
-            connection.on('error', (err) => console.error('MongoDB connection error:', err?.message ?? err));
-            // eslint-disable-next-line no-console
-            connection.on('disconnected', () => console.warn('MongoDB disconnected'));
-            return connection;
-          },
         } as unknown) as MongooseModuleOptions;
       },
     }),
@@ -62,8 +47,13 @@ import { MongooseModuleOptions } from '@nestjs/mongoose';
     EmployeeProfileModule,
     OrganizationStructureModule,
     PerformanceModule,
+    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+   providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: authorizationGuard },
+  ],
 })
 export class AppModule {}
