@@ -1,0 +1,510 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { LeaveEntitlement, LeaveEntitlementDocument } from '../models/leave-entitlement.schema';
+import { LeavePolicy, LeavePolicyDocument } from '../models/leave-policy.schema';
+import { LeaveType, LeaveTypeDocument } from '../models/leave-type.schema';
+import { LeaveAdjustment, LeaveAdjustmentDocument } from '../models/leave-adjustment.schema';
+import { CreateLeaveEntitlementDto } from '../dto/leave-entitlement/create-leave-entitlement.dto';
+import { UpdateLeaveEntitlementDto } from '../dto/leave-entitlement/update-leave-entitlement.dto';
+import { EmployeeService } from '../../employee-profile/employee-profile.service';
+import { AccrualMethod } from '../enums/accrual-method.enum';
+import { RoundingRule } from '../enums/rounding-rule.enum';
+
+/**
+ * Leave Entitlement Service
+ * 
+ * User Story: As an HR Admin, I want to update entitlement calculations and 
+ * scheduling logic so that leave balances are accurately computed and 
+ * scheduling respects the new rules.
+ * 
+ * Input: None (internal system processing)
+ */
+@Injectable()
+export class LeaveEntitlementService {
+  constructor(
+    @InjectModel(LeaveEntitlement.name) private entitlementModel: Model<LeaveEntitlementDocument>,
+    @InjectModel(LeavePolicy.name) private leavePolicyModel: Model<LeavePolicyDocument>,
+    @InjectModel(LeaveType.name) private leaveTypeModel: Model<LeaveTypeDocument>,
+    @InjectModel(LeaveAdjustment.name) private adjustmentModel: Model<LeaveAdjustmentDocument>,
+    private employeeService: EmployeeService,
+  ) {}
+
+  // ==================== ENTITLEMENT CRUD ====================
+
+  /**
+   * Create entitlement for an employee
+   */
+  async createEntitlement(
+    createEntitlementDto: CreateLeaveEntitlementDto,
+  ): Promise<LeaveEntitlementDocument> {
+    // Validate employee exists
+    const employee = await this.employeeService.findById(createEntitlementDto.employeeId);
+    if (!employee) {
+      throw new NotFoundException(
+        `Employee with ID ${createEntitlementDto.employeeId} not found`,
+      );
+    }
+
+    // Validate leave type exists
+    const leaveType = await this.leaveTypeModel.findById(createEntitlementDto.leaveTypeId);
+    if (!leaveType) {
+      throw new NotFoundException(
+        `Leave type with ID ${createEntitlementDto.leaveTypeId} not found`,
+      );
+    }
+
+    // Check if entitlement already exists for this employee + leave type
+    const existing = await this.entitlementModel.findOne({
+      employeeId: new Types.ObjectId(createEntitlementDto.employeeId),
+      leaveTypeId: new Types.ObjectId(createEntitlementDto.leaveTypeId),
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `Entitlement already exists for this employee and leave type. Use update instead.`,
+      );
+    }
+
+    // Get policy for initial calculation
+    const policy = await this.leavePolicyModel.findOne({
+      leaveTypeId: new Types.ObjectId(createEntitlementDto.leaveTypeId),
+    });
+
+    // Calculate initial values based on policy
+    const yearlyEntitlement = createEntitlementDto.yearlyEntitlement ?? policy?.yearlyRate ?? 0;
+    const remaining = yearlyEntitlement - (createEntitlementDto.taken ?? 0);
+
+    const entitlement = new this.entitlementModel({
+      ...createEntitlementDto,
+      employeeId: new Types.ObjectId(createEntitlementDto.employeeId),
+      leaveTypeId: new Types.ObjectId(createEntitlementDto.leaveTypeId),
+      yearlyEntitlement,
+      remaining: createEntitlementDto.remaining ?? remaining,
+      lastAccrualDate: createEntitlementDto.lastAccrualDate ?? new Date(),
+    });
+
+    return entitlement.save();
+  }
+
+  /**
+   * Get all entitlements
+   */
+  async getAllEntitlements(): Promise<LeaveEntitlementDocument[]> {
+    return this.entitlementModel
+      .find()
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .populate('leaveTypeId', 'code name')
+      .exec();
+  }
+
+  /**
+   * Get entitlements by employee
+   */
+  async getEntitlementsByEmployee(employeeId: string): Promise<LeaveEntitlementDocument[]> {
+    return this.entitlementModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .populate('leaveTypeId', 'code name')
+      .exec();
+  }
+
+  /**
+   * Get entitlement by ID
+   */
+  async getEntitlementById(entitlementId: string): Promise<LeaveEntitlementDocument> {
+    const entitlement = await this.entitlementModel
+      .findById(entitlementId)
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .populate('leaveTypeId', 'code name')
+      .exec();
+
+    if (!entitlement) {
+      throw new NotFoundException(`Entitlement with ID ${entitlementId} not found`);
+    }
+    return entitlement;
+  }
+
+  /**
+   * Get specific entitlement by employee and leave type
+   */
+  async getEntitlementByEmployeeAndType(
+    employeeId: string,
+    leaveTypeId: string,
+  ): Promise<LeaveEntitlementDocument> {
+    const entitlement = await this.entitlementModel
+      .findOne({
+        employeeId: new Types.ObjectId(employeeId),
+        leaveTypeId: new Types.ObjectId(leaveTypeId),
+      })
+      .populate('leaveTypeId', 'code name')
+      .exec();
+
+    if (!entitlement) {
+      throw new NotFoundException(
+        `Entitlement not found for employee ${employeeId} and leave type ${leaveTypeId}`,
+      );
+    }
+    return entitlement;
+  }
+
+  /**
+   * Update entitlement
+   */
+  async updateEntitlement(
+    entitlementId: string,
+    updateEntitlementDto: UpdateLeaveEntitlementDto,
+  ): Promise<LeaveEntitlementDocument> {
+    const entitlement = await this.entitlementModel.findById(entitlementId);
+    if (!entitlement) {
+      throw new NotFoundException(`Entitlement with ID ${entitlementId} not found`);
+    }
+
+    Object.assign(entitlement, updateEntitlementDto);
+    
+    // Recalculate remaining if taken or pending changed
+    if (updateEntitlementDto.taken !== undefined || updateEntitlementDto.pending !== undefined) {
+      entitlement.remaining = 
+        entitlement.yearlyEntitlement + 
+        entitlement.carryForward + 
+        entitlement.accruedRounded - 
+        entitlement.taken - 
+        entitlement.pending;
+    }
+
+    return entitlement.save();
+  }
+
+  /**
+   * Delete entitlement
+   */
+  async deleteEntitlement(entitlementId: string): Promise<{ message: string }> {
+    const result = await this.entitlementModel.findByIdAndDelete(entitlementId);
+    if (!result) {
+      throw new NotFoundException(`Entitlement with ID ${entitlementId} not found`);
+    }
+    return { message: 'Entitlement deleted successfully' };
+  }
+
+  // ==================== ENTITLEMENT CALCULATIONS ====================
+
+  /**
+   * Calculate and update entitlement for an employee based on policy rules
+   */
+  async calculateEntitlement(
+    employeeId: string,
+    leaveTypeId: string,
+  ): Promise<LeaveEntitlementDocument> {
+    // Get or create entitlement
+    let entitlement = await this.entitlementModel.findOne({
+      employeeId: new Types.ObjectId(employeeId),
+      leaveTypeId: new Types.ObjectId(leaveTypeId),
+    });
+
+    const policy = await this.leavePolicyModel.findOne({
+      leaveTypeId: new Types.ObjectId(leaveTypeId),
+    });
+
+    if (!policy) {
+      throw new NotFoundException(`No policy found for leave type ${leaveTypeId}`);
+    }
+
+    const employee = await this.employeeService.findById(employeeId);
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${employeeId} not found`);
+    }
+
+    // Calculate tenure in months
+    const hireDate = new Date(employee.dateOfHire);
+    const now = new Date();
+    const tenureMonths = this.calculateMonthsDifference(hireDate, now);
+
+    // Check eligibility based on waiting period
+    if (policy.eligibility?.minTenureMonths && tenureMonths < policy.eligibility.minTenureMonths) {
+      throw new BadRequestException(
+        `Employee does not meet minimum tenure requirement of ${policy.eligibility.minTenureMonths} months`,
+      );
+    }
+
+    if (!entitlement) {
+      // Create new entitlement
+      entitlement = new this.entitlementModel({
+        employeeId: new Types.ObjectId(employeeId),
+        leaveTypeId: new Types.ObjectId(leaveTypeId),
+        yearlyEntitlement: policy.yearlyRate,
+        accruedActual: 0,
+        accruedRounded: 0,
+        carryForward: 0,
+        taken: 0,
+        pending: 0,
+        remaining: 0,
+        lastAccrualDate: new Date(),
+      });
+    }
+
+    // Calculate accrued based on accrual method
+    const accrued = this.calculateAccrual(policy, tenureMonths);
+    
+    // Apply rounding rule
+    const roundedAccrual = this.applyRoundingRule(accrued, policy.roundingRule);
+
+    entitlement.accruedActual = accrued;
+    entitlement.accruedRounded = roundedAccrual;
+    entitlement.yearlyEntitlement = policy.yearlyRate;
+    entitlement.lastAccrualDate = new Date();
+
+    // Calculate remaining balance
+    entitlement.remaining = 
+      entitlement.yearlyEntitlement + 
+      entitlement.carryForward + 
+      entitlement.accruedRounded - 
+      entitlement.taken - 
+      entitlement.pending;
+
+    return entitlement.save();
+  }
+
+  /**
+   * Run accrual calculation for all employees (scheduled job)
+   */
+  async runMonthlyAccrual(): Promise<{ processed: number; errors: string[] }> {
+    const entitlements = await this.entitlementModel.find().exec();
+    let processed = 0;
+    const errors: string[] = [];
+
+    for (const entitlement of entitlements) {
+      try {
+        const policy = await this.leavePolicyModel.findOne({
+          leaveTypeId: entitlement.leaveTypeId,
+        });
+
+        if (!policy) continue;
+
+        // Calculate monthly accrual
+        if (policy.accrualMethod === AccrualMethod.MONTHLY) {
+          const accrualAmount = policy.monthlyRate;
+          entitlement.accruedActual += accrualAmount;
+          entitlement.accruedRounded = this.applyRoundingRule(
+            entitlement.accruedActual,
+            policy.roundingRule,
+          );
+          entitlement.remaining = 
+            entitlement.yearlyEntitlement + 
+            entitlement.carryForward + 
+            entitlement.accruedRounded - 
+            entitlement.taken - 
+            entitlement.pending;
+          entitlement.lastAccrualDate = new Date();
+          await entitlement.save();
+          processed++;
+        }
+      } catch (error) {
+        errors.push(`Error processing entitlement ${entitlement._id}: ${error.message}`);
+      }
+    }
+
+    return { processed, errors };
+  }
+
+  /**
+   * Process year-end carry-forward for all employees
+   */
+  async processYearEndCarryForward(): Promise<{ processed: number; errors: string[] }> {
+    const entitlements = await this.entitlementModel.find().exec();
+    let processed = 0;
+    const errors: string[] = [];
+
+    for (const entitlement of entitlements) {
+      try {
+        const policy = await this.leavePolicyModel.findOne({
+          leaveTypeId: entitlement.leaveTypeId,
+        });
+
+        if (!policy) continue;
+
+        if (policy.carryForwardAllowed) {
+          // Calculate carry-forward amount
+          let carryForwardAmount = entitlement.remaining;
+          
+          // Apply max carry-forward limit
+          if (policy.maxCarryForward && carryForwardAmount > policy.maxCarryForward) {
+            carryForwardAmount = policy.maxCarryForward;
+          }
+
+          // Set expiry date if configured
+          const nextResetDate = policy.expiryAfterMonths
+            ? new Date(new Date().setMonth(new Date().getMonth() + policy.expiryAfterMonths))
+            : undefined;
+
+          // Reset for new year
+          entitlement.carryForward = carryForwardAmount;
+          entitlement.accruedActual = 0;
+          entitlement.accruedRounded = 0;
+          entitlement.taken = 0;
+          entitlement.pending = 0;
+          entitlement.remaining = entitlement.yearlyEntitlement + carryForwardAmount;
+          entitlement.nextResetDate = nextResetDate;
+          
+          await entitlement.save();
+          processed++;
+        } else {
+          // No carry-forward - reset to zero
+          entitlement.carryForward = 0;
+          entitlement.accruedActual = 0;
+          entitlement.accruedRounded = 0;
+          entitlement.taken = 0;
+          entitlement.pending = 0;
+          entitlement.remaining = entitlement.yearlyEntitlement;
+          
+          await entitlement.save();
+          processed++;
+        }
+      } catch (error) {
+        errors.push(`Error processing entitlement ${entitlement._id}: ${error.message}`);
+      }
+    }
+
+    return { processed, errors };
+  }
+
+  /**
+   * Process expired carry-forward balances
+   */
+  async processExpiredCarryForward(): Promise<{ processed: number; expired: number }> {
+    const now = new Date();
+    const expiredEntitlements = await this.entitlementModel
+      .find({
+        nextResetDate: { $lte: now },
+        carryForward: { $gt: 0 },
+      })
+      .exec();
+
+    let processed = 0;
+    let expired = 0;
+
+    for (const entitlement of expiredEntitlements) {
+      const expiredAmount = entitlement.carryForward;
+      entitlement.carryForward = 0;
+      entitlement.remaining -= expiredAmount;
+      entitlement.nextResetDate = undefined;
+      await entitlement.save();
+      
+      processed++;
+      expired += expiredAmount;
+    }
+
+    return { processed, expired };
+  }
+
+  /**
+   * Get entitlement balance summary for an employee
+   */
+  async getEmployeeBalanceSummary(employeeId: string): Promise<{
+    employeeId: string;
+    balances: {
+      leaveTypeId: string;
+      leaveTypeName: string;
+      leaveTypeCode: string;
+      yearlyEntitlement: number;
+      accrued: number;
+      carryForward: number;
+      taken: number;
+      pending: number;
+      remaining: number;
+    }[];
+  }> {
+    const entitlements = await this.entitlementModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .populate('leaveTypeId', 'code name')
+      .exec();
+
+    const balances = entitlements.map((e) => {
+      const leaveType = e.leaveTypeId as any;
+      return {
+        leaveTypeId: leaveType._id?.toString() || e.leaveTypeId.toString(),
+        leaveTypeName: leaveType.name || 'Unknown',
+        leaveTypeCode: leaveType.code || 'N/A',
+        yearlyEntitlement: e.yearlyEntitlement,
+        accrued: e.accruedRounded,
+        carryForward: e.carryForward,
+        taken: e.taken,
+        pending: e.pending,
+        remaining: e.remaining,
+      };
+    });
+
+    return {
+      employeeId,
+      balances,
+    };
+  }
+
+  // ==================== HELPER METHODS ====================
+
+  private calculateMonthsDifference(startDate: Date, endDate: Date): number {
+    const years = endDate.getFullYear() - startDate.getFullYear();
+    const months = endDate.getMonth() - startDate.getMonth();
+    return years * 12 + months;
+  }
+
+  private calculateAccrual(policy: LeavePolicyDocument, tenureMonths: number): number {
+    switch (policy.accrualMethod) {
+      case AccrualMethod.MONTHLY:
+        return policy.monthlyRate * tenureMonths;
+      case AccrualMethod.YEARLY:
+        return policy.yearlyRate * Math.floor(tenureMonths / 12);
+      case AccrualMethod.PER_TERM:
+        // Assuming term = 6 months
+        return policy.yearlyRate * Math.floor(tenureMonths / 6) * 0.5;
+      default:
+        return 0;
+    }
+  }
+
+  private applyRoundingRule(value: number, rule: RoundingRule): number {
+    switch (rule) {
+      case RoundingRule.ROUND:
+        return Math.round(value);
+      case RoundingRule.ROUND_UP:
+        return Math.ceil(value);
+      case RoundingRule.ROUND_DOWN:
+        return Math.floor(value);
+      case RoundingRule.NONE:
+      default:
+        return value;
+    }
+  }
+
+  // ==================== SCHEDULED JOBS ====================
+
+  /**
+   * Monthly accrual job - runs on the 1st of each month at midnight
+   */
+  // Uncomment to enable scheduled job:
+  // @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+  async scheduledMonthlyAccrual(): Promise<void> {
+    console.log('Running scheduled monthly accrual...');
+    const result = await this.runMonthlyAccrual();
+    console.log(`Monthly accrual completed. Processed: ${result.processed}, Errors: ${result.errors.length}`);
+  }
+
+  /**
+   * Year-end carry-forward job - runs on January 1st at midnight
+   */
+  // Uncomment to enable scheduled job:
+  // @Cron('0 0 1 1 *') // January 1st at midnight
+  async scheduledYearEndCarryForward(): Promise<void> {
+    console.log('Running scheduled year-end carry-forward...');
+    const result = await this.processYearEndCarryForward();
+    console.log(`Year-end carry-forward completed. Processed: ${result.processed}`);
+  }
+
+  /**
+   * Daily expiry check - runs every day at midnight
+   */
+  // Uncomment to enable scheduled job:
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async scheduledExpiryCheck(): Promise<void> {
+    console.log('Running scheduled expiry check...');
+    const result = await this.processExpiredCarryForward();
+    console.log(`Expiry check completed. Processed: ${result.processed}, Expired days: ${result.expired}`);
+  }
+}
