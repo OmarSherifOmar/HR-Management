@@ -28,7 +28,9 @@ export class ApplicationStatusHistoryController {
   }
 
   @Get('application/:applicationId')
-  findByApplication(@Param('applicationId') applicationId: string) {
+  findByApplication(
+    @Param('applicationId') applicationId: string,
+  ) {
     return this.historyService.findByApplication(applicationId);
   }
 
