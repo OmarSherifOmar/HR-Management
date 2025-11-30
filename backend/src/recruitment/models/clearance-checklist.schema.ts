@@ -16,7 +16,7 @@ export class ClearanceChecklist {
       department: String,
       status: { type: String, enum: ApprovalStatus, default: ApprovalStatus.PENDING },
       comments: String,
-      updatedBy: { type: Types.ObjectId, ref: 'User' },
+      updatedBy: { type: Types.ObjectId, ref: 'EmployeeProfile' },
       updatedAt: Date,
     }
   ])

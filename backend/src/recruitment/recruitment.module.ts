@@ -20,6 +20,16 @@ import { ClearanceChecklist, ClearanceChecklistSchema } from './models/clearance
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { ApplicationStatusHistoryService } from './services/application-status-history.service';
 import { ApplicationStatusHistoryController } from './controllers/application-status-history.controller';
+import { ApplicationController } from './controllers/application.controller';
+import { ApplicationService } from './services/application.service';
+import { InterviewController } from './controllers/interview.controller';
+import { InterviewService } from './services/interview.service';
+import { JobTemplateController } from './controllers/job-template.controller';
+import { JobTemplateService } from './services/job-template.service';
+import { OfferService } from './services/offer.service';
+import { OfferController } from './controllers/offer.controller';
+
+
 
 @Module({
   imports: [
@@ -44,16 +54,28 @@ import { ApplicationStatusHistoryController } from './controllers/application-st
   controllers: [
     RecruitmentController,
     ApplicationStatusHistoryController,
+    ApplicationController,
+    InterviewController,
+    JobTemplateController,
+    OfferController
   ],
 
   providers: [
     RecruitmentService,
     ApplicationStatusHistoryService,
+    ApplicationService,
+    InterviewService,
+    JobTemplateService,
+    OfferService
   ],
 
   exports: [
     RecruitmentService,
     ApplicationStatusHistoryService,
+    ApplicationService,
+    InterviewService,
+    JobTemplateService,
+    OfferService
   ],
 })
 export class RecruitmentModule {}
