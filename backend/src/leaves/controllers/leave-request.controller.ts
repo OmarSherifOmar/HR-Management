@@ -19,6 +19,7 @@ import { CreateLeaveRequestDto } from '../dto/leave-request/create-leave-request
 import { UpdateLeaveRequestDto } from '../dto/leave-request/update-leave-request.dto';
 import { ManagerDecisionDto } from '../dto/leave-request/manager-decision.dto';
 import { HROverrideDto } from '../dto/leave-request/hr-override.dto';
+import { BulkRequestActionDto, BulkOverrideActionDto } from '../dto/leave-request/bulk-request-action.dto';
 import { LeaveStatus } from '../enums/leave-status.enum';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
@@ -94,7 +95,6 @@ export class LeaveRequestController {
   }
 
   // ==================== ATTACH DOCUMENTS ====================
-
   /**
    * PATCH /leave-requests/:id/attachment
    * 
@@ -504,6 +504,108 @@ export class LeaveRequestController {
       success: true,
       message: `Leave request ${overrideDto.action === 'approve' ? 'approved' : 'rejected'} by HR override`,
       data: leaveRequest,
+    };
+  }
+
+  // ==================== BULK OPERATIONS (REQ-027) ====================
+
+  /**
+   * POST /leave-requests/hr/bulk-finalize
+   * 
+   * REQ-027: Bulk finalize (approve) multiple leave requests
+   * Processes multiple requests at once for efficient batch operations.
+   * 
+   * @param bulkDto - Array of request IDs and optional comments
+   * @param req - Request object containing authenticated HR manager
+   * @returns Summary of successful and failed operations
+   */
+  @Post('hr/bulk-finalize')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_MANAGER)
+  async bulkFinalizeRequests(
+    @Body() bulkDto: BulkRequestActionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const hrManagerId = getUserId(req);
+
+    const result = await this.leaveRequestService.bulkFinalizeRequests(
+      bulkDto.requestIds,
+      hrManagerId,
+      bulkDto.comments,
+    );
+
+    return {
+      success: result.failed === 0,
+      message: `Processed ${result.total} requests: ${result.successful} approved, ${result.failed} failed`,
+      data: result,
+    };
+  }
+
+  /**
+   * POST /leave-requests/hr/bulk-reject
+   * 
+   * REQ-027: Bulk reject multiple leave requests
+   * Processes multiple requests at once for efficient batch operations.
+   * 
+   * @param bulkDto - Array of request IDs and optional comments
+   * @param req - Request object containing authenticated HR manager
+   * @returns Summary of successful and failed operations
+   */
+  @Post('hr/bulk-reject')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_MANAGER)
+  async bulkRejectRequests(
+    @Body() bulkDto: BulkRequestActionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const hrManagerId = getUserId(req);
+
+    const result = await this.leaveRequestService.bulkRejectRequests(
+      bulkDto.requestIds,
+      hrManagerId,
+      bulkDto.comments,
+    );
+
+    return {
+      success: result.failed === 0,
+      message: `Processed ${result.total} requests: ${result.successful} rejected, ${result.failed} failed`,
+      data: result,
+    };
+  }
+
+  /**
+   * POST /leave-requests/hr/bulk-override
+   * 
+   * REQ-027: Bulk override multiple leave requests
+   * Allows HR to approve or reject multiple requests with override capability.
+   * 
+   * @param bulkDto - Array of request IDs, action, and options
+   * @param req - Request object containing authenticated HR manager
+   * @returns Summary of successful and failed operations
+   */
+  @Post('hr/bulk-override')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_MANAGER)
+  async bulkOverrideRequests(
+    @Body() bulkDto: BulkOverrideActionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const hrManagerId = getUserId(req);
+
+    const result = await this.leaveRequestService.bulkOverrideRequests(
+      bulkDto.requestIds,
+      hrManagerId,
+      bulkDto.action,
+      {
+        comments: bulkDto.comments,
+        allowNegativeBalance: bulkDto.allowNegativeBalance,
+      },
+    );
+
+    return {
+      success: result.failed === 0,
+      message: `Processed ${result.total} requests: ${result.successful} ${bulkDto.action === 'approve' ? 'approved' : 'rejected'}, ${result.failed} failed`,
+      data: result,
     };
   }
 }

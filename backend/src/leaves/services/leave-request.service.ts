@@ -919,7 +919,152 @@ export class LeaveRequestService {
     return savedRequest;
   }
 
-  
+  // ==================== BULK OPERATIONS (REQ-027) ====================
+
+  /**
+   * REQ-027: Bulk finalize (approve) multiple leave requests
+   * 
+   * Processes multiple requests at once, returning results for each.
+   * Continues processing even if individual requests fail.
+   */
+  async bulkFinalizeRequests(
+    requestIds: string[],
+    hrManagerId: string,
+    comments?: string,
+  ): Promise<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: { requestId: string; success: boolean; message?: string; error?: string }[];
+  }> {
+    const results: { requestId: string; success: boolean; message?: string; error?: string }[] = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const requestId of requestIds) {
+      try {
+        await this.hrFinalizeRequest(requestId, hrManagerId, comments);
+        results.push({
+          requestId,
+          success: true,
+          message: 'Leave request finalized successfully',
+        });
+        successful++;
+      } catch (error) {
+        results.push({
+          requestId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+        failed++;
+      }
+    }
+
+    return {
+      total: requestIds.length,
+      successful,
+      failed,
+      results,
+    };
+  }
+
+  /**
+   * REQ-027: Bulk reject multiple leave requests
+   * 
+   * Processes multiple requests at once, returning results for each.
+   * Continues processing even if individual requests fail.
+   */
+  async bulkRejectRequests(
+    requestIds: string[],
+    hrManagerId: string,
+    comments?: string,
+  ): Promise<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: { requestId: string; success: boolean; message?: string; error?: string }[];
+  }> {
+    const results: { requestId: string; success: boolean; message?: string; error?: string }[] = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const requestId of requestIds) {
+      try {
+        await this.hrRejectRequest(requestId, hrManagerId, comments);
+        results.push({
+          requestId,
+          success: true,
+          message: 'Leave request rejected successfully',
+        });
+        successful++;
+      } catch (error) {
+        results.push({
+          requestId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+        failed++;
+      }
+    }
+
+    return {
+      total: requestIds.length,
+      successful,
+      failed,
+      results,
+    };
+  }
+
+  /**
+   * REQ-027: Bulk override multiple leave requests
+   * 
+   * Processes multiple requests at once with the same action (approve/reject).
+   * Continues processing even if individual requests fail.
+   */
+  async bulkOverrideRequests(
+    requestIds: string[],
+    hrManagerId: string,
+    action: 'approve' | 'reject',
+    options?: {
+      comments?: string;
+      allowNegativeBalance?: boolean;
+    },
+  ): Promise<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: { requestId: string; success: boolean; message?: string; error?: string }[];
+  }> {
+    const results: { requestId: string; success: boolean; message?: string; error?: string }[] = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const requestId of requestIds) {
+      try {
+        await this.hrOverrideDecision(requestId, hrManagerId, action, options);
+        results.push({
+          requestId,
+          success: true,
+          message: `Leave request ${action === 'approve' ? 'approved' : 'rejected'} via override`,
+        });
+        successful++;
+      } catch (error) {
+        results.push({
+          requestId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+        failed++;
+      }
+    }
+
+    return {
+      total: requestIds.length,
+      successful,
+      failed,
+      results,
+    };
+  }
 
   // ==================== HELPER METHODS ====================
 
