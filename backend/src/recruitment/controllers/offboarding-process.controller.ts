@@ -10,7 +10,7 @@
 import { OffboardingProcessService } from '../services/offboarding-process.service';
 import { CreateOffboardingProcessDto } from '../dtos/create-offboarding-process.dto';
 import { UpdateOffboardingProcessDto } from '../dtos/update-offboarding-process.dto';
-@Controller('recruitment/offboarding-processes')
+@Controller('offboarding-processes')
 export class OffboardingProcessController {
   constructor(
     private readonly offboardingService: OffboardingProcessService,

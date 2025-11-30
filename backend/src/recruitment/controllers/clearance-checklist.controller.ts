@@ -11,7 +11,7 @@ import { ClearanceChecklistService } from '../services/clearance-checklist.servi
 import { CreateClearanceChecklistDto } from '../dtos/create-clearance-checklist.dto';
 import { UpdateDepartmentSignoffDto } from '../dtos/update-department-signoff.dto';
 import { UpdateAssetReturnDto } from '../dtos/update-asset-return.dto';
-@Controller('recruitment/clearance-checklists')
+@Controller('clearance-checklists')
 export class ClearanceChecklistController {
   constructor(
     private readonly checklistService: ClearanceChecklistService,

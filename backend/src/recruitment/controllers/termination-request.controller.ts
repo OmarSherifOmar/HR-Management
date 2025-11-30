@@ -10,7 +10,7 @@
 import { TerminationRequestService } from '../services/termination-request.service';
 import { CreateTerminationRequestDto } from '../dtos/create-termination-request.dto';
 import { UpdateTerminationRequestDto } from '../dtos/update-termination-request.dto';
-@Controller('recruitment/termination-requests')
+@Controller('termination-requests')
 export class TerminationRequestController {
   constructor(
     private readonly terminationService: TerminationRequestService,

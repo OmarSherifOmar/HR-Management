@@ -10,7 +10,7 @@
 import { ResignationRequestService } from '../services/resignation-request.service';
 import { CreateResignationRequestDto } from '../dtos/create-resignation-request.dto';
 import { UpdateResignationRequestDto } from '../dtos/update-resignation-request.dto';
-@Controller('recruitment/resignation-requests')
+@Controller('resignation-requests')
 export class ResignationRequestController {
   constructor(
     private readonly resignationService: ResignationRequestService,
