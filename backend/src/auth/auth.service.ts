@@ -44,10 +44,12 @@ export class AuthService {
       firstName,
       lastName,
       nationalId,
-      password:  dto.password,
+      password: dto.password,
       personalEmail: dto.email,
       employeeNumber,
       dateOfHire,
+      primaryPositionId: new Types.ObjectId(dto.primaryPositionId),
+      supervisorPositionId: dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined,
     });
 
     
