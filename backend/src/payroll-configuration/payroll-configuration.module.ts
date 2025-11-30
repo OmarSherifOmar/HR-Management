@@ -11,6 +11,16 @@ import { signingBonus, signingBonusSchema } from './models/signingBonus.schema';
 import { taxRules, taxRulesSchema } from './models/taxRules.schema';
 import { terminationAndResignationBenefits, terminationAndResignationBenefitsSchema } from './models/terminationAndResignationBenefits';
 import { payGrade } from './models/payGrades.schema';
+import { TaxRulesService } from './services/tax-rules.service';
+import { TaxRulesController } from './controllers/tax-rules.controller';
+import { InsuranceBracketsService } from './services/insurance-brackets.service';
+import { InsuranceBracketsController } from './controllers/insurance-brackets.controller';
+import { CompanyWideSettingsService } from './services/company-wide-settings.service';
+import { CompanyWideSettingsController } from './controllers/company-wide-settings.controller';
+import { BackupService } from './services/backup.service';
+import { BackupController } from './controllers/backup.controller';
+import { ConfigurationApprovalService } from './services/configuration-approval.service';
+import { ConfigurationApprovalsController } from './controllers/configuration-approvals.controller';
 
 @Module({
   imports: [
@@ -26,8 +36,8 @@ import { payGrade } from './models/payGrades.schema';
       { name: payGrade.name, schema: payTypeSchema }
     ]),
   ],
-  controllers: [PayrollConfigurationController],
-  providers: [PayrollConfigurationService],
-  exports:[PayrollConfigurationService]
+  controllers: [PayrollConfigurationController, TaxRulesController, InsuranceBracketsController, CompanyWideSettingsController, BackupController, ConfigurationApprovalsController],
+  providers: [PayrollConfigurationService, TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService],
+  exports:[PayrollConfigurationService, TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService]
 })
 export class PayrollConfigurationModule { }
