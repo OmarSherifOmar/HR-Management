@@ -4,15 +4,21 @@ import { Model, Types } from 'mongoose';
 import { AttendanceCorrectionRequest, AttendanceCorrectionRequestDocument } from '../models/attendance-correction-request.schema';
 import { CorrectionRequestStatus } from '../models/enums';
 import { CorrectionService } from '../services/correction.service';
+import { PolicyService } from '../services/policy.service';
 
 type CorrectionSubmit = { employeeId: string; attendanceRecordId: string; reason?: string };
 type ReviewDto = { status: CorrectionRequestStatus };
+type PolicySubmitDto = { employeeId: string; date: string; punches: { type: 'IN' | 'OUT'; time: Date }[] };
+type ApproveCorrectionDto = { approvedBy: string };
+type RejectCorrectionDto = { approvedBy: string; reason: string };
+type EscalateExceptionsDto = { cutoffDate: string };
 
 @Controller('corrections')
 export class CorrectnessController {
 	constructor(
 		@InjectModel(AttendanceCorrectionRequest.name) private correctionModel: Model<AttendanceCorrectionRequestDocument>,
 		private readonly correctionService: CorrectionService,
+		private readonly policyService: PolicyService
 	) {}
 
 	@Post()
@@ -44,4 +50,26 @@ export class CorrectnessController {
 		if (!req) throw new NotFoundException('Correction request not found');
 		return req;
 	}
+
+	@Post('submit')
+  	async submitPolicyCorrection(@Body() body: PolicySubmitDto) {
+		const date = new Date(body.date);
+		return this.policyService.correctionRequestSubmission(body.employeeId, date, 'Manual correction', body.punches);
+  }
+
+  	@Post(':id/approve')
+	async approve(@Param('id') requestId: string, @Body() body: ApproveCorrectionDto) {
+		return this.policyService.correctionRequestApproval(requestId, body.approvedBy);
+  }
+
+	@Post(':id/reject')
+	async reject(@Param('id') requestId: string, @Body() body: RejectCorrectionDto) {
+		return this.policyService.rejectCorrectionRequest(requestId, body.approvedBy, body.reason);
+  }
+
+  	@Post('exceptions/escalate')
+	async escalate(@Body() body: EscalateExceptionsDto) {
+		const cutoff = new Date(body.cutoffDate);
+		return this.policyService.escalatePendingExceptions(cutoff);
+  }
 }
