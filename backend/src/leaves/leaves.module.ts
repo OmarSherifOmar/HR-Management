@@ -32,6 +32,7 @@ import { LeaveCategory, LeaveCategorySchema } from './models/leave-category.sche
 import { LeaveAdjustment, LeaveAdjustmentSchema } from './models/leave-adjustment.schema';
 import { Calendar, CalendarSchema } from './models/calendar.schema';
 import { Attachment, AttachmentSchema } from './models/attachment.schema';
+import { Holiday, HolidaySchema } from '../time-management/models/holiday.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { TimeManagementModule } from '../time-management/time-management.module';
 import { JwtModule } from '@nestjs/jwt';
@@ -44,7 +45,8 @@ import { JwtModule } from '@nestjs/jwt';
     {name: LeaveCategory.name, schema:LeaveCategorySchema},
     {name: LeaveAdjustment.name, schema:LeaveAdjustmentSchema},
     {name:Calendar.name, schema:CalendarSchema},
-    {name:Attachment.name, schema: AttachmentSchema}
+    {name:Attachment.name, schema: AttachmentSchema},
+    {name:Holiday.name, schema:HolidaySchema}
   ]),EmployeeProfileModule,TimeManagementModule,
   JwtModule.register({
     secret: process.env.JWT_SECRET || 'defaultSecret',

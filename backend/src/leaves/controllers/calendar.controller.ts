@@ -14,6 +14,7 @@ import {
 import { CalendarService } from '../services/calendar.service';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
+import { HolidayType } from '../../time-management/models/enums/index';
 
 @Controller('leaves/calendar')
 @UseGuards(AuthGuard)
@@ -53,14 +54,19 @@ export class CalendarController {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // HOLIDAY ENDPOINTS
+  // HOLIDAY ENDPOINTS (using Holiday model from time-management)
   // ─────────────────────────────────────────────────────────────
 
   @Post('year/:year/holidays')
   @Roles(Role.HR_ADMIN)
   async addHoliday(
     @Param('year') year: string,
-    @Body() body: { from: Date; to: Date; reason: string },
+    @Body() body: { 
+      startDate: Date; 
+      endDate?: Date; 
+      name: string; 
+      type?: HolidayType;
+    },
   ) {
     return this.calendarService.addHoliday(parseInt(year, 10), body);
   }
@@ -70,31 +76,44 @@ export class CalendarController {
     return this.calendarService.getHolidays(parseInt(year, 10));
   }
 
-  @Put('year/:year/holidays/:index')
+  @Put('year/:year/holidays/:holidayId')
   @Roles(Role.HR_ADMIN)
   async updateHoliday(
     @Param('year') year: string,
-    @Param('index') index: string,
-    @Body() body: { from: Date; to: Date; reason: string },
+    @Param('holidayId') holidayId: string,
+    @Body() body: { 
+      startDate?: Date; 
+      endDate?: Date; 
+      name?: string; 
+      type?: HolidayType;
+      active?: boolean;
+    },
   ) {
-    return this.calendarService.updateHoliday(parseInt(year, 10), parseInt(index, 10), body);
+    return this.calendarService.updateHoliday(parseInt(year, 10), holidayId, body);
   }
 
-  @Delete('year/:year/holidays/:index')
+  @Delete('year/:year/holidays/:holidayId')
   @Roles(Role.HR_ADMIN)
   @HttpCode(HttpStatus.OK)
   async removeHoliday(
     @Param('year') year: string,
-    @Param('index') index: string,
+    @Param('holidayId') holidayId: string,
   ) {
-    return this.calendarService.removeHoliday(parseInt(year, 10), parseInt(index, 10));
+    return this.calendarService.removeHoliday(parseInt(year, 10), holidayId);
   }
 
   @Post('year/:year/holidays/bulk')
   @Roles(Role.HR_ADMIN)
   async bulkAddHolidays(
     @Param('year') year: string,
-    @Body() body: { holidays: { from: Date; to: Date; reason: string }[] },
+    @Body() body: { 
+      holidays: { 
+        startDate: Date; 
+        endDate?: Date; 
+        name: string; 
+        type?: HolidayType;
+      }[] 
+    },
   ) {
     return this.calendarService.bulkAddHolidays(parseInt(year, 10), body.holidays);
   }
