@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
-import { PayrollConfigurationController } from './payroll-configuration.controller';
-import { PayrollConfigurationService } from './payroll-configuration.service';
-import { CompanyWideSettings, CompanyWideSettingsSchema } from './models/CompanyWideSettings.schema';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CompanyWideSettings, CompanyWideSettingsSchema } from './models/CompanyWideSettings.schema';
 import { allowance, allowanceSchema } from './models/allowance.schema';
 import { insuranceBrackets, insuranceBracketsSchema } from './models/insuranceBrackets.schema';
 import { payrollPolicies, payrollPoliciesSchema } from './models/payrollPolicies.schema';
@@ -11,6 +9,12 @@ import { signingBonus, signingBonusSchema } from './models/signingBonus.schema';
 import { taxRules, taxRulesSchema } from './models/taxRules.schema';
 import { terminationAndResignationBenefits, terminationAndResignationBenefitsSchema } from './models/terminationAndResignationBenefits';
 import { payGrade } from './models/payGrades.schema';
+import { PayrollPoliciesController } from './controllers/payroll-policies.controller';
+import { PayrollPoliciesService } from './services/payroll-policies.service';
+import { SigningBonusesController } from './controllers/signing-bonuses.controller';
+import { SigningBonusesService } from './services/signing-bonuses.service';
+import { TerminationBenefitsController } from './controllers/termination-benefits.controller';
+import { TerminationBenefitsService } from './services/termination-benefits.service';
 
 @Module({
   imports: [
@@ -26,8 +30,8 @@ import { payGrade } from './models/payGrades.schema';
       { name: payGrade.name, schema: payTypeSchema }
     ]),
   ],
-  controllers: [PayrollConfigurationController],
-  providers: [PayrollConfigurationService],
-  exports:[PayrollConfigurationService]
+  controllers: [PayrollPoliciesController, SigningBonusesController, TerminationBenefitsController],
+  providers: [PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService],
+  exports:[PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService]
 })
 export class PayrollConfigurationModule { }
