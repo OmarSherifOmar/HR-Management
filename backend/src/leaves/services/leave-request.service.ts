@@ -16,6 +16,7 @@ import { UpdateLeaveRequestDto } from '../dto/leave-request/update-leave-request
 import { LeaveStatus } from '../enums/leave-status.enum';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
 import { SystemRole } from '../../employee-profile/enums/employee-profile.enums';
+import { NotificationService } from './notification.service';
 
 /**
  * Leave Request Service
@@ -45,6 +46,7 @@ export class LeaveRequestService {
     @InjectModel(LeavePolicy.name) private policyModel: Model<LeavePolicyDocument>,
     @InjectModel(Attachment.name) private attachmentModel: Model<AttachmentDocument>,
     private employeeService: EmployeeService,
+    private notificationService: NotificationService,
   ) {}
 
   // ==================== SUBMIT NEW LEAVE REQUEST (REQ-015) ====================
@@ -208,8 +210,22 @@ export class LeaveRequestService {
       );
     }
 
-    // TODO: Trigger notification to manager (REQ-020)
-    // await this.notificationService.notifyManager(savedRequest);
+    // REQ-024: Notify manager that a new leave request is assigned to them
+    const managerStep = approvalFlow.find((step) => step.role === 'direct_manager');
+    if (managerStep?.decidedBy) {
+      const manager = await this.employeeService.findById(managerStep.decidedBy.toString());
+      if (manager) {
+        await this.notificationService.notifyManagerRequestAssigned(
+          managerStep.decidedBy.toString(),
+          {
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            leaveType: leaveType.name,
+            startDate: fromDate.toISOString().split('T')[0],
+            endDate: toDate.toISOString().split('T')[0],
+          },
+        );
+      }
+    }
 
     return savedRequest;
   }
@@ -556,8 +572,8 @@ export class LeaveRequestService {
 
     const savedRequest = await leaveRequest.save();
 
-    // TODO: Notify employee and HR that manager approved
-    // await this.notificationService.notifyApproval(savedRequest, 'manager');
+    // Note: No notification here - REQ-024 only covers manager notifications for new assignments
+    // HR will see pending requests via their review queue
 
     return savedRequest;
   }
@@ -624,8 +640,19 @@ export class LeaveRequestService {
 
     const savedRequest = await leaveRequest.save();
 
-    // TODO: Notify employee about rejection
-    // await this.notificationService.notifyRejection(savedRequest, 'manager', comments);
+    // REQ-019: Notify employee about rejection
+    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
+    if (employee && leaveType) {
+      await this.notificationService.notifyLeaveRequestRejected(
+        leaveRequest.employeeId.toString(),
+        {
+          leaveType: leaveType.name,
+          startDate: leaveRequest.dates.from.toISOString().split('T')[0],
+          endDate: leaveRequest.dates.to.toISOString().split('T')[0],
+          reason: comments,
+        },
+      );
+    }
 
     return savedRequest;
   }
@@ -729,8 +756,30 @@ export class LeaveRequestService {
 
     const savedRequest = await leaveRequest.save();
 
-    // TODO: Notify employee about final approval
-    // TODO: Trigger payroll/time management updates
+    // REQ-030: Notify all stakeholders about finalization
+    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
+    if (employee && leaveType) {
+      // Get manager ID from approval flow
+      const managerId = managerStep.decidedBy?.toString();
+      
+      // TODO: Get attendance coordinator ID (could be from department or system role)
+      // For now, we'll just notify employee and manager
+      
+      await this.notificationService.notifyRequestFinalized(
+        {
+          employeeId: leaveRequest.employeeId.toString(),
+          managerId: managerId,
+          // attendanceCoordinatorId: attendanceCoordinatorId,
+        },
+        {
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          leaveType: leaveType.name,
+          startDate: leaveRequest.dates.from.toISOString().split('T')[0],
+          endDate: leaveRequest.dates.to.toISOString().split('T')[0],
+          durationDays: leaveRequest.durationDays,
+        },
+      );
+    }
 
     return savedRequest;
   }
@@ -784,6 +833,20 @@ export class LeaveRequestService {
     }
 
     const savedRequest = await leaveRequest.save();
+
+    // REQ-019: Notify employee about HR rejection
+    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
+    if (employee && leaveType) {
+      await this.notificationService.notifyLeaveRequestRejected(
+        leaveRequest.employeeId.toString(),
+        {
+          leaveType: leaveType.name,
+          startDate: leaveRequest.dates.from.toISOString().split('T')[0],
+          endDate: leaveRequest.dates.to.toISOString().split('T')[0],
+          reason: comments,
+        },
+      );
+    }
 
     return savedRequest;
   }
@@ -913,8 +976,38 @@ export class LeaveRequestService {
 
     const savedRequest = await leaveRequest.save();
 
-    // TODO: Log audit trail for HR override
-    // TODO: Notify employee and manager about the override
+    // REQ-019 & REQ-030: Notify employee about the override decision
+    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
+    if (employee && leaveType) {
+      if (action === 'approve') {
+        // Finalized via override - notify all stakeholders
+        const managerStep = leaveRequest.approvalFlow.find((step) => step.role === 'direct_manager');
+        await this.notificationService.notifyRequestFinalized(
+          {
+            employeeId: leaveRequest.employeeId.toString(),
+            managerId: managerStep?.decidedBy?.toString(),
+          },
+          {
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            leaveType: leaveType.name,
+            startDate: leaveRequest.dates.from.toISOString().split('T')[0],
+            endDate: leaveRequest.dates.to.toISOString().split('T')[0],
+            durationDays: leaveRequest.durationDays,
+          },
+        );
+      } else {
+        // Rejected via override
+        await this.notificationService.notifyLeaveRequestRejected(
+          leaveRequest.employeeId.toString(),
+          {
+            leaveType: leaveType.name,
+            startDate: leaveRequest.dates.from.toISOString().split('T')[0],
+            endDate: leaveRequest.dates.to.toISOString().split('T')[0],
+            reason: options?.comments,
+          },
+        );
+      }
+    }
 
     return savedRequest;
   }
