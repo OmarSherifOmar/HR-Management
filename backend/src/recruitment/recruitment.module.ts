@@ -17,9 +17,25 @@ import { Contract, ContractSchema } from './models/contract.schema';
 import { Document, DocumentSchema } from './models/document.schema';
 import { TerminationRequest, TerminationRequestSchema } from './models/termination-request.schema';
 import { ClearanceChecklist, ClearanceChecklistSchema } from './models/clearance-checklist.schema';
-import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
-import { ApplicationStatusHistoryService } from './services/application-status-history.service';
+import { ResignationRequest, ResignationRequestSchema } from './models/resignation-request.schema';
+import { OffboardingProcess, OffboardingProcessSchema } from './models/offboarding-process.schema';
+
+// Controllers
 import { ApplicationStatusHistoryController } from './controllers/application-status-history.controller';
+import { ResignationRequestController } from './controllers/resignation-request.controller';
+import { TerminationRequestController } from './controllers/termination-request.controller';
+import { ClearanceChecklistController } from './controllers/clearance-checklist.controller';
+import { OffboardingProcessController } from './controllers/offboarding-process.controller';
+
+// Services
+import { ApplicationStatusHistoryService } from './services/application-status-history.service';
+import { ResignationRequestService } from './services/resignation-request.service';
+import { TerminationRequestService } from './services/termination-request.service';
+import { ClearanceChecklistService } from './services/clearance-checklist.service';
+import { OffboardingProcessService } from './services/offboarding-process.service';
+
+
+import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 
 @Module({
   imports: [
@@ -36,6 +52,8 @@ import { ApplicationStatusHistoryController } from './controllers/application-st
       { name: Document.name, schema: DocumentSchema },
       { name: TerminationRequest.name, schema: TerminationRequestSchema },
       { name: ClearanceChecklist.name, schema: ClearanceChecklistSchema },
+      { name: ResignationRequest.name, schema: ResignationRequestSchema },
+      { name: OffboardingProcess.name, schema: OffboardingProcessSchema },
     ]),
 
     EmployeeProfileModule,
@@ -44,16 +62,31 @@ import { ApplicationStatusHistoryController } from './controllers/application-st
   controllers: [
     RecruitmentController,
     ApplicationStatusHistoryController,
+    ResignationRequestController,
+    TerminationRequestController,
+    ClearanceChecklistController,
+    OffboardingProcessController,
   ],
 
   providers: [
     RecruitmentService,
     ApplicationStatusHistoryService,
+    ResignationRequestService,
+    TerminationRequestService,
+    ClearanceChecklistService,
+    OffboardingProcessService,
+    // TODO: Add integration service providers when other modules are ready:
+    // - TimeManagementService for access revocation
+    // - PayrollExecutionService for final settlements
   ],
 
   exports: [
     RecruitmentService,
     ApplicationStatusHistoryService,
+    ResignationRequestService,
+    TerminationRequestService,
+    ClearanceChecklistService,
+    OffboardingProcessService,
   ],
 })
 export class RecruitmentModule {}
