@@ -31,7 +31,7 @@ export class AttendanceService {
     const employeeId = new Types.ObjectId(employeeIdRaw);
 
     const assignment = await this.shiftAssignmentService.getEmployeeActiveShift(employeeId, timeVal as Date);
-    const isHoliday = await this.holidayService.isHolidayOrRestDay(timeVal);
+    const isHoliday = await this.holidayService.isHoliday(timeVal);
 
     const start = startOfDay(timeVal);
     const end = endOfDay(timeVal);
