@@ -9,6 +9,8 @@ import { LeaveParametersController } from './controllers/leave-parameters.contro
 import { CalendarController } from './controllers/calendar.controller';
 import { SpecialAbsenceController } from './controllers/special-absence.controller';
 import { LeaveYearConfigController } from './controllers/leave-year-config.controller';
+import { BalanceAdjustmentController } from './controllers/balance-adjustment.controller';
+import { LeaveRoleManagementController } from './controllers/leave-role-management.controller';
 import { LeavesService } from './services/leaves.service';
 import { LeaveConfigurationService } from './services/leave-configuration.service';
 import { LeaveTypeService } from './services/leave-type.service';
@@ -19,6 +21,8 @@ import { LeaveParametersService } from './services/leave-parameters.service';
 import { CalendarService } from './services/calendar.service';
 import { SpecialAbsenceService } from './services/special-absence.service';
 import { LeaveYearConfigService } from './services/leave-year-config.service';
+import { BalanceAdjustmentService } from './services/balance-adjustment.service';
+import { LeaveRoleManagementService } from './services/leave-role-management.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LeaveType, LeaveTypeSchema } from './models/leave-type.schema';
 import { LeaveRequest, LeaveRequestSchema } from './models/leave-request.schema';
@@ -28,6 +32,7 @@ import { LeaveCategory, LeaveCategorySchema } from './models/leave-category.sche
 import { LeaveAdjustment, LeaveAdjustmentSchema } from './models/leave-adjustment.schema';
 import { Calendar, CalendarSchema } from './models/calendar.schema';
 import { Attachment, AttachmentSchema } from './models/attachment.schema';
+import { Holiday, HolidaySchema } from '../time-management/models/holiday.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { TimeManagementModule } from '../time-management/time-management.module';
 import { JwtModule } from '@nestjs/jwt';
@@ -40,7 +45,8 @@ import { JwtModule } from '@nestjs/jwt';
     {name: LeaveCategory.name, schema:LeaveCategorySchema},
     {name: LeaveAdjustment.name, schema:LeaveAdjustmentSchema},
     {name:Calendar.name, schema:CalendarSchema},
-    {name:Attachment.name, schema: AttachmentSchema}
+    {name:Attachment.name, schema: AttachmentSchema},
+    {name:Holiday.name, schema:HolidaySchema}
   ]),EmployeeProfileModule,TimeManagementModule,
   JwtModule.register({
     secret: process.env.JWT_SECRET || 'defaultSecret',
@@ -57,6 +63,8 @@ import { JwtModule } from '@nestjs/jwt';
     CalendarController,
     SpecialAbsenceController,
     LeaveYearConfigController,
+    BalanceAdjustmentController,
+    LeaveRoleManagementController,
   ],
   providers: [
     LeavesService, 
@@ -69,6 +77,8 @@ import { JwtModule } from '@nestjs/jwt';
     CalendarService,
     SpecialAbsenceService,
     LeaveYearConfigService,
+    BalanceAdjustmentService,
+    LeaveRoleManagementService,
   ],
   exports:[
     LeavesService, 
@@ -81,6 +91,8 @@ import { JwtModule } from '@nestjs/jwt';
     CalendarService,
     SpecialAbsenceService,
     LeaveYearConfigService,
+    BalanceAdjustmentService,
+    LeaveRoleManagementService,
   ]
 })
 export class LeavesModule {}

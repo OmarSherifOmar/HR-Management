@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { LeaveType, LeaveTypeDocument } from '../models/leave-type.schema';
 import { LeavePolicy, LeavePolicyDocument } from '../models/leave-policy.schema';
 import { LeaveCategory, LeaveCategoryDocument } from '../models/leave-category.schema';
+import { AttachmentType } from '../enums/attachment-type.enum';
 
 export enum SpecialAbsenceCode {
   BEREAVEMENT = 'BEREAVEMENT',
@@ -45,6 +46,36 @@ export class SpecialAbsenceService {
   // CREATE SPECIAL ABSENCE / MISSION TYPE
   // ─────────────────────────────────────────────────────────────
 
+  // Helper to map documentationType to valid AttachmentType enum value
+  private mapToAttachmentType(documentationType?: string): AttachmentType | undefined {
+    if (!documentationType) return undefined;
+    
+    // If it's already a valid AttachmentType value, use it
+    const validTypes = Object.values(AttachmentType);
+    if (validTypes.includes(documentationType as AttachmentType)) {
+      return documentationType as AttachmentType;
+    }
+    
+    // Map common documentation types to AttachmentType.DOCUMENT
+    const documentTypes = [
+      'COURT_SUMMONS', 'DEATH_CERTIFICATE', 'MILITARY_ORDERS', 
+      'MISSION_ORDER', 'TRAINING_REGISTRATION', 'CERTIFICATE',
+      'PROOF', 'OFFICIAL_DOCUMENT'
+    ];
+    if (documentTypes.includes(documentationType.toUpperCase())) {
+      return AttachmentType.DOCUMENT;
+    }
+    
+    // Medical-related types
+    if (documentationType.toUpperCase().includes('MEDICAL') || 
+        documentationType.toUpperCase().includes('DOCTOR')) {
+      return AttachmentType.MEDICAL;
+    }
+    
+    // Default to OTHER
+    return AttachmentType.OTHER;
+  }
+
   async createSpecialAbsenceType(data: {
     code: string;
     name: string;
@@ -56,6 +87,9 @@ export class SpecialAbsenceService {
     const category = await this.leaveCategoryModel.findById(data.categoryId).exec();
     if (!category) throw new NotFoundException(`Category ${data.categoryId} not found`);
 
+    // Map documentationType to valid AttachmentType
+    const attachmentType = this.mapToAttachmentType(data.rule.documentationType);
+
     // Create the leave type
     const leaveType = new this.leaveTypeModel({
       code: data.code,
@@ -65,7 +99,7 @@ export class SpecialAbsenceService {
       paid: data.rule.isPaid,
       deductible: false, // Special absences typically don't deduct from regular balance
       requiresAttachment: data.rule.requiresDocumentation,
-      attachmentType: data.rule.documentationType,
+      attachmentType: attachmentType,
       maxDurationDays: data.rule.maxDaysPerOccurrence,
     });
     const savedLeaveType = await leaveType.save();
@@ -73,7 +107,7 @@ export class SpecialAbsenceService {
     // Create the associated policy with special rules
     const policy = new this.leavePolicyModel({
       leaveTypeId: savedLeaveType._id,
-      accrualMethod: 'NONE', // Special absences don't accrue
+      accrualMethod: 'yearly', // Use yearly for special absences (represents yearly allocation)
       monthlyRate: 0,
       yearlyRate: data.rule.maxDaysPerYear ?? 0,
       carryForwardAllowed: false,
@@ -175,7 +209,7 @@ export class SpecialAbsenceService {
           maxDaysPerYear: 5,
           maxDaysPerOccurrence: 5,
           requiresDocumentation: true,
-          documentationType: 'DEATH_CERTIFICATE',
+          documentationType: AttachmentType.DOCUMENT,
           isPaid: true,
           payPercentage: 100,
           advanceNoticeRequired: false,
@@ -183,7 +217,7 @@ export class SpecialAbsenceService {
           approvalLevels: ['MANAGER'],
           allowExtension: true,
           extensionMaxDays: 2,
-          notes: 'For immediate family members',
+          notes: 'For immediate family members (requires death certificate)',
         },
       },
       {
@@ -194,7 +228,7 @@ export class SpecialAbsenceService {
           maxDaysPerYear: 30,
           maxDaysPerOccurrence: 30,
           requiresDocumentation: true,
-          documentationType: 'COURT_SUMMONS',
+          documentationType: AttachmentType.DOCUMENT,
           isPaid: true,
           payPercentage: 100,
           advanceNoticeRequired: true,
@@ -202,7 +236,7 @@ export class SpecialAbsenceService {
           autoApprove: true,
           allowExtension: true,
           extensionMaxDays: 30,
-          notes: 'Legal obligation',
+          notes: 'Legal obligation (requires court summons)',
         },
       },
       {
@@ -212,14 +246,14 @@ export class SpecialAbsenceService {
           code: SpecialAbsenceCode.MILITARY,
           maxDaysPerYear: 15,
           requiresDocumentation: true,
-          documentationType: 'MILITARY_ORDERS',
+          documentationType: AttachmentType.DOCUMENT,
           isPaid: true,
           payPercentage: 100,
           advanceNoticeRequired: true,
           advanceNoticeDays: 30,
           autoApprove: true,
           allowExtension: true,
-          notes: 'Reserve/National Guard duty',
+          notes: 'Reserve/National Guard duty (requires military orders)',
         },
       },
       {
@@ -228,7 +262,7 @@ export class SpecialAbsenceService {
         defaultRule: {
           code: SpecialAbsenceCode.MISSION,
           requiresDocumentation: true,
-          documentationType: 'MISSION_ORDER',
+          documentationType: AttachmentType.DOCUMENT,
           isPaid: true,
           payPercentage: 100,
           advanceNoticeRequired: true,
@@ -236,7 +270,7 @@ export class SpecialAbsenceService {
           autoApprove: false,
           approvalLevels: ['MANAGER', 'HR'],
           allowExtension: true,
-          notes: 'Official work mission or travel',
+          notes: 'Official work mission or travel (requires mission order)',
         },
       },
       {
@@ -246,7 +280,7 @@ export class SpecialAbsenceService {
           code: SpecialAbsenceCode.TRAINING,
           maxDaysPerYear: 10,
           requiresDocumentation: true,
-          documentationType: 'TRAINING_REGISTRATION',
+          documentationType: AttachmentType.DOCUMENT,
           isPaid: true,
           payPercentage: 100,
           advanceNoticeRequired: true,
@@ -254,7 +288,7 @@ export class SpecialAbsenceService {
           autoApprove: false,
           approvalLevels: ['MANAGER', 'HR'],
           allowExtension: false,
-          notes: 'Professional development training',
+          notes: 'Professional development training (requires training registration)',
         },
       },
       {
