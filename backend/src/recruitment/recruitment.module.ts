@@ -17,19 +17,34 @@ import { Contract, ContractSchema } from './models/contract.schema';
 import { Document, DocumentSchema } from './models/document.schema';
 import { TerminationRequest, TerminationRequestSchema } from './models/termination-request.schema';
 import { ClearanceChecklist, ClearanceChecklistSchema } from './models/clearance-checklist.schema';
+import { ResignationRequest, ResignationRequestSchema } from './models/resignation-request.schema';
+import { OffboardingProcess, OffboardingProcessSchema } from './models/offboarding-process.schema';
+
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
-import { ApplicationStatusHistoryService } from './services/application-status-history.service';
-import { ApplicationStatusHistoryController } from './controllers/application-status-history.controller';
+
+// Controllers
+import { ApplicationStatusHistoryController } from '../recruitment/controllers/application-status-history.controller';
 import { ApplicationController } from './controllers/application.controller';
-import { ApplicationService } from './services/application.service';
 import { InterviewController } from './controllers/interview.controller';
-import { InterviewService } from './services/interview.service';
 import { JobTemplateController } from './controllers/job-template.controller';
-import { JobTemplateService } from './services/job-template.service';
-import { OfferService } from './services/offer.service';
 import { OfferController } from './controllers/offer.controller';
 
+import { ResignationRequestController } from './controllers/resignation-request.controller';
+import { TerminationRequestController } from './controllers/termination-request.controller';
+import { ClearanceChecklistController } from './controllers/clearance-checklist.controller';
+import { OffboardingProcessController } from './controllers/offboarding-process.controller';
 
+// Services
+import { ApplicationStatusHistoryService } from './services/application-status-history.service';
+import { ApplicationService } from './services/application.service';
+import { InterviewService } from './services/interview.service';
+import { JobTemplateService } from './services/job-template.service';
+import { OfferService } from './services/offer.service';
+
+import { ResignationRequestService } from './services/resignation-request.service';
+import { TerminationRequestService } from './services/termination-request.service';
+import { ClearanceChecklistService } from './services/clearance-checklist.service';
+import { OffboardingProcessService } from './services/offboarding-process.service';
 
 @Module({
   imports: [
@@ -46,6 +61,8 @@ import { OfferController } from './controllers/offer.controller';
       { name: Document.name, schema: DocumentSchema },
       { name: TerminationRequest.name, schema: TerminationRequestSchema },
       { name: ClearanceChecklist.name, schema: ClearanceChecklistSchema },
+      { name: ResignationRequest.name, schema: ResignationRequestSchema },
+      { name: OffboardingProcess.name, schema: OffboardingProcessSchema },
     ]),
 
     EmployeeProfileModule,
@@ -57,7 +74,11 @@ import { OfferController } from './controllers/offer.controller';
     ApplicationController,
     InterviewController,
     JobTemplateController,
-    OfferController
+    OfferController,
+    ResignationRequestController,
+    TerminationRequestController,
+    ClearanceChecklistController,
+    OffboardingProcessController,
   ],
 
   providers: [
@@ -66,7 +87,11 @@ import { OfferController } from './controllers/offer.controller';
     ApplicationService,
     InterviewService,
     JobTemplateService,
-    OfferService
+    OfferService,
+    ResignationRequestService,
+    TerminationRequestService,
+    ClearanceChecklistService,
+    OffboardingProcessService,
   ],
 
   exports: [
@@ -75,7 +100,11 @@ import { OfferController } from './controllers/offer.controller';
     ApplicationService,
     InterviewService,
     JobTemplateService,
-    OfferService
+    OfferService,
+    ResignationRequestService,
+    TerminationRequestService,
+    ClearanceChecklistService,
+    OffboardingProcessService,
   ],
 })
 export class RecruitmentModule {}
