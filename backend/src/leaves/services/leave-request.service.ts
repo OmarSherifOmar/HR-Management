@@ -496,6 +496,72 @@ export class LeaveRequestService {
       .exec();
   }
 
+  /**
+   * REQ-032 & REQ-033: Get leave history for an employee with filters and sorting
+   * Returns past leave requests with their statuses for tracking leave usage over time
+   */
+  async getEmployeeLeaveHistory(
+    employeeId: string,
+    filters?: {
+      leaveTypeId?: string;
+      status?: LeaveStatus;
+      startDate?: Date;
+      endDate?: Date;
+      sortBy?: 'date' | 'status' | 'leaveType' | 'duration';
+      sortOrder?: 'asc' | 'desc';
+    },
+  ): Promise<LeaveRequestDocument[]> {
+    const query: any = { employeeId: new Types.ObjectId(employeeId) };
+    
+    // Filter by leave type
+    if (filters?.leaveTypeId) {
+      query.leaveTypeId = new Types.ObjectId(filters.leaveTypeId);
+    }
+
+    // Filter by status
+    if (filters?.status) {
+      query.status = filters.status;
+    }
+
+    // Filter by date range
+    if (filters?.startDate || filters?.endDate) {
+      query['dates.from'] = {};
+      if (filters?.startDate) {
+        query['dates.from'].$gte = filters.startDate;
+      }
+      if (filters?.endDate) {
+        query['dates.from'].$lte = filters.endDate;
+      }
+    }
+
+    // Determine sort field
+    let sortField: string;
+    switch (filters?.sortBy) {
+      case 'status':
+        sortField = 'status';
+        break;
+      case 'leaveType':
+        sortField = 'leaveTypeId';
+        break;
+      case 'duration':
+        sortField = 'durationDays';
+        break;
+      case 'date':
+      default:
+        sortField = 'dates.from';
+    }
+
+    // Determine sort order (default: descending for dates)
+    const sortOrder = filters?.sortOrder === 'asc' ? 1 : -1;
+
+    return this.leaveRequestModel
+      .find(query)
+      .populate('leaveTypeId', 'code name')
+      .populate('attachmentId')
+      .sort({ [sortField]: sortOrder })
+      .exec();
+  }
+
   // ==================== MANAGER REVIEW/APPROVE/REJECT (REQ-020, REQ-021, REQ-022) ====================
 
   /**

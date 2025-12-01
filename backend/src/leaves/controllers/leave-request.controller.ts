@@ -221,6 +221,52 @@ export class LeaveRequestController {
   }
 
   /**
+   * GET /leave-requests/my-history
+   * 
+   * REQ-032 & REQ-033: Employee View Past History with Filters
+   * Get past leave requests with filtering and sorting options
+   * 
+   * @param leaveTypeId - Optional filter by leave type
+   * @param status - Optional filter by status
+   * @param startDate - Optional filter by date range start
+   * @param endDate - Optional filter by date range end
+   * @param sortBy - Sort field: 'date' | 'status' | 'leaveType' | 'duration' (default: 'date')
+   * @param sortOrder - Sort order: 'asc' | 'desc' (default: 'desc')
+   * @param req - Request object containing authenticated user
+   * @returns List of past leave requests with statuses
+   */
+  @Get('my-history')
+  async getMyLeaveHistory(
+    @Query('leaveTypeId') leaveTypeId: string,
+    @Query('status') status: LeaveStatus,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('sortBy') sortBy: string,
+    @Query('sortOrder') sortOrder: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const employeeId = getUserId(req);
+    
+    const leaveRequests = await this.leaveRequestService.getEmployeeLeaveHistory(
+      employeeId,
+      {
+        leaveTypeId,
+        status,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        sortBy: sortBy as 'date' | 'status' | 'leaveType' | 'duration',
+        sortOrder: sortOrder as 'asc' | 'desc',
+      },
+    );
+
+    return {
+      success: true,
+      data: leaveRequests,
+      count: leaveRequests.length,
+    };
+  }
+
+  /**
    * GET /leave-requests/my-requests/pending
    * 
    * Get pending leave requests for the authenticated employee
