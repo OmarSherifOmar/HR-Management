@@ -114,4 +114,19 @@ async findByPrimaryPositionId(positionId: string): Promise<EmployeeProfileDocume
     }
 }
 
+/**
+ * Delete an employee (used for rollback during registration errors)
+ */
+async deleteEmployee(employeeId: string | Types.ObjectId): Promise<void> {
+    const id = typeof employeeId === 'string' 
+        ? new Types.ObjectId(employeeId) 
+        : employeeId;
+    
+    // Delete employee profile
+    await this.employeeModel.findByIdAndDelete(id);
+    
+    // Delete associated system role
+    await this.systemRoleModel.deleteOne({ employeeProfileId: id });
+}
+
 }

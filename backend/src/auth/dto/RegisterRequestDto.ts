@@ -1,4 +1,5 @@
-import { IsEmail, IsMongoId, IsOptional, IsString } from "class-validator";
+import { IsEmail, IsEnum, IsMongoId, IsOptional, IsString } from "class-validator";
+import { SystemRole } from "../../employee-profile/enums/employee-profile.enums";
 
 export class RegisterRequestDto {
   @IsString()
@@ -11,11 +12,12 @@ export class RegisterRequestDto {
   @IsString()
   password: string;
 
-  @IsString()
-  role: string = "department employee";
+  @IsEnum(SystemRole, { message: 'Invalid role. Must be one of the valid system roles.' })
+  role: SystemRole = SystemRole.DEPARTMENT_EMPLOYEE;
 
+  @IsOptional()
   @IsMongoId()
-  primaryPositionId: string;
+  primaryPositionId?: string;
 
   @IsOptional()
   @IsMongoId()

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { LeaveEntitlement, LeaveEntitlementDocument } from '../models/leave-entitlement.schema';
@@ -8,8 +8,10 @@ import { LeaveAdjustment, LeaveAdjustmentDocument } from '../models/leave-adjust
 import { CreateLeaveEntitlementDto } from '../dto/leave-entitlement/create-leave-entitlement.dto';
 import { UpdateLeaveEntitlementDto } from '../dto/leave-entitlement/update-leave-entitlement.dto';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
+import { AccrualSuspensionService } from './accrual-suspension.service';
 import { AccrualMethod } from '../enums/accrual-method.enum';
 import { RoundingRule } from '../enums/rounding-rule.enum';
+import { AdjustmentType } from '../enums/adjustment-type.enum';
 
 /**
  * Leave Entitlement Service
@@ -28,6 +30,8 @@ export class LeaveEntitlementService {
     @InjectModel(LeaveType.name) private leaveTypeModel: Model<LeaveTypeDocument>,
     @InjectModel(LeaveAdjustment.name) private adjustmentModel: Model<LeaveAdjustmentDocument>,
     private employeeService: EmployeeService,
+    @Inject(forwardRef(() => AccrualSuspensionService))
+    private accrualSuspensionService: AccrualSuspensionService,
   ) {}
 
   // ==================== ENTITLEMENT CRUD ====================
@@ -264,11 +268,17 @@ export class LeaveEntitlementService {
 
   /**
    * Run accrual calculation for all employees (scheduled job)
+   * REQ-042: Integrates accrual suspension to exclude unpaid leave and suspension periods
    */
   async runMonthlyAccrual(): Promise<{ processed: number; errors: string[] }> {
     const entitlements = await this.entitlementModel.find().exec();
     let processed = 0;
     const errors: string[] = [];
+
+    // Calculate period for this month's accrual
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     for (const entitlement of entitlements) {
       try {
@@ -280,21 +290,51 @@ export class LeaveEntitlementService {
 
         // Calculate monthly accrual
         if (policy.accrualMethod === AccrualMethod.MONTHLY) {
-          const accrualAmount = policy.monthlyRate;
-          entitlement.accruedActual += accrualAmount;
-          entitlement.accruedRounded = this.applyRoundingRule(
-            entitlement.accruedActual,
-            policy.roundingRule,
+          // REQ-042: Calculate actual service days (excludes unpaid leave and suspensions)
+          const serviceDays = await this.accrualSuspensionService.calculateActualServiceDays(
+            entitlement.employeeId.toString(),
+            periodStart,
+            periodEnd,
           );
-          entitlement.remaining = 
-            entitlement.yearlyEntitlement + 
-            entitlement.carryForward + 
-            entitlement.accruedRounded - 
-            entitlement.taken - 
-            entitlement.pending;
-          entitlement.lastAccrualDate = new Date();
-          await entitlement.save();
-          processed++;
+
+          // Calculate accrual based on actual service days percentage
+          const originalAccrual = policy.monthlyRate;
+          const adjustedAccrual = (originalAccrual * serviceDays.serviceDaysPercentage) / 100;
+
+          // Only accrue if there were actual service days
+          if (serviceDays.actualServiceDays > 0) {
+            entitlement.accruedActual += adjustedAccrual;
+            entitlement.accruedRounded = this.applyRoundingRule(
+              entitlement.accruedActual,
+              policy.roundingRule,
+            );
+            entitlement.remaining = 
+              entitlement.yearlyEntitlement + 
+              entitlement.carryForward + 
+              entitlement.accruedRounded - 
+              entitlement.taken - 
+              entitlement.pending;
+            entitlement.lastAccrualDate = new Date();
+            await entitlement.save();
+
+            // Log suspension adjustment if accrual was reduced
+            if (adjustedAccrual < originalAccrual) {
+              const deductedAmount = originalAccrual - adjustedAccrual;
+              await this.adjustmentModel.create({
+                employeeId: entitlement.employeeId,
+                leaveTypeId: entitlement.leaveTypeId,
+                adjustmentType: AdjustmentType.DEDUCT,
+                amount: deductedAmount,
+                reason: `[AUTO_ACCRUAL_SUSPENSION] Month: ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}. ` +
+                  `Unpaid leave: ${serviceDays.unpaidLeaveDays} days, Suspension: ${serviceDays.suspensionDays} days. ` +
+                  `Service days: ${serviceDays.actualServiceDays}/${serviceDays.totalCalendarDays} (${serviceDays.serviceDaysPercentage.toFixed(1)}%). ` +
+                  `Accrued: ${adjustedAccrual.toFixed(2)} instead of ${originalAccrual}`,
+                hrUserId: new Types.ObjectId('000000000000000000000000'), // System user
+              });
+            }
+
+            processed++;
+          }
         }
       } catch (error) {
         errors.push(`Error processing entitlement ${entitlement._id}: ${error.message}`);
