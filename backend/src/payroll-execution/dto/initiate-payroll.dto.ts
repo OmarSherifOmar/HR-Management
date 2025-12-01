@@ -1,17 +1,12 @@
-import { IsDateString, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsDateString } from 'class-validator';
 
 export class InitiatePayrollDto {
+  @IsNotEmpty()
   @IsDateString()
-  periodStart: Date;
+  payrollPeriod: string;
 
-  @IsDateString()
-  periodEnd: Date;
-
-  @IsEnum(['Monthly', 'Bi-Weekly', 'Weekly'], {
-    message: 'Payroll type must be monthly, bi-weekly, or weekly'
-  })
-  payPeriodType: string;
-
+  @IsNotEmpty()
   @IsString()
-  initiatorId: string;
+  entity: string;
 }
+
