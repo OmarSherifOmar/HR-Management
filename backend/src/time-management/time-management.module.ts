@@ -13,6 +13,15 @@ import { ShiftSchema, Shift } from './models/shift.schema';
 import { ShiftAssignmentSchema, ShiftAssignment } from './models/shift-assignment.schema';
 import { LatenessRule, latenessRuleSchema } from './models/lateness-rule.schema';
 import { HolidaySchema, Holiday } from './models/holiday.schema';
+import { ReportsService } from './services/reports.service';
+import { PolicyService } from './services/policy.service';
+import { ShiftAssignmentService } from './services/ShiftAssignmentService';
+import { ShiftService } from './services/shift.service';
+import { HolidayService } from './services/holiday.service';
+import { AttendanceService } from './services/attendance.service';
+import { CorrectionService } from './services/correction.service';
+import { NotificationService } from './services/notification.service';
+import { ReportsController } from './controllers/reports.controller';
 
 
 @Module({
@@ -29,7 +38,17 @@ import { HolidaySchema, Holiday } from './models/holiday.schema';
     { name: LatenessRule.name, schema: latenessRuleSchema },
     { name: Holiday.name, schema: HolidaySchema },
   ])],
-  controllers: [TimeManagementController],
-  providers: [TimeManagementService]
+  controllers: [TimeManagementController, ReportsController],
+  providers: [
+    TimeManagementService,
+    ReportsService,
+    PolicyService,
+    ShiftAssignmentService,
+    ShiftService,
+    HolidayService,
+    AttendanceService,
+    CorrectionService,
+    NotificationService,
+  ]
 })
 export class TimeManagementModule {}

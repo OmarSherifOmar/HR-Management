@@ -18,5 +18,22 @@ export class HolidayService {
     return !!holiday;
   }
 
-  // TODO: other holiday-related methods
+  // Admin APIs
+  async createHoliday(payload: Partial<Holiday>) {
+    return this.holidayModel.create(payload);
+  }
+
+  async listHolidays(filter: Partial<Holiday> = {}) {
+    return this.holidayModel.find(filter).sort({ startDate: 1 }).exec();
+  }
+
+  async updateHoliday(id: string, updates: Partial<Holiday>) {
+    return this.holidayModel
+      .findByIdAndUpdate(id, updates, { new: true })
+      .exec();
+  }
+
+  async setHolidayActive(id: string, active: boolean) {
+    return this.updateHoliday(id, { active } as Partial<Holiday>);
+  }
 }
