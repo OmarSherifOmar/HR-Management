@@ -9,6 +9,8 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { LeaveEntitlementService } from '../services/leave-entitlement.service';
 import { CreateLeaveEntitlementDto } from '../dto/leave-entitlement/create-leave-entitlement.dto';
@@ -16,12 +18,87 @@ import { UpdateLeaveEntitlementDto } from '../dto/leave-entitlement/update-leave
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
 
+// Extended Request interface with user property
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    employeeNumber?: string;
+    role?: string;
+    roles?: string[];
+    username?: string;
+  };
+}
+
+/**
+ * Helper to extract and validate user ID from request
+ */
+function getUserId(req: AuthenticatedRequest): string {
+  const userId = req.user?.sub;
+  if (!userId) {
+    throw new UnauthorizedException('User not authenticated');
+  }
+  return userId;
+}
+
 
  
 @Controller('leaves/entitlements')
 @UseGuards(AuthGuard)
 export class LeaveEntitlementController {
   constructor(private readonly entitlementService: LeaveEntitlementService) {}
+
+  // ==================== EMPLOYEE DASHBOARD (REQ-031) ====================
+
+  /**
+   * REQ-031: Get current employee's leave balance
+   * 
+   * GET /leaves/entitlements/my-balance
+   * 
+   * As an employee, I want to view my current leave balance so that I can 
+   * plan my future leave requests.
+   * 
+   * Returns:
+   * - Accrued vacation days (accruedRounded for employee view)
+   * - Vacation days taken
+   * - Vacation balance available (remaining)
+   * - Pending days
+   * - Carry-over days
+   * 
+   * @param req - Request object containing authenticated user
+   * @returns Employee's leave balance summary with rounded values
+   */
+  @Get('my-balance')
+  async getMyLeaveBalance(@Req() req: AuthenticatedRequest) {
+    const employeeId = getUserId(req);
+    
+    const summary = await this.entitlementService.getEmployeeBalanceSummary(employeeId);
+    
+    // Format for employee dashboard with rounded values as per requirement
+    const balances = summary.balances.map((b) => ({
+      leaveType: {
+        id: b.leaveTypeId,
+        name: b.leaveTypeName,
+        code: b.leaveTypeCode,
+      },
+      // "used rounded vacation balance must be displayed"
+      accrued: Math.round(b.accrued * 100) / 100,           // Accrued vacation days (rounded)
+      taken: Math.round(b.taken * 100) / 100,               // Vacation days taken
+      remaining: Math.round(b.remaining * 100) / 100,       // Vacation balance available
+      pending: Math.round(b.pending * 100) / 100,           // Pending approval
+      carryOver: Math.round(b.carryForward * 100) / 100,    // Carry-over from previous year
+      yearlyEntitlement: Math.round(b.yearlyEntitlement * 100) / 100,
+    }));
+
+    return {
+      success: true,
+      data: {
+        employeeId,
+        balances,
+      },
+    };
+  }
+
+  // ==================== HR ADMIN ENDPOINTS ====================
 
   // entitlement Endpoints
 
