@@ -1,4 +1,3 @@
-// backend/src/payroll-tracking/payroll-tracking.service.ts
 import {
   Injectable,
   BadRequestException,
@@ -8,11 +7,27 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+// Omar models
 import { claims, claimsDocument } from './models/claims.schema';
 import { disputes, disputesDocument } from './models/disputes.schema';
 import { refunds, refundsDocument } from './models/refunds.schema';
 
-import { paySlip, PayslipDocument } from '../payroll-execution/models/payslip.schema';
+// Ahmed models
+import {
+  EmployeeProfile,
+  EmployeeProfileDocument,
+} from '../employee-profile/models/employee-profile.schema';
+
+import {
+  allowance,
+  allowanceDocument,
+} from '../payroll-configuration/models/allowance.schema';
+
+// Shared model
+import {
+  paySlip,
+  PayslipDocument,
+} from '../payroll-execution/models/payslip.schema';
 
 import { PayrollReportQueryDto } from './dto/payroll-report-query.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
@@ -25,14 +40,14 @@ import {
   RefundStatus,
 } from './enums/payroll-tracking-enum';
 
-// Helper: pick a single role (if array)
-function pickRole(roleOrRoles: any): string | undefined {
-  if (!roleOrRoles) return undefined;
-  if (Array.isArray(roleOrRoles)) return roleOrRoles[0];
-  return roleOrRoles;
+
+// ----------- Helper functions -----------
+function pickRole(role: any) {
+  if (!role) return;
+  if (Array.isArray(role)) return role[0];
+  return role;
 }
 
-// Helper: safe enum validation + casting
 function castEnumValue<T>(enumObj: any, value: string): T {
   if (!Object.values(enumObj).includes(value)) {
     throw new BadRequestException(`Invalid enum value: ${value}`);
@@ -40,28 +55,60 @@ function castEnumValue<T>(enumObj: any, value: string): T {
   return value as unknown as T;
 }
 
+// For Ahmed's typed payslip extracting
+type LeanPayslip = {
+  _id: string;
+  employeeId?: string;
+  createdAt: Date;
+  paymentStatus: string;
+  netPay: number;
+  totalGrossSalary: number;
+  totaDeductions?: number;
+
+  earningsDetails?: {
+    baseSalary?: number;
+    allowances?: any[];
+    bonuses?: any[];
+    benefits?: any[];
+    refunds?: any[];
+  };
+
+  deductionsDetails?: {
+    taxes?: any[];
+    insurances?: any[];
+    penalties?: any;
+  };
+};
+
 @Injectable()
 export class PayrollTrackingService {
   constructor(
+    // Omar injections
     @InjectModel(claims.name)
-    private claimModel: Model<claimsDocument>,
+    private readonly claimModel: Model<claimsDocument>,
 
     @InjectModel(disputes.name)
-    private disputeModel: Model<disputesDocument>,
+    private readonly disputeModel: Model<disputesDocument>,
 
     @InjectModel(refunds.name)
-    private refundModel: Model<refundsDocument>,
+    private readonly refundModel: Model<refundsDocument>,
 
+    // Shared payslip model
     @InjectModel(paySlip.name)
-    private payslipModel: Model<PayslipDocument>,
+    private readonly payslipModel: Model<PayslipDocument>,
+
+    // Ahmed injections
+    @InjectModel(EmployeeProfile.name)
+    private readonly employeeModel: Model<EmployeeProfileDocument>,
+
+    @InjectModel(allowance.name)
+    private readonly allowanceModel: Model<allowanceDocument>,
   ) {}
 
-  // ============================================================
-  // EMPLOYEE — CLAIMS
-  // ============================================================
   async getClaimsForEmployee(employeeId: string) {
     if (!Types.ObjectId.isValid(employeeId))
       throw new BadRequestException('Invalid employee id');
+
     return this.claimModel.find({ employeeId }).sort({ createdAt: -1 }).lean();
   }
 
@@ -69,23 +116,19 @@ export class PayrollTrackingService {
     if (!Types.ObjectId.isValid(claimId))
       throw new BadRequestException('Invalid claim id');
 
-    // NOTE: do NOT call .lean() here because tests may stub findById()
     const claim: any = await this.claimModel.findById(claimId);
     if (!claim) throw new NotFoundException('Claim not found');
 
-    const claimEmployeeId = claim.employeeId
-      ? String(claim.employeeId._id ?? claim.employeeId)
-      : undefined;
-    if (String(claimEmployeeId) !== String(employeeId))
+    const claimEmployeeId = String(
+      claim.employeeId?._id ?? claim.employeeId,
+    );
+
+    if (claimEmployeeId !== String(employeeId))
       throw new ForbiddenException('Access denied');
 
-    if (typeof claim.toObject === 'function') return claim.toObject();
-    return claim;
+    return typeof claim.toObject === 'function' ? claim.toObject() : claim;
   }
 
-  // ============================================================
-  // EMPLOYEE — TAX DOCUMENTS (payslips)
-  // ============================================================
   async listTaxDocumentsForEmployee(employeeId: string) {
     if (!Types.ObjectId.isValid(employeeId))
       throw new BadRequestException('Invalid employee id');
@@ -111,19 +154,19 @@ export class PayrollTrackingService {
     }));
   }
 
-  // ============================================================
-  // PAYROLL SPECIALIST — PAYROLL REPORT
-  // ============================================================
+
+
   async generatePayrollReport(query: PayrollReportQueryDto) {
     const match: any = {};
 
     if (query.month) {
-      if (Types.ObjectId.isValid(query.month))
-        match.payrollRunId = new Types.ObjectId(query.month);
-      else match.payrollRunId = query.month;
+      match.payrollRunId =
+        Types.ObjectId.isValid(query.month)
+          ? new Types.ObjectId(query.month)
+          : query.month;
     }
 
-    const pipeline: any[] = [
+    return this.payslipModel.aggregate([
       { $match: match },
       {
         $group: {
@@ -134,48 +177,34 @@ export class PayrollTrackingService {
         },
       },
       { $sort: { totalGross: -1 } },
-    ];
-
-    return this.payslipModel.aggregate(pipeline);
+    ]);
   }
 
-  // ============================================================
-  // SPECIALIST/MANAGER — DISPUTES
-  // ============================================================
+
   async listDisputes(filter?: { status?: string }) {
     const query: any = {};
 
     if (filter?.status) {
-      if (
-        !Object.values(DisputeStatus).includes(filter.status as DisputeStatus)
-      )
+      if (!Object.values(DisputeStatus).includes(filter.status as any))
         throw new BadRequestException(
           `Invalid dispute status: ${filter.status}`,
         );
-
       query.status = filter.status;
     }
 
     return this.disputeModel.find(query).sort({ createdAt: -1 }).lean();
   }
 
-  async updateDispute(
-    disputeId: string,
-    updater: { userId: string; role: string },
-    dto: UpdateDisputeDto,
-  ) {
-    if (!Types.ObjectId.isValid(disputeId))
+  async updateDispute(id: string, updater: any, dto: UpdateDisputeDto) {
+    if (!Types.ObjectId.isValid(id))
       throw new BadRequestException('Invalid dispute id');
 
-    const dispute: any = await this.disputeModel.findById(disputeId);
+    const dispute: any = await this.disputeModel.findById(id);
     if (!dispute) throw new NotFoundException('Dispute not found');
 
-    // Status update (enum-safe)
-    if (dto.status) {
-      dispute.status = castEnumValue<DisputeStatus>(DisputeStatus, dto.status);
-    }
+    if (dto.status)
+      dispute.status = castEnumValue(DisputeStatus, dto.status);
 
-    // Resolution note
     if (dto.note) {
       const entry = {
         by: updater.userId,
@@ -184,22 +213,19 @@ export class PayrollTrackingService {
         date: new Date(),
       };
 
-      if (Array.isArray(dispute.resolutionNotes))
-        dispute.resolutionNotes.push(entry);
-      else dispute.resolutionNotes = [entry];
+      dispute.resolutionNotes = dispute.resolutionNotes || [];
+      dispute.resolutionNotes.push(entry);
     }
 
     await dispute.save();
-
-    if (typeof dispute.toObject === 'function') return dispute.toObject();
-    return dispute;
+    return dispute.toObject ? dispute.toObject() : dispute;
   }
 
-  async managerApproveDispute(disputeId: string, managerId: string) {
-    if (!Types.ObjectId.isValid(disputeId))
+  async managerApproveDispute(id: string, managerId: string) {
+    if (!Types.ObjectId.isValid(id))
       throw new BadRequestException('Invalid dispute id');
 
-    const dispute: any = await this.disputeModel.findById(disputeId);
+    const dispute: any = await this.disputeModel.findById(id);
     if (!dispute) throw new NotFoundException('Dispute not found');
 
     dispute.status = DisputeStatus.APPROVED;
@@ -211,49 +237,33 @@ export class PayrollTrackingService {
       date: new Date(),
     };
 
-    if (Array.isArray(dispute.resolutionNotes))
-      dispute.resolutionNotes.push(entry);
-    else dispute.resolutionNotes = [entry];
+    dispute.resolutionNotes = dispute.resolutionNotes || [];
+    dispute.resolutionNotes.push(entry);
 
     await dispute.save();
-
-    if (typeof dispute.toObject === 'function') return dispute.toObject();
-    return dispute;
+    return dispute.toObject ? dispute.toObject() : dispute;
   }
 
-  // ============================================================
-  // SPECIALIST/MANAGER — CLAIMS
-  // ============================================================
+
   async listClaims(filter?: { status?: string }) {
     const query: any = {};
-
     if (filter?.status) {
-      if (!Object.values(ClaimStatus).includes(filter.status as ClaimStatus))
+      if (!Object.values(ClaimStatus).includes(filter.status as any))
         throw new BadRequestException(`Invalid claim status: ${filter.status}`);
-
       query.status = filter.status;
     }
-
     return this.claimModel.find(query).sort({ createdAt: -1 }).lean();
   }
 
-  async updateClaim(
-    claimId: string,
-    updater: { userId: string; role: string },
-    dto: UpdateClaimDto,
-  ) {
-    if (!Types.ObjectId.isValid(claimId))
+  async updateClaim(id: string, updater: any, dto: UpdateClaimDto) {
+    if (!Types.ObjectId.isValid(id))
       throw new BadRequestException('Invalid claim id');
 
-    const claim: any = await this.claimModel.findById(claimId);
+    const claim: any = await this.claimModel.findById(id);
     if (!claim) throw new NotFoundException('Claim not found');
 
-    // Status update (enum-safe)
-    if (dto.status) {
-      claim.status = castEnumValue<ClaimStatus>(ClaimStatus, dto.status);
-    }
+    if (dto.status) claim.status = castEnumValue(ClaimStatus, dto.status);
 
-    // Add note
     if (dto.note) {
       const entry = {
         by: updater.userId,
@@ -262,19 +272,16 @@ export class PayrollTrackingService {
         date: new Date(),
       };
 
-      if (claim.notes && Array.isArray(claim.notes)) claim.notes.push(entry);
-      else claim.notes = [entry];
+      claim.notes = claim.notes || [];
+      claim.notes.push(entry);
     }
 
     await claim.save();
-
-    if (typeof claim.toObject === 'function') return claim.toObject();
-    return claim;
+    return claim.toObject ? claim.toObject() : claim;
   }
 
-  // ============================================================
-  // TRANSPARENCY SUMMARY
-  // ============================================================
+
+
   async transparencySummary() {
     const totalPayslips = await this.payslipModel.countDocuments();
     const totalDisputes = await this.disputeModel.countDocuments();
@@ -302,36 +309,26 @@ export class PayrollTrackingService {
     };
   }
 
-  // ============================================================
-  // FINANCE — PROCESS REFUND
-  // ============================================================
-  async processRefund(
-    actor: { userId: string; role: string },
-    dto: ProcessRefundDto,
-  ) {
+
+  async processRefund(actor: any, dto: ProcessRefundDto) {
     if (!Types.ObjectId.isValid(dto.linkedId))
       throw new BadRequestException('Invalid linked ID');
 
-    const linkedIdObj = new Types.ObjectId(dto.linkedId);
+    const id = new Types.ObjectId(dto.linkedId);
 
-    const dispute: any = await this.disputeModel.findById(linkedIdObj);
-    const claim: any = dispute
-      ? null
-      : await this.claimModel.findById(linkedIdObj);
+    const dispute = await this.disputeModel.findById(id);
+    const claim = dispute ? null : await this.claimModel.findById(id);
 
     if (!dispute && !claim)
       throw new NotFoundException('No linked dispute/claim found');
 
-    // Create refundDetails (matches your schema)
-    const details = {
-      description: dto.reason || 'Refund processed',
-      amount: dto.amount,
-    };
-
     const refund: any = await this.refundModel.create({
-      claimId: claim ? claim._id : undefined,
-      disputeId: dispute ? dispute._id : undefined,
-      refundDetails: details,
+      claimId: claim?._id,
+      disputeId: dispute?._id,
+      refundDetails: {
+        description: dto.reason || 'Refund processed',
+        amount: dto.amount,
+      },
       employeeId: dispute
         ? dispute.employeeId
         : claim
@@ -343,41 +340,326 @@ export class PayrollTrackingService {
       status: RefundStatus.PAID,
     });
 
-    // Update dispute → set status to APPROVED because refund resolves it
-    if (dispute) {
-      dispute.status = DisputeStatus.APPROVED;
+    // update dispute or claim
+    const entity = dispute || claim;
 
-      const note = {
-        by: actor.userId,
-        role: pickRole(actor.role),
-        note: `Refund of ${dto.amount} processed`,
-        date: new Date(),
-      };
+    entity.status = dispute
+      ? DisputeStatus.APPROVED
+      : ClaimStatus.APPROVED;
 
-      if (dispute.resolutionNotes) dispute.resolutionNotes.push(note);
-      else dispute.resolutionNotes = [note];
+    const note = {
+      by: actor.userId,
+      role: pickRole(actor.role),
+      note: `Refund of ${dto.amount} processed`,
+      date: new Date(),
+    };
 
-      await dispute.save();
+    entity.notes = entity.notes || entity.resolutionNotes || [];
+    entity.notes.push(note);
+
+    await entity.save();
+
+    return refund.toObject ? refund.toObject() : refund;
+  }
+
+
+  async getPayslipsForEmployee(employeeId: string) {
+    const slips = await this.payslipModel
+      .find({ employeeId })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    return slips.map((p) => ({
+      _id: p._id,
+      month: p.createdAt?.toISOString?.().slice(0, 7),
+      generatedAt: p.createdAt,
+      paymentStatus: p.paymentStatus,
+      grossSalary: p.totalGrossSalary,
+      totalDeductions: p.totaDeductions ?? 0,
+      netPay: p.netPay,
+    }));
+  }
+
+  async getPayslipById(employeeId: string, slipId: string) {
+    const slip = await this.payslipModel
+      .findOne({ _id: slipId, employeeId })
+      .lean<LeanPayslip>();
+
+    if (!slip) throw new NotFoundException('Payslip not found');
+
+    const employee = await this.employeeModel
+      .findById(employeeId)
+      .populate({ path: 'payGradeId' })
+      .lean();
+
+    const dispute = await this.disputeModel
+      .findOne({ payslipId: slip._id })
+      .lean();
+
+    return {
+      ...slip,
+      month: slip.createdAt.toISOString().slice(0, 7),
+      contractType: employee?.contractType ?? null,
+      workType: employee?.workType ?? null,
+      dispute: dispute || null,
+    };
+  }
+
+  async downloadPayslipCsv(employeeId: string, slipId: string) {
+    const slip = await this.getPayslipById(employeeId, slipId);
+    const lines = [
+      'Field,Value',
+      `Month,${slip.month}`,
+      `Base Salary,${slip.earningsDetails?.baseSalary ?? 0}`,
+      `Gross Salary,${slip.totalGrossSalary}`,
+      `Net Pay,${slip.netPay}`,
+    ];
+    return Buffer.from(lines.join('\n'), 'utf8');
+  }
+
+  async getBaseSalaryForEmployee(employeeId: string) {
+    const employee = await this.employeeModel
+      .findById(employeeId)
+      .populate({ path: 'payGradeId' })
+      .lean();
+
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    let fullTimeBase =
+      employee?.payGradeId?.baseSalary ??
+      (await this.payslipModel
+        .findOne({ employeeId })
+        .sort({ createdAt: -1 })
+        .lean()
+        .then((p: any) => p?.earningsDetails?.baseSalary));
+
+    if (!fullTimeBase) {
+      return { baseSalary: 0, fullTimeBase: null, fraction: 0 };
     }
 
-    // Update claim → set status to APPROVED
-    if (claim) {
-      claim.status = ClaimStatus.APPROVED;
+    let fraction = 1;
 
-      const note = {
-        by: actor.userId,
-        role: pickRole(actor.role),
-        note: `Refund of ${dto.amount} processed`,
-        date: new Date(),
-      };
-
-      if (claim.notes) claim.notes.push(note);
-      else claim.notes = [note];
-
-      await claim.save();
+    if (employee.contractType?.includes('PART')) {
+      const perc = employee.partTimePercentage ?? employee.workFraction;
+      fraction =
+        perc && perc > 1
+          ? perc / 100
+          : perc && perc > 0
+            ? perc
+            : 0.5;
     }
 
-    if (typeof refund.toObject === 'function') return refund.toObject();
-    return refund;
+    return {
+      baseSalary: Math.round(fullTimeBase * fraction * 100) / 100,
+      fullTimeBase,
+      fraction,
+    };
+  }
+
+  async calculateLeaveCompensation(
+    employeeId: string,
+    remaining: number,
+    encash = true,
+    workingDays?: number,
+  ) {
+    if (remaining <= 0)
+      return {
+        remaining,
+        encash,
+        dailyRate: 0,
+        compensation: 0,
+      };
+
+    const salaryInfo = await this.getBaseSalaryForEmployee(employeeId);
+    const base = salaryInfo.baseSalary ?? 0;
+
+    const work = workingDays || 22;
+    const rate = Math.round((base / work) * 100) / 100;
+    const comp = Math.round(rate * remaining * 100) / 100;
+
+    return {
+      remaining,
+      encash,
+      baseSalary: base,
+      workingDaysPerMonth: work,
+      dailyRate: rate,
+      compensation: comp,
+    };
+  }
+
+  async calculateCommuteCompensation(employeeId: string) {
+    const slip = await this.payslipModel
+      .findOne({ employeeId })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip>();
+
+    const matches = [];
+
+    if (slip?.earningsDetails?.allowances) {
+      for (const a of slip.earningsDetails.allowances) {
+        const name = a.name ?? a.label ?? a.type ?? '';
+        const n = String(name).toLowerCase();
+        if (
+          n.includes('transport') ||
+          n.includes('commut') ||
+          n.includes('bus') ||
+          n.includes('metro')
+        ) {
+          matches.push({
+            name,
+            amount: a.amount ?? 0,
+            source: 'payslip',
+          });
+        }
+      }
+    }
+
+    let total = matches.reduce((s, m) => s + m.amount, 0);
+
+    if (total === 0) {
+      const cfg = await this.allowanceModel.findOne({ name: /transport/i });
+      if (cfg?.amount) {
+        total = cfg.amount;
+        matches.push({
+          name: cfg.name,
+          amount: cfg.amount,
+          source: 'config',
+        });
+      }
+    }
+
+    return {
+      monthlyTransportAllowance: total,
+      annualTransportAllowance: total * 12,
+      breakdown: matches,
+    };
+  }
+
+  async calculateTaxBreakdown(employeeId: string) {
+    const slip = await this.payslipModel
+      .findOne({ employeeId })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip>();
+
+    if (!slip)
+      return { taxes: [], totalTax: 0, note: 'No payslip found' };
+
+    const taxes = (slip.deductionsDetails?.taxes ?? []).map((t: any) => ({
+      name: t.name ?? 'Tax',
+      amount: t.amount ?? 0,
+      base: t.base ?? null,
+      rate: t.rate ?? null,
+      rule: t.rule ?? null,
+      source: 'payslip',
+    }));
+
+    return {
+      taxes,
+      totalTax: taxes.reduce((s, t) => s + t.amount, 0),
+      payslipId: slip._id,
+      month: slip.createdAt.toISOString().slice(0, 7),
+    };
+  }
+
+  async calculateInsuranceBreakdown(employeeId: string) {
+    const slip = await this.payslipModel
+      .findOne({ employeeId })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip>();
+
+    if (!slip)
+      return { insurances: [], totalEmployeeContributions: 0, totalEmployerContributions: 0 };
+
+    const items = (slip.deductionsDetails?.insurances ?? []).map((i: any) => ({
+      name: i.name ?? 'Insurance',
+      employeeShare: i.employee ?? 0,
+      employerShare: i.employer ?? 0,
+      total: (i.employee ?? 0) + (i.employer ?? 0),
+      base: i.base ?? null,
+      rate: i.rate ?? null,
+      rule: i.rule ?? null,
+    }));
+
+    return {
+      insurances: items,
+      totalEmployeeContributions: items.reduce((s, i) => s + i.employeeShare, 0),
+      totalEmployerContributions: items.reduce((s, i) => s + i.employerShare, 0),
+      payslipId: slip._id,
+      month: slip.createdAt.toISOString().slice(0, 7),
+    };
+  }
+
+  async calculateMisconductDeductions(employeeId: string) {
+    const slip = await this.payslipModel
+      .findOne({ employeeId })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip>();
+
+    if (!slip)
+      return { items: [], total: 0, note: 'No payslip found' };
+
+    const penalties = slip.deductionsDetails?.penalties;
+    let items: any[] = [];
+
+    if (Array.isArray(penalties)) items = penalties;
+    else if (penalties) items = [penalties];
+
+    const filtered = items.filter((p) => {
+      const name = String(p.name ?? '').toLowerCase();
+      return (
+        name.includes('misconduct') ||
+        name.includes('absence') ||
+        name.includes('unapproved') ||
+        name.includes('penalty')
+      );
+    });
+
+    const mapped = filtered.map((p) => ({
+      name: p.name ?? 'Penalty',
+      amount: p.amount ?? 0,
+      source: 'payslip',
+    }));
+
+    return {
+      items: mapped,
+      total: mapped.reduce((s, m) => s + m.amount, 0),
+      payslipId: slip._id,
+      month: slip.createdAt.toISOString().slice(0, 7),
+    };
+  }
+
+  async calculateUnpaidLeaveDeductions(employeeId: string) {
+    const slip = await this.payslipModel
+      .findOne({ employeeId })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip>();
+
+    if (!slip)
+      return { unpaidDays: 0, dailyRate: 0, deduction: 0 };
+
+    const penalties = slip.deductionsDetails?.penalties;
+
+    let unpaidDays = 0;
+
+    if (Array.isArray(penalties)) {
+      for (const p of penalties) {
+        if (p.unpaidLeaveDays) unpaidDays += p.unpaidLeaveDays;
+      }
+    } else if (penalties?.unpaidLeaveDays) {
+      unpaidDays = penalties.unpaidLeaveDays;
+    }
+
+    const salaryInfo = await this.getBaseSalaryForEmployee(employeeId);
+    const rate = Math.round((salaryInfo.baseSalary / 22) * 100) / 100;
+    const deduction = Math.round(rate * unpaidDays * 100) / 100;
+
+    return {
+      unpaidDays,
+      baseSalary: salaryInfo.baseSalary,
+      dailyRate: rate,
+      deduction,
+      payslipId: slip._id,
+      month: slip.createdAt.toISOString().slice(0, 7),
+    };
   }
 }

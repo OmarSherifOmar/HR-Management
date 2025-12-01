@@ -1,4 +1,3 @@
-// backend/src/payroll-tracking/payroll-tracking.controller.ts
 import {
   Controller,
   Get,
@@ -8,12 +7,16 @@ import {
   Body,
   Query,
   Req,
+  Res,
   UseGuards,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 
 import { AuthGuard } from '../auth/guards/authentication.guard';
 import { authorizationGuard } from '../auth/guards/authorization.guard';
-
 import { Roles, Role } from '../auth/decorators/roles.decorator';
 
 import { PayrollTrackingService } from './payroll-tracking.service';
@@ -26,19 +29,12 @@ import { CreateDisputeNoteDto } from './dto/create-dispute-note.dto';
 
 /**
  * MaybeUseGuards decorator factory:
- * - In tests (NODE_ENV === 'test') it returns a valid no-op decorator so Jest/Nest
- *   won't try to instantiate guard dependencies like JwtService.
- * - In other environments it applies UseGuards(...) as usual.
+ * - In tests (NODE_ENV === 'test') it returns a no-op decorator to avoid instantiating JwtService.
+ * - In prod it applies real guards.
  */
 function MaybeUseGuards(...guards: any[]) {
   if (process.env.NODE_ENV === 'test') {
-    return function (
-      target: any,
-      propertyKey?: string | symbol,
-      descriptor?: PropertyDescriptor,
-    ) {
-      // intentionally do nothing — valid decorator for tests
-    } as ClassDecorator & MethodDecorator;
+    return function () {} as any;
   }
   return UseGuards(...guards);
 }
@@ -56,7 +52,6 @@ export class PayrollTrackingController {
     return { userId, role };
   }
 
-  // EMPLOYEE – Get own claims
   @Get('claims/mine')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
   async getMyClaims(@Req() req: any) {
@@ -78,7 +73,6 @@ export class PayrollTrackingController {
     return this.svc.listTaxDocumentsForEmployee(userId);
   }
 
-  // PAYROLL SPECIALIST + MANAGER + FINANCE + ADMIN
   @Get('reports/payroll')
   @Roles(
     Role.PAYROLL_SPECIALIST,
@@ -90,14 +84,12 @@ export class PayrollTrackingController {
     return this.svc.generatePayrollReport(q);
   }
 
-  // DISPUTES LIST
   @Get('disputes')
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
   async listDisputes(@Query('status') status?: string) {
     return this.svc.listDisputes({ status });
   }
 
-  // UPDATE DISPUTE
   @Patch('disputes/:id')
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async patchDispute(
@@ -109,7 +101,6 @@ export class PayrollTrackingController {
     return this.svc.updateDispute(id, { userId, role }, dto);
   }
 
-  // CLAIMS LIST
   @Get('claims')
   @Roles(
     Role.PAYROLL_SPECIALIST,
@@ -121,7 +112,6 @@ export class PayrollTrackingController {
     return this.svc.listClaims({ status });
   }
 
-  // UPDATE CLAIM
   @Patch('claims/:id')
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async patchClaim(
@@ -133,7 +123,6 @@ export class PayrollTrackingController {
     return this.svc.updateClaim(id, { userId, role }, dto);
   }
 
-  // MANAGER APPROVAL
   @Patch('disputes/:id/manager-approve')
   @Roles(Role.Payroll_MANAGER)
   async managerApprove(@Param('id') id: string, @Req() req: any) {
@@ -141,14 +130,12 @@ export class PayrollTrackingController {
     return this.svc.managerApproveDispute(id, userId);
   }
 
-  // TRANSPARENCY SUMMARY
   @Get('transparency/summary')
   @Roles(Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
   async getTransparency() {
     return this.svc.transparencySummary();
   }
 
-  // FINANCE – REFUNDS
   @Post('refunds')
   @Roles(Role.FINANCE_STAFF)
   async processRefund(@Req() req: any, @Body() dto: ProcessRefundDto) {
@@ -156,7 +143,6 @@ export class PayrollTrackingController {
     return this.svc.processRefund({ userId, role }, dto);
   }
 
-  // ADD DISPUTE NOTE
   @Post('disputes/:id/notes')
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async addDisputeNote(
@@ -166,5 +152,133 @@ export class PayrollTrackingController {
   ) {
     const { userId, role } = this.extractUser(req);
     return this.svc.updateDispute(id, { userId, role }, { note: body.note });
+  }
+
+  @Get('me/payslips')
+  getMyPayslips(@Req() req: Request & { user?: { sub?: string } }) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getPayslipsForEmployee(employeeId);
+  }
+
+  @Get('me/payslips/:id')
+  getMyPayslip(
+    @Req() req: Request & { user?: { sub?: string } },
+    @Param('id') payslipId: string,
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getPayslipById(employeeId, payslipId);
+  }
+
+  @Get('me/payslips/:id/download')
+  async downloadMyPayslip(
+    @Req() req: Request & { user?: { sub?: string } },
+    @Param('id') payslipId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+
+    const csvBuffer = await this.svc.downloadPayslipCsv(employeeId, payslipId);
+    if (!csvBuffer)
+      throw new NotFoundException('Payslip not found or access denied');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="payslip_${payslipId}.csv"`,
+    );
+
+    return csvBuffer;
+  }
+
+  @Get('me/base-salary')
+  async getMyBaseSalary(@Req() req: Request & { user?: { sub?: string } }) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getBaseSalaryForEmployee(employeeId);
+  }
+
+  @Get('me/leave-compensation')
+  async getMyLeaveCompensation(
+    @Req() req: Request & { user?: { sub?: string } },
+    @Query('remainingDays') remainingDaysStr: string,
+    @Query('encash') encashStr?: string,
+    @Query('workingDays') workingDaysStr?: string,
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+
+    if (!remainingDaysStr)
+      throw new BadRequestException(
+        'Query param `remainingDays` is required and must be a number',
+      );
+
+    const remainingDays = Number(remainingDaysStr);
+    if (isNaN(remainingDays) || remainingDays < 0)
+      throw new BadRequestException(
+        '`remainingDays` must be a non-negative number',
+      );
+
+    const encash = encashStr === undefined ? true : encashStr !== 'false';
+
+    let workingDays: number | undefined = undefined;
+    if (workingDaysStr) {
+      const num = Number(workingDaysStr);
+      if (isNaN(num) || num <= 0)
+        throw new BadRequestException('`workingDays` must be a positive number');
+      workingDays = num;
+    }
+
+    return this.svc.calculateLeaveCompensation(
+      employeeId,
+      remainingDays,
+      encash,
+      workingDays,
+    );
+  }
+
+  @Get('me/commute-compensation')
+  async getMyCommuteCompensation(
+    @Req() req: Request & { user?: { sub?: string } },
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.calculateCommuteCompensation(employeeId);
+  }
+
+  @Get('me/tax-deductions')
+  async getMyTaxDeductions(@Req() req: Request & { user?: { sub?: string } }) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.calculateTaxBreakdown(employeeId);
+  }
+
+  @Get('me/insurance-deductions')
+  async getMyInsuranceDeductions(
+    @Req() req: Request & { user?: { sub?: string } },
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.calculateInsuranceBreakdown(employeeId);
+  }
+
+  @Get('me/misconduct-deductions')
+  async getMyMisconductDeductions(
+    @Req() req: Request & { user?: { sub?: string } },
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.calculateMisconductDeductions(employeeId);
+  }
+
+  @Get('me/unpaid-leave-deductions')
+  async getMyUnpaidLeaveDeductions(
+    @Req() req: Request & { user?: { sub?: string } },
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.calculateUnpaidLeaveDeductions(employeeId);
   }
 }

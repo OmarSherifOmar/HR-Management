@@ -10,3 +10,4 @@ export class UpdateClaimDto {
   @IsString()
   note?: string;
 }
+

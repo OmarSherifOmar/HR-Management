@@ -2,12 +2,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
 import { PayrollTrackingController } from './payroll-tracking.controller';
+import { JwtService } from '@nestjs/jwt';
 import { PayrollTrackingService } from './payroll-tracking.service';
-
-import {
-  paySlip,
-  PayslipDocument,
-} from '../payroll-execution/models/payslip.schema';
 
 describe('PayrollTrackingController', () => {
   let controller: PayrollTrackingController;
@@ -30,10 +26,15 @@ describe('PayrollTrackingController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PayrollTrackingController],
-      providers: [{ provide: PayrollTrackingService, useValue: mockService }],
+      providers: [
+        { provide: JwtService, useValue: {} },
+        { provide: PayrollTrackingService, useValue: mockService },
+      ],
     }).compile();
 
-    controller = module.get<PayrollTrackingController>(PayrollTrackingController);
+    controller = module.get<PayrollTrackingController>(
+      PayrollTrackingController,
+    );
   });
 
   it('should be defined', () => {
@@ -108,7 +109,4 @@ describe('PayrollTrackingController', () => {
     expect(mockService.processRefund).toHaveBeenCalledWith({ userId: user.sub, role: user.role }, dto);
     expect(res).toEqual({ _id: 'r1' });
   });
-
-  // Add any other controller method smoke tests similarly...
 });
-

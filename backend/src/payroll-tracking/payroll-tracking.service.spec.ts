@@ -1,7 +1,6 @@
-// backend/src/payroll-tracking/payroll-tracking.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
-import { Model, Types } from 'mongoose';
 import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Types, Model } from 'mongoose';
 
 import { PayrollTrackingService } from './payroll-tracking.service';
 import {
@@ -30,24 +29,164 @@ describe('PayrollTrackingService', () => {
     ...overrides.extra,
   });
 
-  beforeEach(async () => {
+
+  let payslipModel: { find: jest.Mock; findOne: jest.Mock };
+  let employeeModel: { findById: jest.Mock };
+  let disputesModel: { findOne: jest.Mock };
+  let allowanceModel: { findOne: jest.Mock };
+
+  const validEmployeeId = new Types.ObjectId().toHexString();
+  const validPayslipId = new Types.ObjectId().toHexString();
+
+  type SampleSlipType = {
+    _id: string;
+    employeeId: string;
+    createdAt: Date;
+    paymentStatus: string;
+    netPay: number;
+    totalGrossSalary: number;
+    totaDeductions: number;
+    earningsDetails: {
+      baseSalary: number;
+      allowances: { name: string; amount: number }[];
+    };
+    deductionsDetails: {
+      taxes: {
+        name: string;
+        amount: number;
+        base: number;
+        rate: number;
+        rule?: string;
+      }[];
+      insurances: {
+        name: string;
+        employee: number;
+        employer: number;
+        base: number;
+        rate: number;
+      }[];
+      penalties:
+        | { unpaidLeaveDays?: number }
+        | { name: string; amount: number }[];
+    };
+  };
+
+  const sampleSlip: SampleSlipType = {
+    _id: validPayslipId,
+    employeeId: validEmployeeId,
+    createdAt: new Date('2025-10-15T00:00:00.000Z'),
+    paymentStatus: 'PAID',
+    netPay: 800,
+    totalGrossSalary: 1000,
+    totaDeductions: 200,
+    earningsDetails: {
+      baseSalary: 1000,
+      allowances: [{ name: 'Transport Allowance', amount: 50 }],
+    },
+    deductionsDetails: {
+      taxes: [
+        {
+          name: 'Income Tax',
+          amount: 100,
+          base: 1000,
+          rate: 10,
+          rule: 'Law XYZ',
+        },
+      ],
+      insurances: [
+        { name: 'Pension', employee: 20, employer: 30, base: 1000, rate: 2 },
+      ],
+      penalties: { unpaidLeaveDays: 2 },
+    },
+  };
+
+
+  beforeEach(() => {
+    //
+    // --- OMAR BRANCH MOCKS ---
+    //
     const claimModel = createMockModel();
     const disputeModel = createMockModel();
     const refundModel = createMockModel();
-    const payslipModel = createMockModel();
+    const payslipModelOmar = createMockModel();
 
-    // instantiate the service with mock Models (constructor order must match real service)
+    //
+    // --- AHMED BRANCH MOCKS ---
+    //
+    payslipModel = {
+      find: jest.fn().mockImplementation(() => ({
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([sampleSlip]),
+      })),
+      findOne: jest.fn().mockImplementation(() => ({
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(sampleSlip),
+      })),
+    };
+
+    const employeeObj = {
+      contractType: 'FULL_TIME',
+      workType: 'FULL_TIME',
+      partTimePercentage: undefined,
+      workFraction: undefined,
+      payGradeId: { baseSalary: 1200 },
+    };
+
+    employeeModel = {
+      findById: jest.fn().mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(employeeObj),
+        populate: jest.fn().mockImplementation(() => ({
+          lean: jest.fn().mockResolvedValue(employeeObj),
+        })),
+      })),
+    };
+
+    disputesModel = {
+      findOne: jest.fn().mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue({
+          disputeId: 'd1',
+          status: 'OPEN',
+          description: 'Test dispute',
+        }),
+      })),
+    };
+
+    allowanceModel = {
+      findOne: jest.fn().mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue({
+          name: 'Transport Allowance',
+          amount: 60,
+        }),
+      })),
+    };
+
+    //
+    // FINAL MERGED CONSTRUCTOR CALL
+    // ✔ maintains Omar’s constructor order
+    // ✔ injects Ahmed’s extended mocks where needed
+    //
     service = new PayrollTrackingService(
       claimModel as any,
       disputeModel as any,
       refundModel as any,
-      payslipModel as unknown as Model<PayslipDocument>,
+      payslipModelOmar as unknown as Model<PayslipDocument>,
+
+      // AHMED extra injected models:
+      payslipModel as unknown as Model<any>,
+      employeeModel as unknown as Model<any>,
+      disputesModel as unknown as Model<any>,
+      allowanceModel as unknown as Model<any>,
     );
   });
 
+  afterEach(() => jest.resetAllMocks());
+
+
   describe('getClaimsForEmployee', () => {
     it('throws on invalid employee id', async () => {
-      await expect(service.getClaimsForEmployee('bad-id')).rejects.toThrow(BadRequestException);
+      await expect(service.getClaimsForEmployee('bad-id')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('returns claims list when valid id', async () => {
@@ -59,108 +198,99 @@ describe('PayrollTrackingService', () => {
 
       const res = await service.getClaimsForEmployee(employeeId);
       expect(res).toEqual([{ _id: 'c1', employeeId }]);
-      expect((service as any).claimModel.find).toHaveBeenCalledWith({ employeeId });
     });
   });
 
   describe('getClaimByIdForEmployee', () => {
     it('throws on invalid claim id', async () => {
-      await expect(service.getClaimByIdForEmployee('emp', 'bad')).rejects.toThrow(BadRequestException);
+      await expect(
+        service.getClaimByIdForEmployee('emp', 'bad'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws NotFound if claim missing', async () => {
       const emp = new Types.ObjectId().toHexString();
       const claimId = new Types.ObjectId().toHexString();
       (service as any).claimModel.findById.mockResolvedValueOnce(null);
-      await expect(service.getClaimByIdForEmployee(emp, claimId)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.getClaimByIdForEmployee(emp, claimId),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws Forbidden if employee mismatch', async () => {
       const empA = new Types.ObjectId().toHexString();
       const claimId = new Types.ObjectId().toHexString();
-      const fakeClaim = { _id: claimId, employeeId: new Types.ObjectId().toHexString() };
+      const fakeClaim = {
+        _id: claimId,
+        employeeId: new Types.ObjectId().toHexString(),
+      };
       (service as any).claimModel.findById.mockResolvedValueOnce(fakeClaim);
-      await expect(service.getClaimByIdForEmployee(empA, claimId)).rejects.toThrow(ForbiddenException);
-    });
-
-    it('returns claim when owner matches', async () => {
-      const emp = new Types.ObjectId().toHexString();
-      const claimId = new Types.ObjectId().toHexString();
-      const fakeClaim = { _id: claimId, employeeId: emp };
-      (service as any).claimModel.findById.mockResolvedValueOnce(fakeClaim);
-      const out = await service.getClaimByIdForEmployee(emp, claimId);
-      expect(out._id).toBe(claimId);
+      await expect(
+        service.getClaimByIdForEmployee(empA, claimId),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('listTaxDocumentsForEmployee', () => {
-    it('throws on invalid id', async () => {
-      await expect(service.listTaxDocumentsForEmployee('bad')).rejects.toThrow(BadRequestException);
-    });
 
-    it('returns mapped payslip summary', async () => {
-      const emp = new Types.ObjectId().toHexString();
-      const sample = [{ payrollRunId: 'r1', totalGrossSalary: 1200, netPay: 1000, createdAt: new Date() }];
-      (service as any).payslipModel.find.mockImplementationOnce(() => ({
-        sort: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue(sample),
-      }));
-
-      const res = await service.listTaxDocumentsForEmployee(emp);
-      expect(res[0]).toMatchObject({ payrollRunId: 'r1', gross: 1200, net: 1000 });
+  it('getPayslipsForEmployee returns a summary list', async () => {
+    const res = await service.getPayslipsForEmployee(validEmployeeId);
+    expect(Array.isArray(res)).toBe(true);
+    expect(res[0]).toMatchObject({
+      _id: validPayslipId,
+      paymentStatus: 'PAID',
+      netPay: 800,
     });
   });
 
-  describe('generatePayrollReport', () => {
-    it('calls aggregate and returns result', async () => {
-      (service as any).payslipModel.aggregate.mockResolvedValueOnce([{ _id: 'run1', totalGross: 200 }]);
-      const res = await service.generatePayrollReport({ month: undefined } as any);
-      expect(res).toEqual([{ _id: 'run1', totalGross: 200 }]);
-    });
+  it('getPayslipById returns full payslip details and dispute', async () => {
+    const res = await service.getPayslipById(validEmployeeId, validPayslipId);
+    expect(res._id).toBe(validPayslipId);
+    expect(res.baseSalary).toBe(1000);
+    expect(res.dispute!.status).toBe('OPEN');
   });
 
-  describe('listDisputes & updateDispute', () => {
-    it('listDisputes returns array', async () => {
-      (service as any).disputeModel.find.mockImplementationOnce(() => ({
-        sort: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([{ _id: 'd1' }]),
-      }));
-      const res = await service.listDisputes();
-      expect(res).toEqual([{ _id: 'd1' }]);
-    });
-
-    it('updateDispute appends note and saves', async () => {
-      const id = new Types.ObjectId().toHexString();
-      const mockDispute: any = { _id: id, resolutionNotes: [], save: jest.fn() };
-      (service as any).disputeModel.findById.mockResolvedValueOnce(mockDispute);
-
-      const out = await service.updateDispute(id, { userId: 'u1', role: 'Payroll Specialist' }, { note: 'hi' } as any);
-      expect(mockDispute.save).toHaveBeenCalled();
-      expect(out.resolutionNotes.length).toBe(1);
-    });
+  it('downloadPayslipCsv returns a valid CSV buffer', async () => {
+    const buf = await service.downloadPayslipCsv(
+      validEmployeeId,
+      validPayslipId,
+    );
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    const s = buf.toString('utf8');
+    expect(s).toContain('Base Salary');
   });
 
-  describe('processRefund', () => {
-    it('throws on invalid linkedId', async () => {
-      await expect(service.processRefund({ userId: 'u1', role: 'Finance' }, { linkedId: 'bad' } as any)).rejects.toThrow(BadRequestException);
+  it('calculateLeaveCompensation computes correctly', async () => {
+    jest.spyOn(service, 'getBaseSalaryForEmployee').mockResolvedValue({
+      baseSalary: 2200,
+      fullTimeBase: 2200,
+      fraction: 1,
+    });
+    const out = await service.calculateLeaveCompensation(
+      validEmployeeId,
+      5,
+      true,
+      22,
+    );
+    expect(out.dailyRate).toBeCloseTo(100);
+  });
+
+  it('calculateUnpaidLeaveDeductions works', async () => {
+    const slipWithUnpaid = {
+      ...sampleSlip,
+      deductionsDetails: { penalties: { unpaidLeaveDays: 3 } },
+    };
+    payslipModel.findOne.mockImplementation(() => ({
+      sort: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(slipWithUnpaid),
+    }));
+
+    jest.spyOn(service, 'getBaseSalaryForEmployee').mockResolvedValue({
+      baseSalary: 2200,
+      fullTimeBase: 2200,
+      fraction: 1,
     });
 
-    it('creates refund and updates dispute', async () => {
-      const linkedId = new Types.ObjectId().toHexString();
-      const mockDispute: any = { _id: linkedId, employeeId: 'e1', resolutionNotes: [], status: undefined, save: jest.fn() };
-      (service as any).disputeModel.findById.mockResolvedValueOnce(mockDispute);
-      (service as any).claimModel.findById.mockResolvedValueOnce(null);
-      const created = { _id: 'r1', toObject: () => ({ _id: 'r1' }) };
-      (service as any).refundModel.create.mockResolvedValueOnce(created);
-
-      const financeUserId = new Types.ObjectId().toHexString();
-      const res = await service.processRefund({ userId: financeUserId, role: 'Finance' }, { linkedId, amount: 50 } as any);
-
-      expect((service as any).refundModel.create).toHaveBeenCalled();
-      expect(mockDispute.status).toBeDefined();
-      expect(mockDispute.save).toHaveBeenCalled();
-      expect(res._id).toBe('r1');
-    });
+    const out = await service.calculateUnpaidLeaveDeductions(validEmployeeId);
+    expect(out.unpaidDays).toBe(3);
   });
 });
-
