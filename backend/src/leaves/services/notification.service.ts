@@ -103,6 +103,38 @@ export class NotificationService {
     return this.notificationModel.countDocuments({ to: new Types.ObjectId(userId) });
   }
 
+  /**
+   * Generic notification sender with structured data
+   * Used for custom notification types like irregular pattern flagging
+   */
+  async sendNotification(params: {
+    recipientId: string;
+    type: string;
+    title: string;
+    message: string;
+    data?: Record<string, any>;
+  }): Promise<NotificationLogDocument> {
+    // For special recipient types like 'hr_manager', we'd need to resolve the actual ID
+    // For now, log it and skip if it's a placeholder
+    if (params.recipientId === 'hr_manager') {
+      this.logger.log(`[NOTIFICATION] HR Manager notification (not sent - needs resolution): ${params.message}`);
+      // In a real implementation, you'd resolve the HR manager ID here
+      // For now, we'll just log it
+      return null as any;
+    }
+
+    const notification = new this.notificationModel({
+      to: new Types.ObjectId(params.recipientId),
+      type: params.type,
+      message: `[${params.title}] ${params.message}`,
+    });
+
+    const saved = await notification.save();
+    this.logger.log(`[NOTIFICATION] ${params.type} sent to ${params.recipientId}: ${params.title}`);
+    
+    return saved;
+  }
+
   // ==================== REQ-019: EMPLOYEE STATUS NOTIFICATIONS ====================
 
   /**

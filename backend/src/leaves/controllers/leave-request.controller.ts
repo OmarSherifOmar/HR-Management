@@ -357,6 +357,48 @@ export class LeaveRequestController {
   }
 
   /**
+   * GET /leave-requests/manager/team-balances
+   *
+   * REQ-034: Manager View Team Balances & Upcoming Leaves
+   * Returns each team member with their leave entitlements and upcoming leaves.
+   * Supports filtering by leaveTypeId, status, date range, and department.
+   */
+  @Get('manager/team-balances')
+  @UseGuards(AuthGuard)
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER)
+  async getTeamBalancesAndUpcomingLeaves(
+    @Query('leaveTypeId') leaveTypeId: string,
+    @Query('status') status: LeaveStatus,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('departmentId') departmentId: string,
+    @Query('sortBy') sortBy: string,
+    @Query('sortOrder') sortOrder: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const managerId = getUserId(req);
+
+    const result = await this.leaveRequestService.getTeamBalancesAndUpcomingLeaves(
+      managerId,
+      {
+        leaveTypeId,
+        status,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        departmentId,
+        sortBy: sortBy as any,
+        sortOrder: sortOrder as any,
+      },
+    );
+
+    return {
+      success: true,
+      data: result,
+      count: result.length,
+    };
+  }
+
+  /**
    * PATCH /leave-requests/:id/manager/approve
    * 
    * REQ-021: Manager approves a leave request
@@ -652,6 +694,84 @@ export class LeaveRequestController {
       success: result.failed === 0,
       message: `Processed ${result.total} requests: ${result.successful} ${bulkDto.action === 'approve' ? 'approved' : 'rejected'}, ${result.failed} failed`,
       data: result,
+    };
+  }
+
+  // ==================== REQ-039: FLAG IRREGULAR PATTERNS ====================
+
+  /**
+   * PATCH /leave-requests/:id/flag-irregular
+   * 
+   * REQ-039: Manager flags an irregular leave pattern
+   * As a direct manager, I want to be able to flag irregular leaving patterns 
+   * in employees' leave history.
+   * 
+   * @param id - Leave request ID
+   * @param body - Flag status and optional reason
+   * @param req - Request object containing authenticated manager
+   * @returns Updated leave request
+   */
+  @Patch(':id/flag-irregular')
+  @UseGuards(AuthGuard)
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER)
+  async flagIrregularPattern(
+    @Param('id') id: string,
+    @Body() body: { flagged: boolean; reason?: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const managerId = getUserId(req);
+
+    const leaveRequest = await this.leaveRequestService.flagIrregularPattern(
+      id,
+      managerId,
+      body.flagged,
+      body.reason,
+    );
+
+    return {
+      success: true,
+      message: body.flagged 
+        ? 'Leave request flagged as irregular pattern' 
+        : 'Irregular pattern flag removed',
+      data: leaveRequest,
+    };
+  }
+
+  /**
+   * GET /leave-requests/manager/flagged-irregular
+   * 
+   * REQ-039: Get leave requests flagged as irregular patterns for manager's team
+   * 
+   * @param employeeId - Optional filter by specific employee
+   * @param startDate - Optional filter by date range start
+   * @param endDate - Optional filter by date range end
+   * @param req - Request object containing authenticated manager
+   * @returns List of flagged leave requests
+   */
+  @Get('manager/flagged-irregular')
+  @UseGuards(AuthGuard)
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER)
+  async getFlaggedIrregularRequests(
+    @Query('employeeId') employeeId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const managerId = getUserId(req);
+
+    const leaveRequests = await this.leaveRequestService.getFlaggedIrregularRequests(
+      managerId,
+      {
+        employeeId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      },
+    );
+
+    return {
+      success: true,
+      data: leaveRequests,
+      count: leaveRequests.length,
     };
   }
 }
