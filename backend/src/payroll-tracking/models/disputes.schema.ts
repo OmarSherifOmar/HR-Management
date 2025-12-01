@@ -49,6 +49,24 @@ export class disputes {
 
   @Prop()
   resolutionComment?: string;
+
+  @Prop({
+    type: [
+      {
+        by: mongoose.Schema.Types.ObjectId,
+        role: String,
+        note: String,
+        date: Date,
+      },
+    ],
+    default: [],
+  })
+  resolutionNotes?: {
+    by?: mongoose.Types.ObjectId;
+    role?: string;
+    note?: string;
+    date?: Date;
+  }[];
 }
 
 export const disputesSchema = SchemaFactory.createForClass(disputes);

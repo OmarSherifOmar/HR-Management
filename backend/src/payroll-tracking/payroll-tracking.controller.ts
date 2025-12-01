@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Param,
   Body,
@@ -27,14 +28,35 @@ import { UpdateClaimDto } from './dto/update-claim.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { CreateDisputeNoteDto } from './dto/create-dispute-note.dto';
 
-/**
- * MaybeUseGuards decorator factory:
- * - In tests (NODE_ENV === 'test') it returns a no-op decorator to avoid instantiating JwtService.
- * - In prod it applies real guards.
- */
-function MaybeUseGuards(...guards: any[]) {
+import { CreateClaimDto } from './dto/create-claim.dto';
+import { CreateDisputeDto } from './dto/create-dispute.dto';
+import { CreateRefundDto } from './dto/create-refund.dto';
+
+import { IsOptional, IsString, IsIn } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+
+/** DTO used by specialist + manager decision endpoints */
+class SpecialistDecisionDto {
+  @IsString()
+  @IsIn(['approve', 'reject'])
+  action: 'approve' | 'reject';
+
+  @IsOptional()
+  @IsString()
+  comment?: string;
+
+  @IsOptional()
+  approvedAmount?: number;
+}
+
+/** No-op guard wrapper for tests */
+function MaybeUseGuards(
+  ...guards: Parameters<typeof UseGuards>
+): ReturnType<typeof UseGuards> {
   if (process.env.NODE_ENV === 'test') {
-    return function () {} as any;
+    // return a no-op decorator compatible with NestJS decorator type
+    const noop = () => undefined;
+    return noop as unknown as ReturnType<typeof UseGuards>;
   }
   return UseGuards(...guards);
 }
@@ -44,13 +66,232 @@ function MaybeUseGuards(...guards: any[]) {
 export class PayrollTrackingController {
   constructor(private readonly svc: PayrollTrackingService) {}
 
-  private extractUser(req: any) {
-    const user = req.user || {};
-    const userId = user.sub || user.id || null;
+  /** extract user info helper */
+  private extractUser(
+    req: Request & {
+      user?: { sub?: string; id?: string; roles?: string[]; role?: string };
+    },
+  ) {
+    const user = (req.user ?? {}) as {
+      sub?: string;
+      id?: string;
+      roles?: string[];
+      role?: string;
+    };
+    const userId = user.sub ?? user.id ?? null;
     const role =
-      user.role || (Array.isArray(user.roles) ? user.roles[0] : undefined);
+      user.role ?? (Array.isArray(user.roles) ? user.roles[0] : undefined);
     return { userId, role };
   }
+
+  // ---------------------------------------------------------------------------
+  // EMPLOYEE CLAIM CREATION
+  // ---------------------------------------------------------------------------
+  @Post('claims')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async createClaim(
+    @Body() dto: CreateClaimDto,
+    @Req()
+    req: Request & {
+      user?: { sub?: string; id?: string; roles?: string[]; role?: string };
+    },
+  ) {
+    const { userId } = this.extractUser(req);
+    const roles = Array.isArray(req.user?.roles)
+      ? req.user.roles
+      : req.user?.role
+        ? [req.user.role]
+        : [];
+
+    const allowed =
+      roles.includes(Role.HR_EMPLOYEE) ||
+      roles.includes(Role.HR_MANAGER) ||
+      roles.includes(Role.SYSTEM_ADMIN);
+
+    if (dto.employeeId !== userId && !allowed) {
+      throw new BadRequestException(
+        'employeeId must match authenticated user unless HR/System Admin',
+      );
+    }
+
+    return this.svc.createClaim(dto);
+  }
+
+  @Post('disputes')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async createDispute(
+    @Body() dto: CreateDisputeDto,
+    @Req()
+    req: Request & {
+      user?: { sub?: string; id?: string; roles?: string[]; role?: string };
+    },
+  ) {
+    const { userId } = this.extractUser(req);
+    const roles = Array.isArray(req.user?.roles)
+      ? req.user.roles
+      : req.user?.role
+        ? [req.user.role]
+        : [];
+
+    const allowed =
+      roles.includes(Role.HR_EMPLOYEE) ||
+      roles.includes(Role.HR_MANAGER) ||
+      roles.includes(Role.SYSTEM_ADMIN);
+
+    if (dto.employeeId !== userId && !allowed) {
+      throw new BadRequestException(
+        'employeeId must match authenticated user unless HR/System Admin',
+      );
+    }
+
+    return this.svc.createDispute(dto);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CLAIM SPECIALIST DECISION
+  // ---------------------------------------------------------------------------
+  @Put('claims/:id/specialist-decision')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async claimSpecialistDecision(
+    @Param('id') id: string,
+    @Body() body: SpecialistDecisionDto,
+    @Req() req: any,
+  ) {
+    const dto = plainToInstance(SpecialistDecisionDto, body);
+    const { userId } = this.extractUser(req);
+
+    return this.svc.claimSpecialistDecision(
+      id,
+      dto.action,
+      userId,
+      dto.comment,
+      dto.approvedAmount,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // CLAIM MANAGER DECISION
+  // ---------------------------------------------------------------------------
+  @Put('claims/:id/manager-decision')
+  @Roles(Role.Payroll_MANAGER)
+  async claimManagerDecision(
+    @Param('id') id: string,
+    @Body() body: SpecialistDecisionDto,
+    @Req() req: any,
+  ) {
+    const dto = plainToInstance(SpecialistDecisionDto, body);
+    const { userId } = this.extractUser(req);
+
+    return this.svc.claimManagerDecision(id, dto.action, userId, dto.comment);
+  }
+
+  // ---------------------------------------------------------------------------
+  // APPROVED CLAIMS (FINANCE)
+  // ---------------------------------------------------------------------------
+  @Get('claims/approved')
+  @Roles(Role.FINANCE_STAFF)
+  async getApprovedClaims() {
+    return this.svc.getApprovedClaims();
+  }
+
+  // ---------------------------------------------------------------------------
+  // FINANCE REFUND FOR CLAIM
+  // ---------------------------------------------------------------------------
+  @Post('claims/:id/refund')
+  @Roles(Role.FINANCE_STAFF)
+  async createRefundForClaim(
+    @Param('id') id: string,
+    @Body() dto: CreateRefundDto,
+    @Req() req: any,
+  ) {
+    const { userId } = this.extractUser(req);
+    return this.svc.createRefundForClaim(id, dto, userId);
+  }
+
+  // EXPENSE CLAIM REFUND
+  @Post('claims/:id/expense-refund')
+  @Roles(Role.FINANCE_STAFF)
+  async createExpenseRefundForClaim(
+    @Param('id') id: string,
+    @Body() dto: CreateRefundDto,
+    @Req() req: any,
+  ) {
+    const { userId } = this.extractUser(req);
+    return this.svc.createExpenseRefundForClaim(id, dto, userId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // DISPUTE SPECIALIST DECISION
+  // ---------------------------------------------------------------------------
+  @Put('disputes/:id/specialist-decision')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async disputeSpecialistDecision(
+    @Param('id') id: string,
+    @Body() body: SpecialistDecisionDto,
+    @Req() req: any,
+  ) {
+    const dto = plainToInstance(SpecialistDecisionDto, body);
+    const { userId } = this.extractUser(req);
+
+    return this.svc.disputeSpecialistDecision(
+      id,
+      dto.action,
+      userId,
+      dto.comment,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // DISPUTE MANAGER DECISION
+  // ---------------------------------------------------------------------------
+  @Put('disputes/:id/manager-decision')
+  @Roles(Role.Payroll_MANAGER)
+  async disputeManagerDecision(
+    @Param('id') id: string,
+    @Body() body: SpecialistDecisionDto,
+    @Req() req: any,
+  ) {
+    const dto = plainToInstance(SpecialistDecisionDto, body);
+    const { userId } = this.extractUser(req);
+
+    return this.svc.disputeManagerDecision(id, dto.action, userId, dto.comment);
+  }
+
+  // ---------------------------------------------------------------------------
+  // APPROVED DISPUTES (FINANCE)
+  // ---------------------------------------------------------------------------
+  @Get('disputes/approved')
+  @Roles(Role.FINANCE_STAFF)
+  async getApprovedDisputes() {
+    return this.svc.getApprovedDisputes();
+  }
+
+  // ---------------------------------------------------------------------------
+  // REFUND FOR DISPUTE
+  // ---------------------------------------------------------------------------
+  @Post('disputes/:id/refund')
+  @Roles(Role.FINANCE_STAFF)
+  async createRefundForDispute(
+    @Param('id') id: string,
+    @Body() dto: CreateRefundDto,
+    @Req() req: any,
+  ) {
+    const { userId } = this.extractUser(req);
+    return this.svc.createRefundForDispute(id, dto, userId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // PAYROLL REPORT BY DEPARTMENT
+  // ---------------------------------------------------------------------------
+  @Get('reports/department/:departmentId')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async getDepartmentReport(@Param('departmentId') departmentId: string) {
+    return this.svc.getDepartmentPayrollReport(departmentId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // EMPLOYEE SELF-SERVICE ROUTES
+  // ---------------------------------------------------------------------------
 
   @Get('claims/mine')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
@@ -70,7 +311,7 @@ export class PayrollTrackingController {
   @Roles(Role.DEPARTMENT_EMPLOYEE)
   async getMyTaxDocs(@Req() req: any) {
     const { userId } = this.extractUser(req);
-    return this.svc.listTaxDocumentsForEmployee(userId);
+    return await this.svc.listTaxDocumentsForEmployee(userId);
   }
 
   @Get('reports/payroll')
@@ -154,6 +395,10 @@ export class PayrollTrackingController {
     return this.svc.updateDispute(id, { userId, role }, { note: body.note });
   }
 
+  // ---------------------------------------------------------------------------
+  // PAYSLIP + COMPENSATION (EMPLOYEE)
+  // ---------------------------------------------------------------------------
+
   @Get('me/payslips')
   getMyPayslips(@Req() req: Request & { user?: { sub?: string } }) {
     const employeeId = req.user?.sub;
@@ -227,7 +472,7 @@ export class PayrollTrackingController {
     if (workingDaysStr) {
       const num = Number(workingDaysStr);
       if (isNaN(num) || num <= 0)
-        throw new BadRequestException('`workingDays` must be a positive number');
+        throw new BadRequestException('`workingDays` must be positive');
       workingDays = num;
     }
 
