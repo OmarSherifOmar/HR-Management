@@ -14,6 +14,8 @@ import { LeaveRequestController } from './controllers/leave-request.controller';
 import { AttachmentController } from './controllers/attachment.controller';
 import { NotificationController } from './controllers/notification.controller';
 import { LeaveAccrualController } from './controllers/leave-accrual.controller';
+import { AccrualSuspensionController } from './controllers/accrual-suspension.controller';
+import { PayrollSyncController } from './controllers/payroll-sync.controller';
 import { LeaveConfigurationService } from './services/leave-configuration.service';
 import { LeaveTypeService } from './services/leave-type.service';
 import { LeaveEntitlementService } from './services/leave-entitlement.service';
@@ -29,6 +31,8 @@ import { LeaveRequestService } from './services/leave-request.service';
 import { AttachmentService } from './services/attachment.service';
 import { NotificationService } from './services/notification.service';
 import { LeaveAccrualService } from './services/leave-accrual.service';
+import { AccrualSuspensionService } from './services/accrual-suspension.service';
+import { PayrollSyncService } from './services/payroll-sync.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LeaveType, LeaveTypeSchema } from './models/leave-type.schema';
 import { LeaveRequest, LeaveRequestSchema } from './models/leave-request.schema';
@@ -77,6 +81,8 @@ import { JwtModule } from '@nestjs/jwt';
     AttachmentController,
     NotificationController,
     LeaveAccrualController,
+    AccrualSuspensionController,
+    PayrollSyncController,
   ],
   providers: [
     LeaveConfigurationService,
@@ -94,6 +100,8 @@ import { JwtModule } from '@nestjs/jwt';
     AttachmentService,
     NotificationService,
     LeaveAccrualService,
+    AccrualSuspensionService,
+    PayrollSyncService,
   ],
   exports:[
     LeaveConfigurationService,
@@ -111,6 +119,8 @@ import { JwtModule } from '@nestjs/jwt';
     AttachmentService,
     NotificationService,
     LeaveAccrualService,
+    AccrualSuspensionService,
+    PayrollSyncService,
   ]
 })
 export class LeavesModule {}
