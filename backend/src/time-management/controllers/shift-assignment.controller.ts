@@ -22,7 +22,7 @@ import { UpdateShiftAssignmentStatusDto } from '../dtos/shift-assignment/update-
 import { UpdateShiftAssignmentDto } from '../dtos/shift-assignment/update-shift-assignment.dto'; 
 import { RenewShiftAssignmentDto } from '../dtos/shift-assignment/renew-shift-assignment.dto';
 
-@Controller('shift-assignments')
+@Controller('time-management/shift-assignments')
 @UsePipes(new ValidationPipe({ transform: true })) // Auto-validate all requests
 export class ShiftAssignmentController {
   constructor(private readonly shiftAssignmentService: ShiftAssignmentService) {}

@@ -3,7 +3,7 @@ import { ShiftTypeService } from '../services/shift-type.service';
 import { CreateShiftTypeDto } from '../dtos/shift-type/create-shift-type.dto';
 import { UpdateShiftTypeDto } from '../dtos/shift-type/update-shift-type.dto';
 
-@Controller('shift-types')
+@Controller('time-management/shift-types')
 export class ShiftTypeController {
   constructor(private readonly shiftTypeService: ShiftTypeService) {}
 
