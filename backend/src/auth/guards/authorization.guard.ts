@@ -16,8 +16,22 @@ export class authorizationGuard implements CanActivate {
       const { user } = context.switchToHttp().getRequest();
       if(!user)
         throw new ForbiddenException('no user attached');
-      const userRole = user.role
-      if (!requiredRoles.includes(userRole)) 
+      
+      // Support both user.roles (array) and user.role (string)
+      const userRoles: string[] = Array.isArray(user.roles)
+        ? user.roles
+        : user.role
+        ? [user.role]
+        : [];
+      
+      console.log('=== AUTHORIZATION DEBUG ===');
+      console.log('User roles from token:', JSON.stringify(userRoles));
+      console.log('Required roles:', JSON.stringify(requiredRoles));
+      
+      const hasRole = userRoles.some((role) => requiredRoles.includes(role as Role));
+      console.log('Has required role:', hasRole);
+      
+      if (!hasRole) 
         throw new ForbiddenException('unauthorized access');
        
     return true;
