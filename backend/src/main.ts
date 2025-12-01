@@ -22,9 +22,26 @@ const routes: string[] = [];
 }
 
 
+
+async function printRoutes(app) {
+  await app.init(); // ensure adapters mounted
+  const adapter = app.getHttpAdapter();
+  const instance = adapter.getInstance(); // express app
+  const stack = instance._router?.stack ?? [];
+const routes: string[] = [];
+  stack.forEach((layer) => {
+    if (layer.route && layer.route.path) {
+      const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+      routes.push(`${methods} ${layer.route.path}`);
+    }
+  });
+}
+
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+<<<<<<< HEAD
   // Get the NestJS mongoose connection and register Department model globally
   // This fixes position.schema.ts middleware that uses model(Department.name)
   const connection = app.get(getConnectionToken());
@@ -40,6 +57,8 @@ async function bootstrap() {
     mongoose.model('Department', DepartmentSchema);
   }
 
+=======
+>>>>>>> origin/payrollconfig
   // cookies for AuthGuard to read req.cookies.token
   app.use(cookieParser());
 
