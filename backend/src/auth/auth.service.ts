@@ -45,6 +45,7 @@ export class AuthService {
       lastName,
       nationalId,
       password:  dto.password,
+      mobilePhone: dto.number,
       personalEmail: dto.email,
       employeeNumber,
       dateOfHire,
