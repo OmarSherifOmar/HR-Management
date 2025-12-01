@@ -97,4 +97,36 @@ async findById(id: string): Promise<EmployeeProfileDocument | null> {
     }
 }
 
+/**
+ * Find employee by their primary position ID
+ * Used to find the manager for a given supervisorPositionId
+ */
+async findByPrimaryPositionId(positionId: string): Promise<EmployeeProfileDocument | null> {
+    if (!positionId) return null;
+
+    try {
+        const employee = await this.employeeModel.findOne({
+            primaryPositionId: new Types.ObjectId(positionId),
+        });
+        return employee;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * Delete an employee (used for rollback during registration errors)
+ */
+async deleteEmployee(employeeId: string | Types.ObjectId): Promise<void> {
+    const id = typeof employeeId === 'string' 
+        ? new Types.ObjectId(employeeId) 
+        : employeeId;
+    
+    // Delete employee profile
+    await this.employeeModel.findByIdAndDelete(id);
+    
+    // Delete associated system role
+    await this.systemRoleModel.deleteOne({ employeeProfileId: id });
+}
+
 }
