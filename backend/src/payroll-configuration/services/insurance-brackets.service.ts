@@ -89,4 +89,33 @@ export class InsuranceBracketsService {
 
     return bracket;
   }
+
+  async approve(id: string, approverId: string) {
+    const bracket = await this.insuranceBracketsModel.findById(id);
+    if (!bracket) throw new NotFoundException('Insurance bracket not found');
+
+    bracket.status = ConfigStatus.APPROVED;
+    bracket.approvedBy = new mongoose.Types.ObjectId(approverId);
+    bracket.approvedAt = new Date();
+
+    return bracket.save();
+  }
+
+  async reject(id: string, approverId: string) {
+    const bracket = await this.insuranceBracketsModel.findById(id);
+    if (!bracket) throw new NotFoundException('Insurance bracket not found');
+
+    bracket.status = ConfigStatus.REJECTED;
+    bracket.approvedBy = new mongoose.Types.ObjectId(approverId);
+    bracket.approvedAt = new Date();
+
+    return bracket.save();
+  }
+
+  async delete(id: string) {
+    const bracket = await this.insuranceBracketsModel.findById(id);
+    if (!bracket) throw new NotFoundException('Insurance bracket not found');
+
+    return this.insuranceBracketsModel.deleteOne({ _id: id }).exec();
+  }
 }
