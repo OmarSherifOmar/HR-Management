@@ -496,6 +496,72 @@ export class LeaveRequestService {
       .exec();
   }
 
+  /**
+   * REQ-032 & REQ-033: Get leave history for an employee with filters and sorting
+   * Returns past leave requests with their statuses for tracking leave usage over time
+   */
+  async getEmployeeLeaveHistory(
+    employeeId: string,
+    filters?: {
+      leaveTypeId?: string;
+      status?: LeaveStatus;
+      startDate?: Date;
+      endDate?: Date;
+      sortBy?: 'date' | 'status' | 'leaveType' | 'duration';
+      sortOrder?: 'asc' | 'desc';
+    },
+  ): Promise<LeaveRequestDocument[]> {
+    const query: any = { employeeId: new Types.ObjectId(employeeId) };
+    
+    // Filter by leave type
+    if (filters?.leaveTypeId) {
+      query.leaveTypeId = new Types.ObjectId(filters.leaveTypeId);
+    }
+
+    // Filter by status
+    if (filters?.status) {
+      query.status = filters.status;
+    }
+
+    // Filter by date range
+    if (filters?.startDate || filters?.endDate) {
+      query['dates.from'] = {};
+      if (filters?.startDate) {
+        query['dates.from'].$gte = filters.startDate;
+      }
+      if (filters?.endDate) {
+        query['dates.from'].$lte = filters.endDate;
+      }
+    }
+
+    // Determine sort field
+    let sortField: string;
+    switch (filters?.sortBy) {
+      case 'status':
+        sortField = 'status';
+        break;
+      case 'leaveType':
+        sortField = 'leaveTypeId';
+        break;
+      case 'duration':
+        sortField = 'durationDays';
+        break;
+      case 'date':
+      default:
+        sortField = 'dates.from';
+    }
+
+    // Determine sort order (default: descending for dates)
+    const sortOrder = filters?.sortOrder === 'asc' ? 1 : -1;
+
+    return this.leaveRequestModel
+      .find(query)
+      .populate('leaveTypeId', 'code name')
+      .populate('attachmentId')
+      .sort({ [sortField]: sortOrder })
+      .exec();
+  }
+
   // ==================== MANAGER REVIEW/APPROVE/REJECT (REQ-020, REQ-021, REQ-022) ====================
 
   /**
@@ -522,6 +588,124 @@ export class LeaveRequestService {
       .populate('attachmentId')
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  /**
+   * REQ-034: Manager view of team balances and upcoming leaves
+   *
+   * Returns an array of team members with their entitlements and upcoming leaves
+   */
+  async getTeamBalancesAndUpcomingLeaves(
+    managerId: string,
+    filters?: {
+      leaveTypeId?: string;
+      status?: LeaveStatus;
+      startDate?: Date;
+      endDate?: Date;
+      departmentId?: string;
+      sortBy?: 'name' | 'department' | 'upcomingDate';
+      sortOrder?: 'asc' | 'desc';
+    },
+  ): Promise<any[]> {
+    // Find manager profile
+    const manager = await this.employeeService.findById(managerId);
+    if (!manager) {
+      throw new NotFoundException(`Manager with ID ${managerId} not found`);
+    }
+
+    // Build employee query: team members who have supervisorPositionId == manager.primaryPositionId
+    const employeeModel = this.employeeService['employeeModel'];
+    const teamQuery: any = { isActive: true };
+    if (manager.primaryPositionId) {
+      teamQuery.supervisorPositionId = manager.primaryPositionId;
+    }
+    if (filters?.departmentId) {
+      teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
+    }
+
+    const teamMembers = await employeeModel
+      .find(teamQuery)
+      .select('_id firstName lastName employeeNumber primaryDepartmentId')
+      .exec();
+
+    // Default date range for upcoming if not provided: today -> 90 days out
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + 90);
+    const startDate = filters?.startDate || today;
+    const endDate = filters?.endDate || defaultEnd;
+
+    const results: any[] = [];
+
+    for (const member of teamMembers) {
+      // Entitlements for this member
+      const entitlements = await this.entitlementModel
+        .find({ employeeId: member._id })
+        .populate('leaveTypeId', 'code name deductible')
+        .exec();
+
+      // Build upcoming leaves query
+      const leaveQuery: any = {
+        employeeId: new Types.ObjectId(member._id),
+        'dates.from': { $gte: startDate, $lte: endDate },
+      };
+
+      // Status filter - default include pending and approved upcoming
+      if (filters?.status) {
+        leaveQuery.status = filters.status;
+      } else {
+        leaveQuery.status = { $in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] };
+      }
+
+      if (filters?.leaveTypeId) {
+        leaveQuery.leaveTypeId = new Types.ObjectId(filters.leaveTypeId);
+      }
+
+      const upcomingLeaves = await this.leaveRequestModel
+        .find(leaveQuery)
+        .populate('leaveTypeId', 'code name')
+        .populate('attachmentId')
+        .sort({ 'dates.from': 1 })
+        .exec();
+
+      results.push({
+        employee: member,
+        entitlements,
+        upcomingLeaves,
+      });
+    }
+
+    // Sorting
+    const sortOrder = filters?.sortOrder === 'asc' ? 1 : -1;
+    switch (filters?.sortBy) {
+      case 'department':
+        results.sort((a, b) => {
+          const da = a.employee.primaryDepartmentId?.toString() || '';
+          const db = b.employee.primaryDepartmentId?.toString() || '';
+          if (da === db) return 0;
+          return da > db ? sortOrder : -sortOrder;
+        });
+        break;
+      case 'upcomingDate':
+        results.sort((a, b) => {
+          const aDate = a.upcomingLeaves?.[0]?.dates?.from ? new Date(a.upcomingLeaves[0].dates.from).getTime() : Infinity;
+          const bDate = b.upcomingLeaves?.[0]?.dates?.from ? new Date(b.upcomingLeaves[0].dates.from).getTime() : Infinity;
+          return (aDate - bDate) * sortOrder;
+        });
+        break;
+      case 'name':
+      default:
+        results.sort((a, b) => {
+          const an = `${a.employee.lastName || ''} ${a.employee.firstName || ''}`.toLowerCase();
+          const bn = `${b.employee.lastName || ''} ${b.employee.firstName || ''}`.toLowerCase();
+          if (an === bn) return 0;
+          return an > bn ? sortOrder : -sortOrder;
+        });
+        break;
+    }
+
+    return results;
   }
 
   /**
@@ -1329,5 +1513,110 @@ export class LeaveRequestService {
     }
 
     return count;
+  }
+
+  // ==================== REQ-039: MANUALLY FLAG IRREGULAR PATTERNS ====================
+
+  /**
+   * REQ-039: Manager flags an irregular pattern on an employee's leave request
+   * 
+   * As a direct manager, I want to be able to flag irregular leaving patterns 
+   * in employees' leave history.
+   */
+  async flagIrregularPattern(
+    requestId: string,
+    managerId: string,
+    flagged: boolean,
+    reason?: string,
+  ): Promise<LeaveRequestDocument> {
+    const leaveRequest = await this.leaveRequestModel.findById(requestId);
+    if (!leaveRequest) {
+      throw new NotFoundException(`Leave request with ID ${requestId} not found`);
+    }
+
+    // Verify manager has authority (is direct manager of the employee)
+    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    // Check if manager is the supervisor
+    if (employee.supervisorPositionId) {
+      const manager = await this.employeeService.findById(managerId);
+      if (!manager?.primaryPositionId || 
+          manager.primaryPositionId.toString() !== employee.supervisorPositionId.toString()) {
+        throw new ForbiddenException('You are not authorized to flag this employee\'s leave requests');
+      }
+    }
+
+    leaveRequest.irregularPatternFlag = flagged;
+    const savedRequest = await leaveRequest.save();
+
+    // Notify HR if flagged
+    if (flagged) {
+      const leaveType = await this.leaveTypeModel.findById(leaveRequest.leaveTypeId);
+      await this.notificationService.sendNotification({
+        recipientId: 'hr_manager', // Will be resolved by notification service
+        type: 'irregular_pattern_flagged',
+        title: 'Irregular Leave Pattern Flagged',
+        message: `Manager flagged irregular pattern for ${employee.firstName} ${employee.lastName}. Leave type: ${leaveType?.name || 'Unknown'}. ${reason ? `Reason: ${reason}` : ''}`,
+        data: {
+          leaveRequestId: requestId,
+          employeeId: leaveRequest.employeeId.toString(),
+          reason,
+        },
+      });
+    }
+
+    return savedRequest;
+  }
+
+  /**
+   * Get all leave requests flagged as irregular for a team or employee
+   */
+  async getFlaggedIrregularRequests(
+    managerId: string,
+    filters?: {
+      employeeId?: string;
+      startDate?: Date;
+      endDate?: Date;
+    },
+  ): Promise<LeaveRequestDocument[]> {
+    // Get manager's team members
+    const manager = await this.employeeService.findById(managerId);
+    if (!manager?.primaryPositionId) {
+      return [];
+    }
+
+    const employeeModel = this.employeeService['employeeModel'];
+    const teamQuery: any = {
+      isActive: true,
+      supervisorPositionId: manager.primaryPositionId,
+    };
+
+    const teamMembers = await employeeModel.find(teamQuery).select('_id').exec();
+    const teamMemberIds = teamMembers.map((m: any) => m._id);
+
+    const query: any = {
+      irregularPatternFlag: true,
+      employeeId: { $in: teamMemberIds },
+    };
+
+    if (filters?.employeeId) {
+      query.employeeId = new Types.ObjectId(filters.employeeId);
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+      query['dates.from'] = {};
+      if (filters.startDate) query['dates.from'].$gte = filters.startDate;
+      if (filters.endDate) query['dates.from'].$lte = filters.endDate;
+    }
+
+    return this.leaveRequestModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .populate('leaveTypeId', 'code name')
+      .sort({ 'dates.from': -1 })
+      .exec();
   }
 }

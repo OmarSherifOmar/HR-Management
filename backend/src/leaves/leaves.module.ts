@@ -13,6 +13,7 @@ import { LeaveRoleManagementController } from './controllers/leave-role-manageme
 import { LeaveRequestController } from './controllers/leave-request.controller';
 import { AttachmentController } from './controllers/attachment.controller';
 import { NotificationController } from './controllers/notification.controller';
+import { LeaveAccrualController } from './controllers/leave-accrual.controller';
 import { LeaveConfigurationService } from './services/leave-configuration.service';
 import { LeaveTypeService } from './services/leave-type.service';
 import { LeaveEntitlementService } from './services/leave-entitlement.service';
@@ -27,6 +28,7 @@ import { LeaveRoleManagementService } from './services/leave-role-management.ser
 import { LeaveRequestService } from './services/leave-request.service';
 import { AttachmentService } from './services/attachment.service';
 import { NotificationService } from './services/notification.service';
+import { LeaveAccrualService } from './services/leave-accrual.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LeaveType, LeaveTypeSchema } from './models/leave-type.schema';
 import { LeaveRequest, LeaveRequestSchema } from './models/leave-request.schema';
@@ -74,6 +76,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveRequestController,
     AttachmentController,
     NotificationController,
+    LeaveAccrualController,
   ],
   providers: [
     LeaveConfigurationService,
@@ -90,6 +93,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveRequestService,
     AttachmentService,
     NotificationService,
+    LeaveAccrualService,
   ],
   exports:[
     LeaveConfigurationService,
@@ -106,6 +110,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveRequestService,
     AttachmentService,
     NotificationService,
+    LeaveAccrualService,
   ]
 })
 export class LeavesModule {}
