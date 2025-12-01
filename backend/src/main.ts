@@ -2,6 +2,9 @@ import { ValidationPipe, INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import mongoose from 'mongoose';
+import { getConnectionToken } from '@nestjs/mongoose';
+import { DepartmentSchema } from './organization-structure/models/department.schema';
 
 
 async function printRoutes(app) {
@@ -21,6 +24,21 @@ const routes: string[] = [];
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Get the NestJS mongoose connection and register Department model globally
+  // This fixes position.schema.ts middleware that uses model(Department.name)
+  const connection = app.get(getConnectionToken());
+  
+  // Set mongoose's default connection to the NestJS connection
+  // so that model() calls in schema middleware use the right connection
+  if (mongoose.connection.readyState === 0) {
+    mongoose.connection.setClient(connection.getClient());
+  }
+  
+  // Register Department on the global mongoose if not already registered
+  if (!mongoose.models['Department']) {
+    mongoose.model('Department', DepartmentSchema);
+  }
 
   // cookies for AuthGuard to read req.cookies.token
   app.use(cookieParser());
