@@ -17,7 +17,6 @@ export class UpdateDepartmentDto {
   @IsString()
   headPositionId?: string;
 
-  // Allow toggling active state from update if necessary
   @IsOptional()
   isActive?: boolean;
 }

@@ -11,7 +11,6 @@ import { DepartmentService } from './services/department.service';
 import { PositionService } from './services/position.service';
 import { ChangeRequestService } from './services/change-request.service';
 
-// schemas (organization)
 import { Department, DepartmentSchema } from './models/department.schema';
 import { Position, PositionSchema } from './models/position.schema';
 import { StructureChangeRequest, StructureChangeRequestSchema } from './models/structure-change-request.schema';
@@ -19,9 +18,8 @@ import { StructureApproval, StructureApprovalSchema } from './models/structure-a
 import { StructureChangeLog, StructureChangeLogSchema } from './models/structure-change-log.schema';
 import { PositionAssignment, PositionAssignmentSchema } from './models/position-assignment.schema';
 
-// <-- add these two lines: payGrade schema from payroll-configuration
+
 import { payGrade, payGradeSchema } from '../payroll-configuration/models/payGrades.schema';
-// at top of organization-structure.module.ts (add near other schema imports)
 import { NotificationLog, NotificationLogSchema } from '../time-management/models/notification-log.schema';
 
 @Module({
@@ -33,8 +31,6 @@ import { NotificationLog, NotificationLogSchema } from '../time-management/model
       { name: StructureApproval.name, schema: StructureApprovalSchema },
       { name: StructureChangeLog.name, schema: StructureChangeLogSchema },
       { name: PositionAssignment.name, schema: PositionAssignmentSchema },
-
-      // register payGrade here so @InjectModel(payGrade.name) resolves
       { name: payGrade.name, schema: payGradeSchema },
       { name: NotificationLog.name, schema: NotificationLogSchema },
     ]),

@@ -17,17 +17,14 @@ export class ChangeRequestService {
     @InjectModel(StructureChangeLog.name) private changeLogModel: Model<any>,
     @InjectModel(Department.name) private deptModel: Model<any>,
     @InjectModel(Position.name) private posModel: Model<any>,
-    @InjectModel(NotificationLog.name) private notificationModel: Model<any>, // injection for notification logs
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>, 
   ) {}
 
-  // Helper to find request - tries multiple approaches
   private async findRequest(requestId: string) {
-    // Try as ObjectId first
     try {
       const req = await this.requestModel.findOne({ _id: new Types.ObjectId(requestId) }).exec();
       if (req) return req;
     } catch (e) {}
-    // Try as string
     const req = await this.requestModel.findOne({ _id: requestId }).exec();
     return req;
   }
@@ -35,8 +32,6 @@ export class ChangeRequestService {
   async create(dto: CreateChangeRequestDto, requestedByEmployeeId: string) {
     const number = `REQ-${Date.now()}`;
     
-    // Store payload as JSON in details field (schema doesn't have payload field)
-    // Format: if payload exists, details = JSON string of { userDetails, payload }
     let detailsToStore = dto.details || '';
     if (dto.payload) {
       detailsToStore = JSON.stringify({
@@ -57,7 +52,6 @@ export class ChangeRequestService {
       status: 'DRAFT',
     } as any);
 
-    // Write change-log entry for request creation
     await this.changeLogModel.create({
       _id: new Types.ObjectId(),
       action: 'CREATED',
@@ -68,7 +62,6 @@ export class ChangeRequestService {
       summary: `Change request ${number} created by ${requestedByEmployeeId}`,
     } as any);
 
-    // Best-effort: write notification log for requester
     try {
       await this.notificationModel.create({
         to: new Types.ObjectId(requestedByEmployeeId),
@@ -87,7 +80,6 @@ export class ChangeRequestService {
       } as any);
     }
 
-    // Optional: system admin notification via env var (best-effort)
     const sysAdminId = process.env.SYSTEM_ADMIN_ID;
     if (sysAdminId) {
       try {
@@ -151,7 +143,6 @@ export class ChangeRequestService {
 
     const rt = String(req.requestType).toUpperCase();
 
-    // Parse payload from details field (stored as JSON)
     let payload: any = null;
     let userDetails = req.details || '';
     if (req.details) {
@@ -162,12 +153,10 @@ export class ChangeRequestService {
           userDetails = parsed.userDetails || '';
         }
       } catch (e) {
-        // details is not JSON, use as-is (legacy or plain text)
         userDetails = req.details;
       }
     }
 
-    // Check if it's a department-related or position-related request
     const isDeptCreate = rt.includes('NEW') && rt.includes('DEPT') || rt === 'NEW_DEPARTMENT';
     const isDeptUpdate = rt.includes('UPDATE') && rt.includes('DEPT') || rt === 'UPDATE_DEPARTMENT';
     const isDeptDeactivate = (rt.includes('DEACTIVATE') || rt.includes('CLOSE')) && rt.includes('DEPT');
@@ -175,7 +164,6 @@ export class ChangeRequestService {
     const isPosUpdate = rt.includes('UPDATE') && rt.includes('POS') || rt === 'UPDATE_POSITION';
     const isPosDeactivate = (rt.includes('DEACTIVATE') || rt.includes('CLOSE')) && rt.includes('POS') || rt === 'CLOSE_POSITION';
 
-    // Validate required fields based on request type
     if (isDeptCreate && !payload) {
       throw new BadRequestException('Payload with department data (code, name, description) is required for NEW_DEPARTMENT requests');
     }
@@ -195,9 +183,12 @@ export class ChangeRequestService {
       throw new BadRequestException('targetPositionId is required for CLOSE_POSITION requests');
     }
 
-    // CREATE DEPARTMENT
     if (isDeptCreate) {
-      const created = await this.deptModel.create(payload);
+      const deptData = { ...payload };
+      if (payload.headPositionId) {
+        deptData.headPositionId = new Types.ObjectId(payload.headPositionId);
+      }
+      const created = await this.deptModel.create(deptData);
       await this.changeLogModel.create({
         _id: new Types.ObjectId(),
         action: 'CREATED',
@@ -207,11 +198,14 @@ export class ChangeRequestService {
         summary: `Applied change-request ${req.requestNumber} (create dept)`,
       } as any);
 
-    // UPDATE DEPARTMENT
     } else if (isDeptUpdate) {
       const before = (await this.deptModel.findById(req.targetDepartmentId).lean().exec()) as any;
       if (!before) throw new NotFoundException('Target department not found');
-      const updated = (await this.deptModel.findByIdAndUpdate(req.targetDepartmentId, payload, { new: true }).exec()) as any;
+      const deptUpdateData = { ...payload };
+      if (payload.headPositionId) {
+        deptUpdateData.headPositionId = new Types.ObjectId(payload.headPositionId);
+      }
+      const updated = (await this.deptModel.findByIdAndUpdate(req.targetDepartmentId, deptUpdateData, { new: true }).exec()) as any;
       await this.changeLogModel.create({
         _id: new Types.ObjectId(),
         action: 'UPDATED',
@@ -222,7 +216,6 @@ export class ChangeRequestService {
         summary: `Applied change-request ${req.requestNumber} (update dept)`,
       } as any);
 
-    // DEACTIVATE DEPARTMENT
     } else if (isDeptDeactivate) {
       const before = (await this.deptModel.findById(req.targetDepartmentId).lean().exec()) as any;
       if (!before) throw new NotFoundException('Target department not found');
@@ -237,9 +230,15 @@ export class ChangeRequestService {
         summary: `Applied change-request ${req.requestNumber} (deactivate dept)`,
       } as any);
 
-    // CREATE POSITION
     } else if (isPosCreate) {
-      const created = await this.posModel.create(payload);
+      const posData = { ...payload };
+      if (payload.departmentId) {
+        posData.departmentId = new Types.ObjectId(payload.departmentId);
+      }
+      if (payload.reportsToPositionId) {
+        posData.reportsToPositionId = new Types.ObjectId(payload.reportsToPositionId);
+      }
+      const created = await this.posModel.create(posData);
       await this.changeLogModel.create({
         _id: new Types.ObjectId(),
         action: 'CREATED',
@@ -249,11 +248,17 @@ export class ChangeRequestService {
         summary: `Applied change-request ${req.requestNumber} (create position)`,
       } as any);
 
-    // UPDATE POSITION
     } else if (isPosUpdate) {
       const before = (await this.posModel.findById(req.targetPositionId).lean().exec()) as any;
       if (!before) throw new NotFoundException('Target position not found');
-      const updated = (await this.posModel.findByIdAndUpdate(req.targetPositionId, payload, { new: true }).exec()) as any;
+      const posUpdateData = { ...payload };
+      if (payload.departmentId) {
+        posUpdateData.departmentId = new Types.ObjectId(payload.departmentId);
+      }
+      if (payload.reportsToPositionId) {
+        posUpdateData.reportsToPositionId = new Types.ObjectId(payload.reportsToPositionId);
+      }
+      const updated = (await this.posModel.findByIdAndUpdate(req.targetPositionId, posUpdateData, { new: true }).exec()) as any;
       await this.changeLogModel.create({
         _id: new Types.ObjectId(),
         action: 'UPDATED',
@@ -264,12 +269,10 @@ export class ChangeRequestService {
         summary: `Applied change-request ${req.requestNumber} (update position)`,
       } as any);
 
-    // CLOSE/DEACTIVATE POSITION (BR 12, BR 37: delimit instead of delete)
     } else if (isPosDeactivate) {
       const before = (await this.posModel.findById(req.targetPositionId).lean().exec()) as any;
       if (!before) throw new NotFoundException('Target position not found');
 
-      // Block deactivation if active assignment exists (BR 12)
       const activeAssignment = (await this.posModel.db
         .collection('position_assignments')
         .findOne({ positionId: req.targetPositionId, endDate: { $exists: false } })) as any;
@@ -296,7 +299,6 @@ export class ChangeRequestService {
     req.status = 'APPROVED';
     await req.save();
 
-    // notify requester that request was approved
     try {
       await this.notificationModel.create({
         to: req.requestedByEmployeeId,
@@ -364,7 +366,6 @@ export class ChangeRequestService {
     const req = await this.findRequest(requestId);
     if (!req) throw new NotFoundException('Change request not found');
 
-    // Only DRAFT or REJECTED requests can be deleted
     if (req.status !== 'DRAFT' && req.status !== 'REJECTED') {
       throw new BadRequestException('Only DRAFT or REJECTED requests can be deleted');
     }

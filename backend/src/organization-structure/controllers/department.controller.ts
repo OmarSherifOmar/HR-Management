@@ -6,7 +6,7 @@ import { AuthGuard } from '../../auth/./guards/authentication.guard';
 import { authorizationGuard } from '../../auth/./guards/authorization.guard';
 import { Roles, Role } from '../../auth/./decorators/roles.decorator';
 
-// IMPORTANT: apply AuthGuard at class-level so authentication runs BEFORE authorization checks
+
 @UseGuards(AuthGuard)
 @Controller('api/org/departments')
 export class DepartmentController {

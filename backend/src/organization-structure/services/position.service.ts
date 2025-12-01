@@ -18,11 +18,9 @@ export class PositionService {
     @InjectModel(payGrade.name) private payGradeModel: Model<any>,
   ) {}
 
-  // Resolve payGrade by grade string only (no payGradeId)
   private async resolvePayGrade(dto: CreatePositionDto | UpdatePositionDto) {
     if (!dto.payGrade) return null;
 
-    // cast to any to satisfy TS about the returned shape
     const pg = (await this.payGradeModel.findOne({ grade: dto.payGrade }).lean().exec()) as any;
     if (!pg || pg.status !== ConfigStatus.APPROVED) {
       throw new BadRequestException('payGrade (grade string) not found or not approved');
@@ -42,9 +40,11 @@ export class PositionService {
 
     const toCreate: any = {
       ...dto,
-      // keep payGrade string on the position (model expects string)
+      departmentId: new Types.ObjectId(dto.departmentId),
+      reportsToPositionId: dto.reportsToPositionId 
+        ? new Types.ObjectId(dto.reportsToPositionId) 
+        : undefined,
       payGrade: resolvedPG.grade,
-      // snapshot for immediate salary access
       payGradeSnapshot: {
         grade: resolvedPG.grade,
         baseSalary: resolvedPG.baseSalary,
@@ -82,7 +82,6 @@ export class PositionService {
     const before = (await this.positionModel.findById(id).lean().exec()) as any;
     if (!before) throw new NotFoundException('Position not found');
 
-    // If payGrade string provided, resolve and update snapshot and the payGrade string
     if (dto.payGrade) {
       const resolved = (await this.resolvePayGrade(dto)) as any;
       if (!resolved) {
@@ -96,8 +95,15 @@ export class PositionService {
         grossSalary: resolved.grossSalary,
       };
     }
+    const updateData: any = { ...dto };
+    if (dto.departmentId) {
+      updateData.departmentId = new Types.ObjectId(dto.departmentId);
+    }
+    if (dto.reportsToPositionId) {
+      updateData.reportsToPositionId = new Types.ObjectId(dto.reportsToPositionId);
+    }
 
-    const updated = (await this.positionModel.findByIdAndUpdate(id, dto as any, { new: true }).exec()) as any;
+    const updated = (await this.positionModel.findByIdAndUpdate(id, updateData, { new: true }).exec()) as any;
     const afterSnapshot = typeof updated?.toObject === 'function' ? updated.toObject() : updated;
 
     await this.changeLogModel.create({
@@ -153,7 +159,6 @@ export class PositionService {
     const before = (await this.positionModel.findById(id).lean().exec()) as any;
     if (!before) throw new NotFoundException('Position not found');
 
-    // Check if active assignments exist
     const activeAssignment = (await this.assignmentModel
       .findOne({ positionId: id, endDate: { $exists: false } })
       .lean()

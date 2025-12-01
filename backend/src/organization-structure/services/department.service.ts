@@ -19,7 +19,12 @@ export class DepartmentService {
     const existing = (await this.deptModel.findOne({ code: createDto.code }).lean().exec()) as any;
     if (existing) throw new BadRequestException('Department code already exists');
 
-    const created = (await this.deptModel.create(createDto as any)) as any;
+    const toCreate: any = { ...createDto };
+    if (createDto.headPositionId) {
+      toCreate.headPositionId = new Types.ObjectId(createDto.headPositionId);
+    }
+
+    const created = (await this.deptModel.create(toCreate)) as any;
     const afterSnapshot = typeof created?.toObject === 'function' ? created.toObject() : created;
 
     await this.changeLogModel.create({
@@ -50,7 +55,12 @@ export class DepartmentService {
     const before = (await this.deptModel.findById(id).lean().exec()) as any;
     if (!before) throw new NotFoundException('Department not found');
 
-    const updated = (await this.deptModel.findByIdAndUpdate(id, dto, { new: true }).exec()) as any;
+    const updateData: any = { ...dto };
+    if (dto.headPositionId) {
+      updateData.headPositionId = new Types.ObjectId(dto.headPositionId);
+    }
+
+    const updated = (await this.deptModel.findByIdAndUpdate(id, updateData, { new: true }).exec()) as any;
     const afterSnapshot = typeof updated?.toObject === 'function' ? updated.toObject() : updated;
 
     await this.changeLogModel.create({
@@ -66,7 +76,6 @@ export class DepartmentService {
     return updated;
   }
 
-  // Pre-deactivate check: returns related active assignments/positions
   async FindActivePoistions(id: string) {
     const assignments = (await this.assignmentModel
       .find({ departmentId: id, endDate: { $exists: false } })
@@ -79,7 +88,6 @@ export class DepartmentService {
     const before = (await this.deptModel.findById(id).lean().exec()) as any;
     if (!before) throw new NotFoundException('Department not found');
 
-    // check if active assignments exist
     const assignments = (await this.assignmentModel
       .find({ departmentId: id, endDate: { $exists: false } })
       .lean()
@@ -108,7 +116,6 @@ export class DepartmentService {
     const before = (await this.deptModel.findById(id).lean().exec()) as any;
     if (!before) throw new NotFoundException('Department not found');
 
-    // Check if active assignments exist
     const assignments = (await this.assignmentModel
       .find({ departmentId: id, endDate: { $exists: false } })
       .lean()

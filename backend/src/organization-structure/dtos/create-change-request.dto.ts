@@ -4,7 +4,6 @@ import { StructureRequestType } from '../enums/organization-structure.enums'; //
 
 export class CreateChangeRequestDto {
   @IsString()
-  // prefer to use enums; if you don't have enums, send string values per spec
   requestType: StructureRequestType | string;
 
   @IsOptional()
@@ -33,17 +32,4 @@ export class CreateChangeRequestDto {
   @IsOptional()
   @IsObject()
   payload?: Record<string, any>;
-
-
-
-
-
-
-
-
-
-
-
-
-
 }

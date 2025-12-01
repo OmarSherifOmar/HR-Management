@@ -6,8 +6,6 @@ import { AuthGuard } from '../../auth/./guards/authentication.guard';
 import { authorizationGuard } from '../../auth/./guards/authorization.guard';
 import { Roles, Role } from '../../auth/./decorators/roles.decorator';
 
-// create, list, get, edit, deactivate
-
 @UseGuards(AuthGuard)
 @Controller('api/org/positions')
 export class PositionController {

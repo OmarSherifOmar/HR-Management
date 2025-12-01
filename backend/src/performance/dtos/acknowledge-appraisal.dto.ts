@@ -1,17 +1,15 @@
 import { IsString, IsOptional } from 'class-validator';
 
-export class CreateDepartmentDto {
+export class AcknowledgeAppraisalDto {
+  @IsOptional()
   @IsString()
-  code: string;
-
-  @IsString()
-  name: string;
+  appraisalRecordId?: string;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  employeeId?: string;
 
   @IsOptional()
   @IsString()
-  headPositionId?: string;
+  comment?: string;
 }

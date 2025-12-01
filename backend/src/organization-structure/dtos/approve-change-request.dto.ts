@@ -6,7 +6,6 @@ export class ApproveChangeRequestDto {
   @IsString()
   comments?: string;
 
-  // optional explicit decision; default to APPROVED if used by controller
   @IsOptional()
   @IsEnum(ApprovalDecision)
   decision?: ApprovalDecision | string;
