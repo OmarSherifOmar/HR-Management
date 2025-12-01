@@ -16,6 +16,11 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
+/** Request type with user info from JWT */
+type AuthenticatedRequest = Request & {
+  user?: { sub?: string; id?: string; roles?: string[]; role?: string };
+};
+
 import { AuthGuard } from '../auth/guards/authentication.guard';
 import { authorizationGuard } from '../auth/guards/authorization.guard';
 import { Roles, Role } from '../auth/decorators/roles.decorator';
@@ -67,11 +72,7 @@ export class PayrollTrackingController {
   constructor(private readonly svc: PayrollTrackingService) {}
 
   /** extract user info helper */
-  private extractUser(
-    req: Request & {
-      user?: { sub?: string; id?: string; roles?: string[]; role?: string };
-    },
-  ) {
+  private extractUser(req: AuthenticatedRequest) {
     const user = (req.user ?? {}) as {
       sub?: string;
       id?: string;
@@ -155,7 +156,7 @@ export class PayrollTrackingController {
   async claimSpecialistDecision(
     @Param('id') id: string,
     @Body() body: SpecialistDecisionDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const dto = plainToInstance(SpecialistDecisionDto, body);
     const { userId } = this.extractUser(req);
@@ -177,7 +178,7 @@ export class PayrollTrackingController {
   async claimManagerDecision(
     @Param('id') id: string,
     @Body() body: SpecialistDecisionDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const dto = plainToInstance(SpecialistDecisionDto, body);
     const { userId } = this.extractUser(req);
@@ -202,7 +203,7 @@ export class PayrollTrackingController {
   async createRefundForClaim(
     @Param('id') id: string,
     @Body() dto: CreateRefundDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const { userId } = this.extractUser(req);
     return this.svc.createRefundForClaim(id, dto, userId);
@@ -214,7 +215,7 @@ export class PayrollTrackingController {
   async createExpenseRefundForClaim(
     @Param('id') id: string,
     @Body() dto: CreateRefundDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const { userId } = this.extractUser(req);
     return this.svc.createExpenseRefundForClaim(id, dto, userId);
@@ -228,7 +229,7 @@ export class PayrollTrackingController {
   async disputeSpecialistDecision(
     @Param('id') id: string,
     @Body() body: SpecialistDecisionDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const dto = plainToInstance(SpecialistDecisionDto, body);
     const { userId } = this.extractUser(req);
@@ -249,7 +250,7 @@ export class PayrollTrackingController {
   async disputeManagerDecision(
     @Param('id') id: string,
     @Body() body: SpecialistDecisionDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const dto = plainToInstance(SpecialistDecisionDto, body);
     const { userId } = this.extractUser(req);
@@ -274,7 +275,7 @@ export class PayrollTrackingController {
   async createRefundForDispute(
     @Param('id') id: string,
     @Body() dto: CreateRefundDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const { userId } = this.extractUser(req);
     return this.svc.createRefundForDispute(id, dto, userId);
@@ -295,21 +296,26 @@ export class PayrollTrackingController {
 
   @Get('claims/mine')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
-  async getMyClaims(@Req() req: any) {
+  async getMyClaims(@Req() req: AuthenticatedRequest) {
     const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
     return this.svc.getClaimsForEmployee(userId);
   }
 
   @Get('claims/:id')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
-  async getMyClaimById(@Req() req: any, @Param('id') id: string) {
+  async getMyClaimById(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
     return this.svc.getClaimByIdForEmployee(userId, id);
   }
 
   @Get('tax-documents/mine')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
-  async getMyTaxDocs(@Req() req: any) {
+  async getMyTaxDocs(@Req() req: AuthenticatedRequest) {
     const { userId } = this.extractUser(req);
     return await this.svc.listTaxDocumentsForEmployee(userId);
   }
@@ -335,7 +341,7 @@ export class PayrollTrackingController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async patchDispute(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateDisputeDto,
   ) {
     const { userId, role } = this.extractUser(req);
@@ -357,7 +363,7 @@ export class PayrollTrackingController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async patchClaim(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateClaimDto,
   ) {
     const { userId, role } = this.extractUser(req);
@@ -366,7 +372,10 @@ export class PayrollTrackingController {
 
   @Patch('disputes/:id/manager-approve')
   @Roles(Role.Payroll_MANAGER)
-  async managerApprove(@Param('id') id: string, @Req() req: any) {
+  async managerApprove(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const { userId } = this.extractUser(req);
     return this.svc.managerApproveDispute(id, userId);
   }
@@ -379,7 +388,10 @@ export class PayrollTrackingController {
 
   @Post('refunds')
   @Roles(Role.FINANCE_STAFF)
-  async processRefund(@Req() req: any, @Body() dto: ProcessRefundDto) {
+  async processRefund(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ProcessRefundDto,
+  ) {
     const { userId, role } = this.extractUser(req);
     return this.svc.processRefund({ userId, role }, dto);
   }
@@ -388,7 +400,7 @@ export class PayrollTrackingController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async addDisputeNote(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: CreateDisputeNoteDto,
   ) {
     const { userId, role } = this.extractUser(req);
