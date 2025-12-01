@@ -16,7 +16,7 @@ export class JobRequisition {
   @Prop()
   location: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile', required: true })
   hiringManagerId: Types.ObjectId;
 
   @Prop({
