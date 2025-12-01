@@ -37,11 +37,15 @@ export class ChangeRequestController {
   }
 
   @Get()
+  @UseGuards(authorizationGuard)
+  @Roles(Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async list() {
     return this.svc.list();
   }
 
   @Get(':id')
+  @UseGuards(authorizationGuard)
+  @Roles(Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
   }
