@@ -1,10 +1,18 @@
-import { IsArray, IsEmail, IsInt, isInt, IsMongoId, IsOptional, IsString } from "class-validator";
-import { EmployeeProfile } from "../../employee-profile/models/employee-profile.schema";
+import {
+  IsArray,
+  IsEmail,
+  IsInt,
+  isInt,
+  IsMongoId,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
 
 export class RegisterRequestDto {
   @IsString()
   @IsEmail()
-  email: string
+  email: string;
 
   @IsString()
   name: string;
@@ -13,8 +21,8 @@ export class RegisterRequestDto {
   age: number;
 
   @IsString()
-  password: string
+  password: string;
 
   @IsString()
-  role: string = "department employee";
+  role: string = 'department employee';
 }
