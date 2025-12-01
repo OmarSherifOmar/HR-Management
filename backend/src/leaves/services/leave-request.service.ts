@@ -932,7 +932,7 @@ export class LeaveRequestService {
           $inc: {
             remaining: -leaveRequest.durationDays,
             pending: -leaveRequest.durationDays,
-            used: leaveRequest.durationDays,
+            taken: leaveRequest.durationDays,
           },
         },
       );
@@ -1110,7 +1110,7 @@ export class LeaveRequestService {
           {
             $inc: {
               remaining: -leaveRequest.durationDays,
-              used: leaveRequest.durationDays,
+              taken: leaveRequest.durationDays,
             },
           },
         );
@@ -1125,7 +1125,7 @@ export class LeaveRequestService {
             $inc: {
               remaining: -leaveRequest.durationDays,
               pending: -leaveRequest.durationDays,
-              used: leaveRequest.durationDays,
+              taken: leaveRequest.durationDays,
             },
           },
         );
