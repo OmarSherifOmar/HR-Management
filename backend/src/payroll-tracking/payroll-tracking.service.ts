@@ -79,9 +79,9 @@ function pickRole(
 
 // ensure incoming id-like values are stored/queried as ObjectId when possible
 function ensureObjectId(
-  id?: string | Types.ObjectId,
+  id?: string | Types.ObjectId | null,
 ): Types.ObjectId | undefined {
-  if (!id) return undefined;
+  if (id === null || id === undefined) return undefined;
   // already an ObjectId instance
   if (id instanceof Types.ObjectId) return id;
   // valid string/object id -> convert
@@ -114,6 +114,7 @@ function generateDisputeIdStatic(): string {
 type LeanPayslip = {
   _id: string;
   employeeId?: string;
+  payrollRunId?: string | { toString(): string };
   createdAt: Date;
   paymentStatus: string;
   netPay: number;
@@ -129,16 +130,14 @@ type LeanPayslip = {
   };
 
   deductionsDetails?: {
-    taxes?: unknown[];
-    insurances?: unknown[];
+    taxes?: { amount?: number }[];
+    insurances?: { amount?: number }[];
     penalties?: {
       unpaidLeaveDays?: number;
       [key: string]: unknown;
     } | null;
   };
 };
-
-// --------------------- Service ---------------------
 
 @Injectable()
 export class PayrollTrackingService {
@@ -162,11 +161,6 @@ export class PayrollTrackingService {
     private readonly allowanceModel: Model<allowanceDocument>,
   ) {}
 
-  // ============================================================
-  // ---------------------- OMAR: Claims & Disputes -------------
-  // ============================================================
-
-  // get claims for an employee (employee-facing)
   async getClaimsForEmployee(employeeId: string) {
     if (!Types.ObjectId.isValid(employeeId))
       throw new BadRequestException('Invalid employee id');
@@ -194,7 +188,6 @@ export class PayrollTrackingService {
     return claim.toObject();
   }
 
-  // list claims (specialist/manager)
   async listClaims(filter?: { status?: string }) {
     const query: { status?: ClaimStatus } = {};
     if (filter?.status) {
@@ -217,7 +210,9 @@ export class PayrollTrackingService {
     if (!claim) throw new NotFoundException('Claim not found');
 
     if (dto.status) {
-      claim.status = dto.status;
+      if (!Object.values(ClaimStatus).includes(dto.status as ClaimStatus))
+        throw new BadRequestException(`Invalid claim status: ${dto.status}`);
+      claim.status = dto.status as ClaimStatus;
     }
 
     if (dto.note) {
@@ -228,17 +223,14 @@ export class PayrollTrackingService {
         date: new Date(),
       };
 
-      if (claim.notes && Array.isArray(claim.notes)) claim.notes.push(entry);
-      else claim.notes = [entry];
+      const notes = (claim.notes ?? []) as (typeof entry)[];
+      notes.push(entry);
+      claim.notes = notes;
     }
 
     await claim.save();
     return claim.toObject();
   }
-
-  // ============================================================
-  // ---------------------- OMAR: Disputes -----------------------
-  // ============================================================
 
   async listDisputes(filter?: { status?: string }) {
     const query: { status?: DisputeStatus } = {};
@@ -266,7 +258,7 @@ export class PayrollTrackingService {
     if (!dispute) throw new NotFoundException('Dispute not found');
 
     if (dto.status) {
-      dispute.status = dto.status;
+      dispute.status = dto.status as DisputeStatus;
     }
 
     if (dto.note) {
@@ -277,9 +269,9 @@ export class PayrollTrackingService {
         date: new Date(),
       };
 
-      if (Array.isArray(dispute.resolutionNotes))
-        dispute.resolutionNotes.push(entry);
-      else dispute.resolutionNotes = [entry];
+      const notes = (dispute.resolutionNotes ?? []) as (typeof entry)[];
+      notes.push(entry);
+      dispute.resolutionNotes = notes;
     }
 
     await dispute.save();
@@ -302,17 +294,13 @@ export class PayrollTrackingService {
       date: new Date(),
     };
 
-    if (Array.isArray(dispute.resolutionNotes))
-      dispute.resolutionNotes.push(entry);
-    else dispute.resolutionNotes = [entry];
+    const notes = (dispute.resolutionNotes ?? []) as (typeof entry)[];
+    notes.push(entry);
+    dispute.resolutionNotes = notes;
 
     await dispute.save();
     return dispute.toObject();
   }
-
-  // ============================================================
-  // ---------------------- OMAR: Payroll Reports ----------------
-  // ============================================================
 
   async generatePayrollReport(query: PayrollReportQueryDto) {
     const match: Record<string, Types.ObjectId | string> = {};
@@ -338,10 +326,6 @@ export class PayrollTrackingService {
 
     return this.payslipModel.aggregate(pipeline);
   }
-
-  // ============================================================
-  // ---------------------- OMAR: Transparency -------------------
-  // ============================================================
 
   async transparencySummary() {
     const totalPayslips = await this.payslipModel.countDocuments();
@@ -370,12 +354,8 @@ export class PayrollTrackingService {
     };
   }
 
-  // ============================================================
-  // ---------------------- OMAR: Process Refund -----------------
-  // ============================================================
-
   async processRefund(
-    actor: { userId: string; role: string },
+    actor: { userId: string | null; role: string | undefined },
     dto: ProcessRefundDto,
   ) {
     if (!Types.ObjectId.isValid(dto.linkedId))
@@ -414,14 +394,15 @@ export class PayrollTrackingService {
       dispute.status = DisputeStatus.APPROVED;
 
       const note = {
-        by: new Types.ObjectId(actor.userId),
+        by: ensureObjectId(actor.userId),
         role: pickRole(actor.role),
         note: `Refund of ${dto.amount} processed`,
         date: new Date(),
       };
 
-      if (dispute.resolutionNotes) dispute.resolutionNotes.push(note);
-      else dispute.resolutionNotes = [note];
+      const notes = (dispute.resolutionNotes ?? []) as (typeof note)[];
+      notes.push(note);
+      dispute.resolutionNotes = notes;
 
       await dispute.save();
     }
@@ -431,24 +412,21 @@ export class PayrollTrackingService {
       claim.status = ClaimStatus.APPROVED;
 
       const note = {
-        by: new Types.ObjectId(actor.userId),
+        by: ensureObjectId(actor.userId),
         role: pickRole(actor.role),
         note: `Refund of ${dto.amount} processed`,
         date: new Date(),
       };
 
-      if (claim.notes) claim.notes.push(note);
-      else claim.notes = [note];
+      const notes = (claim.notes ?? []) as (typeof note)[];
+      notes.push(note);
+      claim.notes = notes;
 
       await claim.save();
     }
 
     return refund.toObject();
   }
-
-  // ============================================================
-  // ---------------------- AHMED: Payslip / Financials ----------
-  // ============================================================
 
   async getPayslipsForEmployee(employeeId: string) {
     const slips = await this.payslipModel
@@ -464,6 +442,25 @@ export class PayrollTrackingService {
       grossSalary: p.totalGrossSalary,
       totalDeductions: p.totaDeductions ?? 0,
       netPay: p.netPay,
+    }));
+  }
+
+  async listTaxDocumentsForEmployee(employeeId: string | null) {
+    if (!employeeId) return [];
+    const slips = await this.payslipModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    return slips.map((slip) => ({
+      payrollRunId: slip.payrollRunId?.toString() ?? null,
+      taxYear: slip.createdAt?.getFullYear() ?? new Date().getFullYear(),
+      totalTaxWithheld:
+        slip.deductionsDetails?.taxes?.reduce(
+          (sum, t) => sum + (t.amount ?? 0),
+          0,
+        ) ?? 0,
+      generatedAt: slip.createdAt,
     }));
   }
 
