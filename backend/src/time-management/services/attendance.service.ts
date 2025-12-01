@@ -9,6 +9,7 @@ import { ShiftService } from './shift.service';
 import { HolidayService } from './holiday.service';
 import { ShiftAssignmentService } from './ShiftAssignmentService';
 import { startOfDay, endOfDay, buildDateFromShiftTime } from '../utils/time.utils';
+import { PolicyService } from './policy.service';
 
 type Punch = { type: PunchType; time: Date };
 
@@ -22,6 +23,7 @@ export class AttendanceService {
     private readonly shiftService: ShiftService,
     private readonly holidayService: HolidayService,
     private readonly shiftAssignmentService: ShiftAssignmentService,
+    private readonly policyService: PolicyService,
   ) {}
 
 
@@ -179,5 +181,6 @@ export class AttendanceService {
         }
       }
     }
+    await this.policyService.sendMissedPunchAlerts(date);
   }
 }

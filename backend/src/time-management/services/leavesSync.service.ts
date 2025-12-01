@@ -5,7 +5,7 @@ import { AttendanceRecord } from '../models/attendance-record.schema';
 import { ShiftAssignment } from '../models/shift-assignment.schema';
 import { NotificationLog } from '../models/notification-log.schema';
 import { NotificationService } from './notification.service';
-//import { LeaveService } from './leave.service';
+//import { LeavesService } from '../leaves.service';
 import { startOfDay, endOfDay } from '../utils/time.utils';
 
 @Injectable()

@@ -332,4 +332,30 @@ export class PolicyService {
     });
     return !!exists; //converts _id / null to boolean
   }
+
+
+async sendMissedPunchAlerts(date: Date) {
+  const start = startOfDay(date);
+  const end = endOfDay(date);
+
+  const missed = await this.timeExceptionModel.find({
+    type: TimeExceptionType.MISSED_PUNCH,
+    createdAt: { $gte: start, $lte: end },
+    status: TimeExceptionStatus.OPEN
+  }).populate('employeeId');
+
+  for (const ex of missed) {
+    const empId = ex.employeeId.toString();
+
+    await this.notificationService.send(
+      empId,
+      'Missed Punch Detected',
+      'You forgot to clock out today. Please submit a correction request.'
+    );
+
+    ex.status = TimeExceptionStatus.PENDING;
+    await ex.save();
+  }
+}
+
 }

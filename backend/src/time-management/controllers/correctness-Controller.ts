@@ -1,10 +1,13 @@
-import { Controller, Post, Body, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, NotFoundException, UseGuards } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AttendanceCorrectionRequest, AttendanceCorrectionRequestDocument } from '../models/attendance-correction-request.schema';
 import { CorrectionRequestStatus } from '../models/enums';
 import { CorrectionService } from '../services/correction.service';
 import { PolicyService } from '../services/policy.service';
+import { AuthGuard } from '../../auth/guards/authentication.guard';
+import { authorizationGuard } from '../../auth/guards/authorization.guard';
+import { Roles, Role } from '../../auth/decorators/roles.decorator';
 
 type CorrectionSubmit = { employeeId: string; attendanceRecordId: string; reason?: string };
 type ReviewDto = { status: CorrectionRequestStatus };
@@ -12,8 +15,15 @@ type PolicySubmitDto = { employeeId: string; date: string; punches: { type: 'IN'
 type ApproveCorrectionDto = { approvedBy: string };
 type RejectCorrectionDto = { approvedBy: string; reason: string };
 type EscalateExceptionsDto = { cutoffDate: string };
+type ReviewAndCorrectDto = { 
+	attendanceRecordId: string; 
+	correctedPunches: { type: 'IN' | 'OUT'; time: Date }[]; 
+	reviewerId: string; 
+	reason: string;
+};
 
 @Controller('corrections')
+@UseGuards(AuthGuard, authorizationGuard)
 export class CorrectnessController {
 	constructor(
 		@InjectModel(AttendanceCorrectionRequest.name) private correctionModel: Model<AttendanceCorrectionRequestDocument>,
@@ -33,6 +43,7 @@ export class CorrectnessController {
 	}
 
 	@Get('pending')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
 	async pending() {
 		return this.correctionModel.find({
 			status: { $in: [CorrectionRequestStatus.SUBMITTED, CorrectionRequestStatus.IN_REVIEW] }
@@ -40,6 +51,7 @@ export class CorrectnessController {
 	}
 
 	@Post(':id/review')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
 	async review(@Param('id') id: string, @Body() body: ReviewDto) {
 		return this.correctionService.reviewRequest(id, body.status);
 	}
@@ -58,18 +70,32 @@ export class CorrectnessController {
   }
 
   	@Post(':id/approve')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
 	async approve(@Param('id') requestId: string, @Body() body: ApproveCorrectionDto) {
 		return this.policyService.correctionRequestApproval(requestId, body.approvedBy);
   }
 
 	@Post(':id/reject')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
 	async reject(@Param('id') requestId: string, @Body() body: RejectCorrectionDto) {
 		return this.policyService.rejectCorrectionRequest(requestId, body.approvedBy, body.reason);
   }
 
   	@Post('exceptions/escalate')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
 	async escalate(@Body() body: EscalateExceptionsDto) {
 		const cutoff = new Date(body.cutoffDate);
 		return this.policyService.escalatePendingExceptions(cutoff);
   }
+
+	@Post('review-and-correct')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
+	async reviewAndCorrect(@Body() body: ReviewAndCorrectDto) {
+		return this.correctionService.reviewAndCorrectAttendance(
+			body.attendanceRecordId,
+			body.correctedPunches,
+			body.reviewerId,
+			body.reason
+		);
+	}
 }
