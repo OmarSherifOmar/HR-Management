@@ -1,55 +1,25 @@
-import { IsMongoId, IsOptional, IsNumber, IsString, IsDate, IsBoolean, IsArray, IsEnum, ValidateNested, Min } from 'class-validator';
-import { Type } from 'class-transformer';
-import { LeaveStatus } from '../../enums/leave-status.enum';
+import { IsMongoId, IsOptional, IsString, IsDateString } from 'class-validator';
 
-class LeaveDatesDto {
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  from?: Date;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  to?: Date;
-}
-
-class ApprovalFlowItemDto {
-  @IsMongoId()
-  approverId: string;
-
-  @IsOptional()
-  @IsEnum(LeaveStatus)
-  status?: LeaveStatus;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  actionDate?: Date;
-
-  @IsOptional()
-  @IsString()
-  comment?: string;
-}
-
+/**
+ * DTO for updating a pending leave request
+ * 
+ * Only includes fields that an employee can modify.
+ * Cannot change: employeeId, status, approvalFlow (system-managed)
+ * 
+ * durationDays is recalculated automatically when dates change.
+ */
 export class UpdateLeaveRequestDto {
-  @IsOptional()
-  @IsMongoId()
-  employeeId?: string;
-
   @IsOptional()
   @IsMongoId()
   leaveTypeId?: string;
 
   @IsOptional()
-  @ValidateNested()
-  @Type(() => LeaveDatesDto)
-  dates?: LeaveDatesDto;
+  @IsDateString()
+  startDate?: string;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0.5)
-  durationDays?: number;
+  @IsDateString()
+  endDate?: string;
 
   @IsOptional()
   @IsString()
@@ -58,18 +28,4 @@ export class UpdateLeaveRequestDto {
   @IsOptional()
   @IsMongoId()
   attachmentId?: string;
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ApprovalFlowItemDto)
-  approvalFlow?: ApprovalFlowItemDto[];
-
-  @IsOptional()
-  @IsEnum(LeaveStatus)
-  status?: LeaveStatus;
-
-  @IsOptional()
-  @IsBoolean()
-  irregularPatternFlag?: boolean;
 }

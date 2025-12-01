@@ -1,49 +1,27 @@
-import { IsMongoId, IsOptional, IsNumber, IsString, IsDate, IsBoolean, IsArray, IsEnum, ValidateNested, Min } from 'class-validator';
-import { Type } from 'class-transformer';
-import { LeaveStatus } from '../../enums/leave-status.enum';
+import { IsMongoId, IsOptional, IsString, IsDateString } from 'class-validator';
 
-class LeaveDatesDto {
-  @IsDate()
-  @Type(() => Date)
-  from: Date;
-
-  @IsDate()
-  @Type(() => Date)
-  to: Date;
-}
-
-class ApprovalFlowItemDto {
-  @IsMongoId()
-  approverId: string;
-
-  @IsOptional()
-  @IsEnum(LeaveStatus)
-  status?: LeaveStatus;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  actionDate?: Date;
-
-  @IsOptional()
-  @IsString()
-  comment?: string;
-}
-
+/**
+ * DTO for creating a new leave request
+ * 
+ * Only includes fields that an employee should provide.
+ * System-managed fields (status, approvalFlow, irregularPatternFlag, durationDays) 
+ * are set automatically by the service.
+ * 
+ * durationDays is calculated from startDate and endDate (business days only).
+ */
 export class CreateLeaveRequestDto {
+  @IsOptional()
   @IsMongoId()
-  employeeId: string;
+  employeeId?: string; // Optional - defaults to authenticated user
 
   @IsMongoId()
   leaveTypeId: string;
 
-  @ValidateNested()
-  @Type(() => LeaveDatesDto)
-  dates: LeaveDatesDto;
+  @IsDateString()
+  startDate: string;
 
-  @IsNumber()
-  @Min(0.5)
-  durationDays: number;
+  @IsDateString()
+  endDate: string;
 
   @IsOptional()
   @IsString()
@@ -52,18 +30,4 @@ export class CreateLeaveRequestDto {
   @IsOptional()
   @IsMongoId()
   attachmentId?: string;
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ApprovalFlowItemDto)
-  approvalFlow?: ApprovalFlowItemDto[];
-
-  @IsOptional()
-  @IsEnum(LeaveStatus)
-  status?: LeaveStatus;
-
-  @IsOptional()
-  @IsBoolean()
-  irregularPatternFlag?: boolean;
 }

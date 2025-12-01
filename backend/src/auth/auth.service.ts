@@ -30,35 +30,67 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterRequestDto) {
-  console.log("REGISTER DTO RECEIVED:", dto);
+    console.log("REGISTER DTO RECEIVED:", dto);
 
-  try {
-    const [firstName, ...rest] = dto.name.split(" ");
-    const lastName = rest.join(" ") || "Unknown";
+    // Check if user already exists
+    const existingUser = await this.usersService.findByEmail(dto.email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
 
-    const employeeNumber = "EMP-" + Date.now();
-    const nationalId = String(Math.floor(Math.random() * 1e14));
-    const dateOfHire = new Date();
+    let employee;
+    try {
+      const [firstName, ...rest] = dto.name.split(" ");
+      const lastName = rest.join(" ") || "Unknown";
 
-    const employee = await this.usersService.create({
-      firstName,
-      lastName,
-      nationalId,
-      password:  dto.password,
-      personalEmail: dto.email,
-      employeeNumber,
-      dateOfHire,
-    });
+      const employeeNumber = "EMP-" + Date.now();
+      const nationalId = String(Math.floor(Math.random() * 1e14));
+      const dateOfHire = new Date();
 
-    
-await this.usersService.assignRole(employee._id, dto.role);
+      // Create employee
+      employee = await this.usersService.create({
+        firstName,
+        lastName,
+        nationalId,
+        password: dto.password,
+        personalEmail: dto.email,
+        employeeNumber,
+        dateOfHire,
+        primaryPositionId: dto.primaryPositionId ? new Types.ObjectId(dto.primaryPositionId) : undefined,
+        supervisorPositionId: dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined,
+      });
 
-    return employee;
-  } catch (err) {
-    console.error("REGISTRATION ERROR:", err);
-    throw new InternalServerErrorException("An error occurred during registration");
+      // Assign role - if this fails, we need to clean up the employee
+      try {
+        await this.usersService.assignRole(employee._id, dto.role);
+      } catch (roleError) {
+        // If role assignment fails, delete the created employee to maintain data consistency
+        await this.usersService.deleteEmployee(employee._id);
+        console.error("ROLE ASSIGNMENT ERROR:", roleError);
+        throw new InternalServerErrorException("Failed to assign role to user. Registration rolled back.");
+      }
+
+      return employee;
+    } catch (err) {
+      console.error("REGISTRATION ERROR:", err);
+      
+      // If employee was created but something else failed, clean up
+      if (employee?._id) {
+        try {
+          await this.usersService.deleteEmployee(employee._id);
+        } catch (cleanupError) {
+          console.error("CLEANUP ERROR:", cleanupError);
+        }
+      }
+      
+      // Re-throw known exceptions
+      if (err instanceof ConflictException || err instanceof BadRequestException) {
+        throw err;
+      }
+      
+      throw new InternalServerErrorException("An error occurred during registration");
+    }
   }
-}
 
  async signIn(email: string, password: string): Promise<SignInResult> {
   if (!email || !password) {
@@ -114,5 +146,4 @@ try {
     payload,
   };
 }
-
 }
