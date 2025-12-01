@@ -15,5 +15,5 @@ export class HROverrideDto {
 
   @IsOptional()
   @IsBoolean()
-  allowNegativeBalance?: boolean;
+  allowNegativeBalance?: boolean = true;
 }
