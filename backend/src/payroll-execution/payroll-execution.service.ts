@@ -55,8 +55,9 @@ export class PayrollExecutionService {
       employees: 0,
       exceptions: 0,
       totalnetpay: 0,
-      payrollSpecialistId: new Types.ObjectId(payrollSpecialistId),
+      payrollSpecialistId: new Types.ObjectId(payrollSpecialistId) as any,
       paymentStatus: PayRollPaymentStatus.PENDING,
+      payrollManagerId: new Types.ObjectId(payrollSpecialistId) as any, // Set initially to specialist, will be updated when manager approves
     });
 
     return payrollRun.save();
@@ -115,7 +116,7 @@ export class PayrollExecutionService {
   async getPayrollRunsPendingManagerApproval(): Promise<payrollRuns[]> {
     return this.payrollRunsModel
       .find({
-        status: PayRollStatus.UNDER_REVIEW,
+        status: { $in: [PayRollStatus.DRAFT, PayRollStatus.UNDER_REVIEW] },
       })
       .populate('payrollSpecialistId')
       .sort({ createdAt: -1 })
@@ -125,7 +126,7 @@ export class PayrollExecutionService {
   async getPayrollRunsPendingFinanceApproval(): Promise<payrollRuns[]> {
     return this.payrollRunsModel
       .find({
-        status: PayRollStatus.PENDING_FINANCE_APPROVAL,
+        status: { $in: [PayRollStatus.UNDER_REVIEW, PayRollStatus.PENDING_FINANCE_APPROVAL] },
       })
       .populate('payrollSpecialistId')
       .populate('payrollManagerId')
@@ -172,9 +173,11 @@ export class PayrollExecutionService {
       );
     }
 
+    this.validatePayrollNotLocked(payrollRun, 'approve payroll run');
+
     payrollRun.status = PayRollStatus.UNDER_REVIEW;
     payrollRun.managerApprovalDate = new Date();
-    payrollRun.payrollManagerId = new Types.ObjectId(payrollSpecialistId);
+    payrollRun.payrollManagerId = new Types.ObjectId(payrollSpecialistId) as any;
 
     return payrollRun.save();
   }
@@ -200,6 +203,8 @@ export class PayrollExecutionService {
       );
     }
 
+    this.validatePayrollNotLocked(payrollRun, 'reject payroll run');
+
     payrollRun.status = PayRollStatus.REJECTED;
     payrollRun.rejectionReason = rejectionReason;
 
@@ -222,6 +227,8 @@ export class PayrollExecutionService {
         `Cannot submit payroll run with status: ${payrollRun.status}. Only DRAFT payroll runs can be submitted for approval.`,
       );
     }
+
+    this.validatePayrollNotLocked(payrollRun, 'submit payroll run for approval');
 
     if (payrollRun.employees === 0) {
       throw new BadRequestException('Cannot submit payroll run with no employees. Please calculate payroll first.');
@@ -251,9 +258,11 @@ export class PayrollExecutionService {
       );
     }
 
+    this.validatePayrollNotLocked(payrollRun, 'approve payroll run as manager');
+
     payrollRun.status = PayRollStatus.PENDING_FINANCE_APPROVAL;
     payrollRun.managerApprovalDate = new Date();
-    payrollRun.payrollManagerId = new Types.ObjectId(managerId);
+    payrollRun.payrollManagerId = new Types.ObjectId(managerId) as any;
 
     return payrollRun.save();
   }
@@ -279,9 +288,11 @@ export class PayrollExecutionService {
       );
     }
 
+    this.validatePayrollNotLocked(payrollRun, 'reject payroll run as manager');
+
     payrollRun.status = PayRollStatus.REJECTED;
     payrollRun.rejectionReason = rejectionReason;
-    payrollRun.payrollManagerId = new Types.ObjectId(managerId);
+    payrollRun.payrollManagerId = new Types.ObjectId(managerId) as any;
 
     return payrollRun.save();
   }
@@ -305,6 +316,8 @@ export class PayrollExecutionService {
         `Cannot approve payroll run with status: ${payrollRun.status}. Only payroll runs PENDING_FINANCE_APPROVAL can be approved by finance.`,
       );
     }
+
+    this.validatePayrollNotLocked(payrollRun, 'approve payroll run as finance');
 
     // Additional validation: Ensure manager has approved
     if (!payrollRun.managerApprovalDate || !payrollRun.payrollManagerId) {
@@ -334,7 +347,7 @@ export class PayrollExecutionService {
     payrollRun.status = PayRollStatus.APPROVED;
     payrollRun.paymentStatus = PayRollPaymentStatus.PENDING;
     payrollRun.financeApprovalDate = new Date();
-    payrollRun.financeStaffId = new Types.ObjectId(financeStaffId);
+    payrollRun.financeStaffId = new Types.ObjectId(financeStaffId) as any;
 
     return payrollRun.save();
   }
@@ -360,9 +373,116 @@ export class PayrollExecutionService {
       );
     }
 
+    this.validatePayrollNotLocked(payrollRun, 'reject payroll run as finance');
+
     payrollRun.status = PayRollStatus.REJECTED;
     payrollRun.rejectionReason = rejectionReason;
-    payrollRun.financeStaffId = new Types.ObjectId(financeStaffId);
+    payrollRun.financeStaffId = new Types.ObjectId(financeStaffId) as any;
+
+    return payrollRun.save();
+  }
+
+  /**
+   * Helper method to check if a payroll run is locked
+   */
+  private isPayrollLocked(payrollRun: payrollRuns): boolean {
+    return payrollRun.status === PayRollStatus.LOCKED;
+  }
+
+  /**
+   * Helper method to validate that payroll run is not locked before making changes
+   */
+  private validatePayrollNotLocked(payrollRun: payrollRuns, operation: string): void {
+    if (this.isPayrollLocked(payrollRun)) {
+      throw new BadRequestException(
+        `Cannot ${operation}. Payroll run ${payrollRun.runId} is locked and cannot be modified. Please unlock it first if you need to make changes.`,
+      );
+    }
+  }
+
+  /**
+   * Lock a finalized payroll run to prevent unauthorized retroactive changes
+   * Only Payroll Managers can lock payroll runs
+   */
+  async lockPayrollRun(
+    payrollRunId: string,
+    managerId: string,
+    lockReason: string,
+  ): Promise<payrollRuns> {
+    if (!Types.ObjectId.isValid(payrollRunId)) {
+      throw new BadRequestException('Invalid payroll run ID');
+    }
+
+    if (!Types.ObjectId.isValid(managerId)) {
+      throw new BadRequestException('Invalid manager ID');
+    }
+
+    const payrollRun = await this.payrollRunsModel.findById(payrollRunId).exec();
+
+    if (!payrollRun) {
+      throw new NotFoundException('Payroll run not found');
+    }
+
+    // Only APPROVED payroll runs can be locked (finalized payrolls)
+    if (payrollRun.status !== PayRollStatus.APPROVED) {
+      throw new BadRequestException(
+        `Cannot lock payroll run with status: ${payrollRun.status}. Only APPROVED payroll runs can be locked.`,
+      );
+    }
+
+    // Check if already locked
+    if (this.isPayrollLocked(payrollRun)) {
+      throw new BadRequestException(
+        `Payroll run ${payrollRun.runId} is already locked.`,
+      );
+    }
+
+    payrollRun.status = PayRollStatus.LOCKED;
+    // Store lock reason in unlockReason field (reusing existing field)
+    payrollRun.unlockReason = `LOCKED: ${lockReason}`;
+
+    return payrollRun.save();
+  }
+
+ 
+  async unlockPayrollRun(
+    payrollRunId: string,
+    managerId: string,
+    unlockReason: string,
+  ): Promise<payrollRuns> {
+    if (!Types.ObjectId.isValid(payrollRunId)) {
+      throw new BadRequestException('Invalid payroll run ID');
+    }
+
+    if (!Types.ObjectId.isValid(managerId)) {
+      throw new BadRequestException('Invalid manager ID');
+    }
+
+    // Validate unlock reason is substantial (at least 20 characters)
+    if (!unlockReason || unlockReason.trim().length < 20) {
+      throw new BadRequestException(
+        'Unlock reason must be at least 20 characters to properly document the exceptional circumstances requiring this unlock.',
+      );
+    }
+
+    const payrollRun = await this.payrollRunsModel.findById(payrollRunId).exec();
+
+    if (!payrollRun) {
+      throw new NotFoundException('Payroll run not found');
+    }
+
+    // Only LOCKED payroll runs can be unlocked
+    if (!this.isPayrollLocked(payrollRun)) {
+      throw new BadRequestException(
+        `Cannot unlock payroll run with status: ${payrollRun.status}. Only LOCKED payroll runs can be unlocked.`,
+      );
+    }
+
+    // Return to APPROVED status to allow modifications
+    payrollRun.status = PayRollStatus.APPROVED;
+    // Store the unlock reason with timestamp for audit trail
+    const timestamp = new Date().toISOString();
+    payrollRun.unlockReason = `[UNLOCKED ${timestamp}] ${unlockReason}`;
 
     return payrollRun.save();
   }
@@ -383,6 +503,8 @@ export class PayrollExecutionService {
         `Cannot calculate payroll for run with status: ${payrollRun.status}. Only DRAFT payroll runs can be calculated.`,
       );
     }
+
+    this.validatePayrollNotLocked(payrollRun, 'calculate payroll');
 
     // Get all active employees for the payroll period
     const payrollPeriodStart = new Date(payrollRun.payrollPeriod);
@@ -529,7 +651,7 @@ export class PayrollExecutionService {
         payrollPeriod: payrollRun.payrollPeriod,
         status: payrollRun.status,
         entity: payrollRun.entity,
-        createdAt: payrollRun.createdAt,
+      
       },
       summary: {
         totalEmployees,
@@ -633,13 +755,14 @@ export class PayrollExecutionService {
       });
     }
 
-    // 2. Pension Contributions (statutory) - from insurance brackets with pension-related names
+    // 2. Pension / Insurance Contributions (statutory) based on insurance brackets
+    //    Deduction is computed on BASE SALARY and only for the bracket that matches the base salary range.
     for (const insurance of approvedInsuranceBrackets) {
-      if (grossSalary >= insurance.minSalary && grossSalary <= insurance.maxSalary) {
+      if (baseSalary >= insurance.minSalary && baseSalary <= insurance.maxSalary) {
         const insuranceName = insurance.name.toLowerCase();
         const isPension = insuranceName.includes('pension') || insuranceName.includes('retirement');
         
-        const employeeContribution = (grossSalary * insurance.employeeRate) / 100;
+        const employeeContribution = (baseSalary * insurance.employeeRate) / 100;
         totalDeductions += employeeContribution;
         statutoryDeductions.push({
           name: insurance.name,
@@ -826,6 +949,8 @@ export class PayrollExecutionService {
       );
     }
 
+    this.validatePayrollNotLocked(payrollRun, 'generate payslips');
+
     // Get all employee payroll details for this run
     const employeeDetails = await this.employeePayrollDetailsModel
       .find({ payrollRunId: payrollRun._id })
@@ -871,10 +996,19 @@ export class PayrollExecutionService {
           benefits: detail.benefit ? [{ amount: detail.benefit }] : undefined,
         };
 
-        // Create deductions details
+        // Determine applicable insurance brackets for this employee based on BASE SALARY
+        const applicableInsuranceBrackets = approvedInsuranceBrackets.filter((bracket) => {
+          return (
+            typeof detail.baseSalary === 'number' &&
+            detail.baseSalary >= (bracket.minSalary ?? 0) &&
+            detail.baseSalary <= (bracket.maxSalary ?? Number.MAX_SAFE_INTEGER)
+          );
+        });
+
+        // Create deductions details - only brackets that actually apply to this employee
         const deductionsDetails = {
           taxes: approvedTaxRules,
-          insurances: approvedInsuranceBrackets,
+          insurances: applicableInsuranceBrackets,
         };
 
         const grossSalary = detail.baseSalary + detail.allowances;
@@ -1001,7 +1135,12 @@ export class PayrollExecutionService {
       doc.fontSize(11);
       
       const deductions = payslip.deductionsDetails || {};
-      
+      const earningsForDeductions = payslip.earningsDetails || {};
+      const baseSalaryForDeductions =
+        (earningsForDeductions && typeof (earningsForDeductions as any).baseSalary === 'number'
+          ? (earningsForDeductions as any).baseSalary
+          : payslip.totalGrossSalary) || 0;
+
       if (deductions.taxes && Array.isArray(deductions.taxes)) {
         deductions.taxes.forEach((tax: any) => {
           const taxAmount = (payslip.totalGrossSalary * (tax.rate || 0)) / 100;
@@ -1011,7 +1150,7 @@ export class PayrollExecutionService {
       
       if (deductions.insurances && Array.isArray(deductions.insurances)) {
         deductions.insurances.forEach((insurance: any) => {
-          const insuranceAmount = (payslip.totalGrossSalary * (insurance.employeeRate || 0)) / 100;
+          const insuranceAmount = (baseSalaryForDeductions * (insurance.employeeRate || 0)) / 100;
           doc.text(`${insurance.name || 'Insurance'}: $${insuranceAmount.toFixed(2)}`);
         });
       }
@@ -1032,5 +1171,157 @@ export class PayrollExecutionService {
       // Finalize PDF
       doc.end();
     });
+  }
+
+  /**
+   * Escalate an irregularity to Payroll Manager for review
+   * Payroll Specialists can escalate irregularities they cannot resolve
+   * Uses existing exceptions field to track escalation status
+   */
+  async escalateIrregularity(
+    employeePayrollDetailId: string,
+    irregularityDescription: string,
+    escalationNotes: string | undefined,
+    payrollSpecialistId: string,
+  ): Promise<employeePayrollDetails> {
+    if (!Types.ObjectId.isValid(employeePayrollDetailId)) {
+      throw new BadRequestException('Invalid employee payroll detail ID');
+    }
+
+    if (!Types.ObjectId.isValid(payrollSpecialistId)) {
+      throw new BadRequestException('Invalid payroll specialist ID');
+    }
+
+    // Get the employee payroll detail
+    const employeePayrollDetail = await this.employeePayrollDetailsModel
+      .findById(employeePayrollDetailId)
+      .populate('employeeId')
+      .populate('payrollRunId')
+      .exec();
+
+    if (!employeePayrollDetail) {
+      throw new NotFoundException('Employee payroll detail not found');
+    }
+
+    // Check if already escalated (check if exceptions contains ESCALATED marker)
+    if (employeePayrollDetail.exceptions && employeePayrollDetail.exceptions.includes('[ESCALATED]')) {
+      throw new BadRequestException(
+        'This irregularity has already been escalated and is pending resolution.',
+      );
+    }
+
+    // Append escalation information to exceptions field
+    const escalationMarker = `[ESCALATED] ${irregularityDescription}`;
+    const escalationInfo = escalationNotes 
+      ? ` | Escalation Notes: ${escalationNotes} | Escalated By: ${payrollSpecialistId}`
+      : ` | Escalated By: ${payrollSpecialistId}`;
+    
+    const updatedExceptions = employeePayrollDetail.exceptions
+      ? `${employeePayrollDetail.exceptions}; ${escalationMarker}${escalationInfo}`
+      : `${escalationMarker}${escalationInfo}`;
+
+    employeePayrollDetail.exceptions = updatedExceptions;
+
+    return employeePayrollDetail.save();
+  }
+
+  /**
+   * Get all escalated irregularities for Payroll Manager review
+   * Finds employeePayrollDetails where exceptions field contains [ESCALATED] marker
+   */
+  async getEscalatedIrregularities(): Promise<employeePayrollDetails[]> {
+    return this.employeePayrollDetailsModel
+      .find({
+        exceptions: { $regex: /\[ESCALATED\]/, $options: 'i' },
+      })
+      .populate('employeeId')
+      .populate('payrollRunId')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
+   * Get escalated irregularities for a specific payroll run
+   */
+  async getEscalatedIrregularitiesByPayrollRun(payrollRunId: string): Promise<employeePayrollDetails[]> {
+    if (!Types.ObjectId.isValid(payrollRunId)) {
+      throw new BadRequestException('Invalid payroll run ID');
+    }
+
+    return this.employeePayrollDetailsModel
+      .find({
+        payrollRunId: new Types.ObjectId(payrollRunId),
+        exceptions: { $regex: /\[ESCALATED\]/, $options: 'i' },
+      })
+      .populate('employeeId')
+      .populate('payrollRunId')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
+   * Resolve an escalated irregularity
+   * Payroll Managers can resolve or dismiss escalated irregularities
+   */
+  async resolveIrregularity(
+    employeePayrollDetailId: string,
+    managerId: string,
+    resolutionNotes: string,
+    status: string,
+  ): Promise<employeePayrollDetails> {
+    if (!Types.ObjectId.isValid(employeePayrollDetailId)) {
+      throw new BadRequestException('Invalid employee payroll detail ID');
+    }
+
+    if (!Types.ObjectId.isValid(managerId)) {
+      throw new BadRequestException('Invalid manager ID');
+    }
+
+    if (status !== 'resolved' && status !== 'dismissed') {
+      throw new BadRequestException(
+        `Invalid status. Only 'resolved' or 'dismissed' statuses are allowed for resolution.`,
+      );
+    }
+
+    // Validate resolution notes length
+    if (!resolutionNotes || resolutionNotes.trim().length < 10) {
+      throw new BadRequestException(
+        'Resolution notes must be at least 10 characters to document the decision.',
+      );
+    }
+
+    const employeePayrollDetail = await this.employeePayrollDetailsModel
+      .findById(employeePayrollDetailId)
+      .exec();
+
+    if (!employeePayrollDetail) {
+      throw new NotFoundException('Employee payroll detail not found');
+    }
+
+    // Check if it's escalated
+    if (!employeePayrollDetail.exceptions || !employeePayrollDetail.exceptions.includes('[ESCALATED]')) {
+      throw new BadRequestException(
+        'This irregularity has not been escalated or has already been resolved.',
+      );
+    }
+
+    // Check if already resolved
+    if (employeePayrollDetail.exceptions.includes('[RESOLVED]') || employeePayrollDetail.exceptions.includes('[DISMISSED]')) {
+      throw new BadRequestException(
+        'This irregularity has already been resolved or dismissed.',
+      );
+    }
+
+    // Append resolution information to exceptions field
+    const resolutionMarker = status === 'resolved' ? '[RESOLVED]' : '[DISMISSED]';
+    const resolutionInfo = ` | Resolution: ${resolutionNotes} | Resolved By: ${managerId} | Resolved At: ${new Date().toISOString()}`;
+    
+    const updatedExceptions = employeePayrollDetail.exceptions
+      ? `${employeePayrollDetail.exceptions}; ${resolutionMarker}${resolutionInfo}`
+      : `${resolutionMarker}${resolutionInfo}`;
+
+    employeePayrollDetail.exceptions = updatedExceptions;
+
+    return employeePayrollDetail.save();
   }
 }
