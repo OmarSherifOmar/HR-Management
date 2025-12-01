@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { LeavesController } from './controllers/leaves.controller';
 import { LeaveConfigurationController } from './controllers/leave-configuration.controller';
 import { LeaveTypeController } from './controllers/leave-type.controller';
 import { LeaveEntitlementController } from './controllers/leave-entitlement.controller';
@@ -11,7 +10,9 @@ import { SpecialAbsenceController } from './controllers/special-absence.controll
 import { LeaveYearConfigController } from './controllers/leave-year-config.controller';
 import { BalanceAdjustmentController } from './controllers/balance-adjustment.controller';
 import { LeaveRoleManagementController } from './controllers/leave-role-management.controller';
-import { LeavesService } from './services/leaves.service';
+import { LeaveRequestController } from './controllers/leave-request.controller';
+import { AttachmentController } from './controllers/attachment.controller';
+import { NotificationController } from './controllers/notification.controller';
 import { LeaveConfigurationService } from './services/leave-configuration.service';
 import { LeaveTypeService } from './services/leave-type.service';
 import { LeaveEntitlementService } from './services/leave-entitlement.service';
@@ -23,6 +24,9 @@ import { SpecialAbsenceService } from './services/special-absence.service';
 import { LeaveYearConfigService } from './services/leave-year-config.service';
 import { BalanceAdjustmentService } from './services/balance-adjustment.service';
 import { LeaveRoleManagementService } from './services/leave-role-management.service';
+import { LeaveRequestService } from './services/leave-request.service';
+import { AttachmentService } from './services/attachment.service';
+import { NotificationService } from './services/notification.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LeaveType, LeaveTypeSchema } from './models/leave-type.schema';
 import { LeaveRequest, LeaveRequestSchema } from './models/leave-request.schema';
@@ -33,8 +37,10 @@ import { LeaveAdjustment, LeaveAdjustmentSchema } from './models/leave-adjustmen
 import { Calendar, CalendarSchema } from './models/calendar.schema';
 import { Attachment, AttachmentSchema } from './models/attachment.schema';
 import { Holiday, HolidaySchema } from '../time-management/models/holiday.schema';
+import { NotificationLog, NotificationLogSchema } from '../time-management/models/notification-log.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { TimeManagementModule } from '../time-management/time-management.module';
+import { OrganizationStructureModule } from '../organization-structure/organization-structure.module';
 import { JwtModule } from '@nestjs/jwt';
 
 @Module({
@@ -46,14 +52,14 @@ import { JwtModule } from '@nestjs/jwt';
     {name: LeaveAdjustment.name, schema:LeaveAdjustmentSchema},
     {name:Calendar.name, schema:CalendarSchema},
     {name:Attachment.name, schema: AttachmentSchema},
-    {name:Holiday.name, schema:HolidaySchema}
-  ]),EmployeeProfileModule,TimeManagementModule,
+    {name:Holiday.name, schema:HolidaySchema},
+    {name:NotificationLog.name, schema:NotificationLogSchema}
+  ]),EmployeeProfileModule,TimeManagementModule,OrganizationStructureModule,
   JwtModule.register({
     secret: process.env.JWT_SECRET || 'defaultSecret',
     signOptions: { expiresIn: '1d' },
   })],
   controllers: [
-    LeavesController, 
     LeaveConfigurationController,
     LeaveTypeController,
     LeaveEntitlementController,
@@ -65,9 +71,11 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveYearConfigController,
     BalanceAdjustmentController,
     LeaveRoleManagementController,
+    LeaveRequestController,
+    AttachmentController,
+    NotificationController,
   ],
   providers: [
-    LeavesService, 
     LeaveConfigurationService,
     LeaveTypeService,
     LeaveEntitlementService,
@@ -79,9 +87,11 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveYearConfigService,
     BalanceAdjustmentService,
     LeaveRoleManagementService,
+    LeaveRequestService,
+    AttachmentService,
+    NotificationService,
   ],
   exports:[
-    LeavesService, 
     LeaveConfigurationService,
     LeaveTypeService,
     LeaveEntitlementService,
@@ -93,6 +103,9 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveYearConfigService,
     BalanceAdjustmentService,
     LeaveRoleManagementService,
+    LeaveRequestService,
+    AttachmentService,
+    NotificationService,
   ]
 })
 export class LeavesModule {}
