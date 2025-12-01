@@ -123,6 +123,20 @@ export class PolicyService {
     return { overtimeMinutes, shortMinutes };
   }
 
+  // Helper used by ReportsService to get scheduled minutes for a given shift assignment/date
+  async getScheduledMinutesForAssignment(assignment: ShiftAssignment, date: Date): Promise<number> {
+    const shift = await this.shiftService.getById(assignment.shiftId);
+    if (!shift) return 0;
+
+    const shiftStart = buildDateFromShiftTime(date, shift.startTime);
+    const shiftEnd = buildDateFromShiftTime(date, shift.endTime);
+    const graceIn = shift.graceInMinutes ?? 0;
+    const graceOut = shift.graceOutMinutes ?? 0;
+
+    const scheduledMinutes = Math.floor((shiftEnd.getTime() - shiftStart.getTime()) / 60000) + graceIn + graceOut;
+    return scheduledMinutes;
+  }
+
   async calcuateLateness(employeeId: string | Types.ObjectId, date: Date, punches: { type: 'IN' | 'OUT'; time: Date }[]): Promise<number> {
     const assignment = await this.shiftAssignmentService.getEmployeeActiveShift(employeeId, date);
     if (!assignment) return 0; 
@@ -303,14 +317,22 @@ export class PolicyService {
   }
 
   async syncWithPayroll() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
 
-    const report = await this.getOvertimeReport(yesterday, yesterday);
+  // Automatically escalate any pending time exceptions before syncing with payroll
+  await this.escalatePendingExceptions(yesterday);
 
-    const payrollPayload = report.map(r => ({employeeId: r.employeeId.toString(), date: r.date, overtimeMinutes: r.overtimeMinutes, shortMinutes: r.shortMinutes}));
+  const report = await this.getOvertimeReport(yesterday, yesterday);
 
-    return payrollPayload;
+  const payrollPayload = report.map(r => ({
+    employeeId: r.employeeId.toString(),
+    date: r.date,
+    overtimeMinutes: r.overtimeMinutes,
+    shortMinutes: r.shortMinutes,
+  }));
+
+  return payrollPayload;
   }
 
    //helper methods:
