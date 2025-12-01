@@ -3,6 +3,10 @@ import { IsString, IsOptional } from 'class-validator';
 export class UpdatePositionDto {
   @IsOptional()
   @IsString()
+  code?: string;
+
+  @IsOptional()
+  @IsString()
   title?: string;
 
   @IsOptional()
@@ -17,6 +21,7 @@ export class UpdatePositionDto {
   @IsString()
   reportsToPositionId?: string;
 
+  @IsOptional()
   @IsString() 
   payGrade?: string;
 

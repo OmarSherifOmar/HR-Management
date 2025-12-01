@@ -23,7 +23,8 @@ export class DepartmentService {
     const afterSnapshot = typeof created?.toObject === 'function' ? created.toObject() : created;
 
     await this.changeLogModel.create({
-      action: 'CREATE',
+      _id: new Types.ObjectId(),
+      action: 'CREATED',
       entityType: 'Department',
       entityId: created._id,
       performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
@@ -53,7 +54,8 @@ export class DepartmentService {
     const afterSnapshot = typeof updated?.toObject === 'function' ? updated.toObject() : updated;
 
     await this.changeLogModel.create({
-      action: 'UPDATE',
+      _id: new Types.ObjectId(),
+      action: 'UPDATED',
       entityType: 'Department',
       entityId: updated._id,
       performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
@@ -65,7 +67,7 @@ export class DepartmentService {
   }
 
   // Pre-deactivate check: returns related active assignments/positions
-  async FindActive(id: string) {
+  async FindActivePoistions(id: string) {
     const assignments = (await this.assignmentModel
       .find({ departmentId: id, endDate: { $exists: false } })
       .lean()
@@ -90,7 +92,8 @@ export class DepartmentService {
     const afterSnapshot = typeof updated?.toObject === 'function' ? updated.toObject() : updated;
 
     await this.changeLogModel.create({
-      action: 'DEACTIVATE',
+      _id: new Types.ObjectId(),
+      action: 'DEACTIVATED',
       entityType: 'Department',
       entityId: updated._id,
       performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
@@ -99,5 +102,33 @@ export class DepartmentService {
       summary: `Department ${before?.code ?? String(id)} deactivated`,
     } as any);
     return updated;
+  }
+
+  async delete(id: string, actorId?: string) {
+    const before = (await this.deptModel.findById(id).lean().exec()) as any;
+    if (!before) throw new NotFoundException('Department not found');
+
+    // Check if active assignments exist
+    const assignments = (await this.assignmentModel
+      .find({ departmentId: id, endDate: { $exists: false } })
+      .lean()
+      .exec()) as any[];
+    if (assignments.length > 0) {
+      throw new BadRequestException('Department has active assignments; cannot delete without reassigning employees.');
+    }
+
+    await this.deptModel.findByIdAndDelete(id).exec();
+
+    await this.changeLogModel.create({
+      _id: new Types.ObjectId(),
+      action: 'DEACTIVATED',
+      entityType: 'Department',
+      entityId: new Types.ObjectId(id),
+      performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
+      beforeSnapshot: before,
+      summary: `Department ${before?.code ?? String(id)} permanently deleted`,
+    } as any);
+
+    return { message: `Department ${before?.code ?? id} has been permanently deleted` };
   }
 }

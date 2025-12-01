@@ -56,7 +56,8 @@ export class PositionService {
     const afterSnapshot = typeof created?.toObject === 'function' ? created.toObject() : created;
 
     await this.changeLogModel.create({
-      action: 'CREATE',
+      _id: new Types.ObjectId(),
+      action: 'CREATED',
       entityType: 'Position',
       entityId: created._id,
       performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
@@ -100,7 +101,8 @@ export class PositionService {
     const afterSnapshot = typeof updated?.toObject === 'function' ? updated.toObject() : updated;
 
     await this.changeLogModel.create({
-      action: 'UPDATE',
+      _id: new Types.ObjectId(),
+      action: 'UPDATED',
       entityType: 'Position',
       entityId: updated._id,
       performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
@@ -134,7 +136,8 @@ export class PositionService {
     const afterSnapshot = typeof updated?.toObject === 'function' ? updated.toObject() : updated;
 
     await this.changeLogModel.create({
-      action: 'DEACTIVATE',
+      _id: new Types.ObjectId(),
+      action: 'DEACTIVATED',
       entityType: 'Position',
       entityId: updated._id,
       performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
@@ -144,5 +147,34 @@ export class PositionService {
     } as any);
 
     return updated;
+  }
+
+  async delete(id: string, actorId?: string) {
+    const before = (await this.positionModel.findById(id).lean().exec()) as any;
+    if (!before) throw new NotFoundException('Position not found');
+
+    // Check if active assignments exist
+    const activeAssignment = (await this.assignmentModel
+      .findOne({ positionId: id, endDate: { $exists: false } })
+      .lean()
+      .exec()) as any;
+
+    if (activeAssignment) {
+      throw new BadRequestException('Position cannot be deleted because an employee is assigned to it');
+    }
+
+    await this.positionModel.findByIdAndDelete(id).exec();
+
+    await this.changeLogModel.create({
+      _id: new Types.ObjectId(),
+      action: 'DEACTIVATED',
+      entityType: 'Position',
+      entityId: new Types.ObjectId(id),
+      performedByEmployeeId: actorId ? new Types.ObjectId(actorId) : undefined,
+      beforeSnapshot: before,
+      summary: `Position ${before.code} permanently deleted`,
+    } as any);
+
+    return { message: `Position ${before.code} has been permanently deleted` };
   }
 }
