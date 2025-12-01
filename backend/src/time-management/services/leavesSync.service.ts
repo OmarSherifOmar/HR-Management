@@ -4,7 +4,8 @@ import { Model, Types } from 'mongoose';
 import { AttendanceRecord, AttendanceRecordDocument } from '../models/attendance-record.schema';
 import { ShiftAssignment, ShiftAssignmentDocument } from '../models/shift-assignment.schema';
 import { NotificationService } from './notification.service';
-//import { LeavesService } from '../leaves.service';
+import { LeaveRequestService } from '../../leaves/services/leave-request.service';
+import { LeaveStatus } from '../../leaves/enums/leave-status.enum';
 import { startOfDay, endOfDay } from '../utils/time.utils';
 
 @Injectable()
@@ -15,13 +16,13 @@ export class LeaveSyncService {
     @InjectModel(AttendanceRecord.name) private attendanceModel: Model<AttendanceRecordDocument>,
     @InjectModel(ShiftAssignment.name) private shiftAssignmentModel: Model<ShiftAssignmentDocument>,
     private readonly notificationService: NotificationService,
-    private readonly leavesService: LeavesService
+    private readonly leaveRequestService: LeaveRequestService
   ) {}
 
   async syncEmployeeLeaves(employeeId: string | Types.ObjectId, from: Date, to: Date) {
     const employeeObjId = typeof employeeId === 'string' ? new Types.ObjectId(employeeId) : employeeId;
 
-    const approvedLeaves = await this.leavesService.getApprovedLeaves(employeeObjId, from, to);
+    const approvedLeaves = await this.leaveRequestService.getEmployeeLeaveRequests(employeeObjId.toString(), LeaveStatus.APPROVED);
 
     for (const leave of approvedLeaves) {
       const leaveDays = this._getDateRange(startOfDay(leave.dates.from), endOfDay(leave.dates.to));

@@ -80,8 +80,8 @@ export class PayrollInitiationService {
   async initiatePayrollRun(dto: InitiatePayrollDto) {
     // First validate the period
     await this.validatePayrollPeriod({
-      startDate: dto.periodStart,
-      endDate: dto.periodEnd,
+      startDate: new Date(dto.periodStart),
+      endDate: new Date(dto.periodEnd),
       payPeriodType: dto.payPeriodType,
     });
 

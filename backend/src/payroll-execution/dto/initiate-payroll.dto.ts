@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsString, IsDateString, IsOptional } from 'class-validator';
 
 export class InitiatePayrollDto {
   @IsNotEmpty()
@@ -8,5 +8,21 @@ export class InitiatePayrollDto {
   @IsNotEmpty()
   @IsString()
   entity: string;
+
+  @IsOptional()
+  @IsString()
+  initiatorId?: string;
+
+  @IsNotEmpty()
+  @IsDateString()
+  periodStart: string;
+
+  @IsNotEmpty()
+  @IsDateString()
+  periodEnd: string;
+
+  @IsNotEmpty()
+  @IsString()
+  payPeriodType: string;
 }
 
