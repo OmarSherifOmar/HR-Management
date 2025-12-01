@@ -45,6 +45,16 @@ import { ResignationRequestService } from './services/resignation-request.servic
 import { TerminationRequestService } from './services/termination-request.service';
 import { ClearanceChecklistService } from './services/clearance-checklist.service';
 import { OffboardingProcessService } from './services/offboarding-process.service';
+import { AssessmentResultController } from './controllers/assessment-result.controller';
+import { AssessmentResultService } from './services/assessment-result.service';
+import { ContractController } from './controllers/contract.controller';
+import { ContractService } from './services/contract.service';
+import { DocumentController } from './controllers/document.controller';
+import { DocumentService } from './services/document.service';
+import { JobRequisitionService } from './services/job-requisition.service';
+import { JobRequisitionController } from './controllers/job-requisition.controller';
+import { ReferralController } from './controllers/referral.controller';
+import { ReferralService } from './services/referral.service';
 
 @Module({
   imports: [
@@ -72,9 +82,14 @@ import { OffboardingProcessService } from './services/offboarding-process.servic
     RecruitmentController,
     ApplicationStatusHistoryController,
     ApplicationController,
+    AssessmentResultController,
+    ContractController,
+    DocumentController,
     InterviewController,
     JobTemplateController,
+    JobRequisitionController,
     OfferController,
+    ReferralController,
     ResignationRequestController,
     TerminationRequestController,
     ClearanceChecklistController,
@@ -85,9 +100,14 @@ import { OffboardingProcessService } from './services/offboarding-process.servic
     RecruitmentService,
     ApplicationStatusHistoryService,
     ApplicationService,
+    AssessmentResultService,
+    ContractService,
+    DocumentService,
     InterviewService,
     JobTemplateService,
+    JobRequisitionService,
     OfferService,
+    ReferralService,
     ResignationRequestService,
     TerminationRequestService,
     ClearanceChecklistService,
@@ -98,9 +118,14 @@ import { OffboardingProcessService } from './services/offboarding-process.servic
     RecruitmentService,
     ApplicationStatusHistoryService,
     ApplicationService,
+    AssessmentResultService,
+    ContractService,
+    DocumentService,
     InterviewService,
     JobTemplateService,
+    JobRequisitionService,
     OfferService,
+    ReferralService,
     ResignationRequestService,
     TerminationRequestService,
     ClearanceChecklistService,
