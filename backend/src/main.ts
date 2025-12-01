@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { DepartmentSchema } from './organization-structure/models/department.schema';
 
+
 async function printRoutes(app) {
   await app.init(); // ensure adapters mounted
   const adapter = app.getHttpAdapter();

@@ -1,10 +1,22 @@
 import { Module } from '@nestjs/common';
+import { PayrollConfigurationController } from './payroll-configuration.controller';
+import { PayrollConfigurationService } from './payroll-configuration.service';
+import {
+  CompanyWideSettings,
+  CompanyWideSettingsSchema,
+} from './models/CompanyWideSettings.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PayrollConfigurationController } from './payroll-configuration.controller';
 import { CompanyWideSettings, CompanyWideSettingsSchema } from './models/CompanyWideSettings.schema';
 import { allowance, allowanceSchema } from './models/allowance.schema';
-import { insuranceBrackets, insuranceBracketsSchema } from './models/insuranceBrackets.schema';
-import { payrollPolicies, payrollPoliciesSchema } from './models/payrollPolicies.schema';
+import {
+  insuranceBrackets,
+  insuranceBracketsSchema,
+} from './models/insuranceBrackets.schema';
+import {
+  payrollPolicies,
+  payrollPoliciesSchema,
+} from './models/payrollPolicies.schema';
 import { payType, payTypeSchema } from './models/payType.schema';
 import { signingBonus, signingBonusSchema } from './models/signingBonus.schema';
 import { taxRules, taxRulesSchema } from './models/taxRules.schema';

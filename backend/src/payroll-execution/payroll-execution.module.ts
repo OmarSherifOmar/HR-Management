@@ -65,4 +65,4 @@ import { payrollPolicies, payrollPoliciesSchema } from '../payroll-configuration
     PayrollInitiationService,
   ]
 })
-export class PayrollExecutionModule { }
+export class PayrollExecutionModule {}

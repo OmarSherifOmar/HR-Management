@@ -1,24 +1,46 @@
-import { forwardRef, Module } from '@nestjs/common';
+// backend/src/payroll-tracking/payroll-tracking.module.ts
+import { Module, forwardRef } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PayrollTrackingController } from './payroll-tracking.controller';
 import { PayrollTrackingService } from './payroll-tracking.service';
-import { MongooseModule } from '@nestjs/mongoose';
-import { refunds, refundsSchema } from './models/refunds.schema';
-import { claims, claimsSchema } from './models/claims.schema';
-import { disputes, disputesSchema } from './models/disputes.schema';
+import { claims, claimsSchema, claimsDocument } from './models/claims.schema';
+import { disputes, disputesSchema, disputesDocument } from './models/disputes.schema';
+import { refunds, refundsSchema, refundsDocument } from './models/refunds.schema';
+import { paySlip, paySlipSchema, PayslipDocument } from '../payroll-execution/models/payslip.schema';
+
+import {
+  EmployeeProfile,
+  EmployeeProfileSchema,
+} from '../employee-profile/models/employee-profile.schema';
+
 import { PayrollConfigurationModule } from '../payroll-configuration/payroll-configuration.module';
 import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
 
 @Module({
-  
   imports: [
-    PayrollConfigurationModule,forwardRef(()=> PayrollExecutionModule),
+    // Ahmed branch modules
+    PayrollConfigurationModule,
+    forwardRef(() => PayrollExecutionModule),
+
     MongooseModule.forFeature([
-      { name: refunds.name, schema: refundsSchema },
+      // claims
       { name: claims.name, schema: claimsSchema },
+
+      // disputes
       { name: disputes.name, schema: disputesSchema },
-    ])],
+
+      // refunds (only Omar branch had this here — keep it)
+      { name: refunds.name, schema: refundsSchema },
+
+      // payslip
+      { name: paySlip.name, schema: paySlipSchema },
+
+      // employee profile 
+      { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+    ]),
+  ],
   controllers: [PayrollTrackingController],
   providers: [PayrollTrackingService],
-  exports:[PayrollTrackingService]
+  exports: [PayrollTrackingService],
 })
-export class PayrollTrackingModule { }
+export class PayrollTrackingModule {}
