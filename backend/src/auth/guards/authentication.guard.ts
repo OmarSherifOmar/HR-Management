@@ -14,7 +14,6 @@ dotenv.config();
 export class AuthGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private jwtService: JwtService,
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
