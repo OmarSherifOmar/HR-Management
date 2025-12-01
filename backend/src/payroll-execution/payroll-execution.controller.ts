@@ -85,4 +85,144 @@ export class PayrollExecutionController {
       approvePayrollDto.payrollSpecialistId,
     );
   }
+
+  @Patch('reject')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  async rejectPayroll(@Body() rejectPayrollDto: RejectPayrollDto) {
+    return this.payrollService.rejectPayroll(
+      rejectPayrollDto.payrollRunId,
+      rejectPayrollDto.rejectionReason,
+      rejectPayrollDto.payrollSpecialistId,
+    );
+  }
+
+  @Post('calculate/:id')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  async calculatePayroll(@Param('id') id: string) {
+    return this.payrollService.calculatePayroll(id);
+  }
+
+  @Get('preview/:id')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
+  async getPayrollPreview(@Param('id') id: string) {
+    return this.payrollService.getPayrollPreview(id);
+  }
+
+  @Post('submit-for-approval')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  async submitForManagerApproval(@Body() submitDto: SubmitForApprovalDto) {
+    return this.payrollService.submitForManagerApproval(submitDto.payrollRunId);
+  }
+
+  @Patch('manager/approve')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async managerApprove(@Body() approvalDto: ManagerApprovalDto) {
+    return this.payrollService.managerApprove(
+      approvalDto.payrollRunId,
+      approvalDto.managerId,
+    );
+  }
+
+  @Patch('manager/reject')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async managerReject(@Body() rejectDto: ManagerRejectDto) {
+    return this.payrollService.managerReject(
+      rejectDto.payrollRunId,
+      rejectDto.managerId,
+      rejectDto.rejectionReason,
+    );
+  }
+
+  @Patch('finance/approve')
+  @Roles(Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
+  async financeApprove(@Body() approvalDto: FinanceApprovalDto) {
+    return this.payrollService.financeApprove(
+      approvalDto.payrollRunId,
+      approvalDto.financeStaffId,
+    );
+  }
+
+  @Patch('finance/reject')
+  @Roles(Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
+  async financeReject(@Body() rejectDto: FinanceRejectDto) {
+    return this.payrollService.financeReject(
+      rejectDto.payrollRunId,
+      rejectDto.financeStaffId,
+      rejectDto.rejectionReason,
+    );
+  }
+
+  @Post('payslips/generate/:id')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  async generatePayslips(@Param('id') id: string) {
+    return this.payrollService.generatePayslips(id);
+  }
+
+  @Get('payslips/:id/pdf')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.DEPARTMENT_EMPLOYEE, Role.SYSTEM_ADMIN)
+  async generatePayslipPDF(@Param('id') id: string, @Res() res: Response) {
+    const pdfBuffer = await this.payrollService.generatePayslipPDF(id);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="payslip-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    
+    res.send(pdfBuffer);
+  }
+
+  @Patch('lock')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async lockPayrollRun(@Body() lockDto: LockPayrollDto) {
+    return this.payrollService.lockPayrollRun(
+      lockDto.payrollRunId,
+      lockDto.managerId,
+      lockDto.lockReason,
+    );
+  }
+
+  @Patch('unlock')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async unlockPayrollRun(@Body() unlockDto: UnlockPayrollDto) {
+    return this.payrollService.unlockPayrollRun(
+      unlockDto.payrollRunId,
+      unlockDto.managerId,
+      unlockDto.unlockReason,
+    );
+  }
+
+  @Post('irregularities/escalate')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  async escalateIrregularity(@Body() escalateDto: EscalateIrregularityDto) {
+    return this.payrollService.escalateIrregularity(
+      escalateDto.employeePayrollDetailId,
+      escalateDto.irregularityDescription,
+      escalateDto.escalationNotes,
+      escalateDto.payrollSpecialistId,
+    );
+  }
+
+  @Get('irregularities/escalated')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async getEscalatedIrregularities() {
+    return this.payrollService.getEscalatedIrregularities();
+  }
+
+  @Get('irregularities/escalated/:payrollRunId')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async getEscalatedIrregularitiesByPayrollRun(@Param('payrollRunId') payrollRunId: string) {
+    return this.payrollService.getEscalatedIrregularitiesByPayrollRun(payrollRunId);
+  }
+
+  @Patch('irregularities/resolve')
+  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async resolveIrregularity(@Body() resolveDto: ResolveIrregularityDto) {
+    return this.payrollService.resolveIrregularity(
+      resolveDto.employeePayrollDetailId,
+      resolveDto.managerId,
+      resolveDto.resolutionNotes,
+      resolveDto.status,
+    );
+  }
 }
