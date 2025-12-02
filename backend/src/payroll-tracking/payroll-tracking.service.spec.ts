@@ -251,11 +251,11 @@ describe('PayrollTrackingService', () => {
       const mockClaim = {
         _id: validClaimId,
         status: ClaimStatus.UNDER_REVIEW,
-        notes: [] as { note: string }[],
+        resolutionComment: '',
         save: jest.fn().mockResolvedValue(true),
         toObject: jest.fn().mockReturnValue({
           _id: validClaimId,
-          notes: [{ note: 'Test note' }],
+          resolutionComment: 'Test note',
         }),
       };
 
@@ -263,8 +263,7 @@ describe('PayrollTrackingService', () => {
 
       await service.updateClaim(validClaimId, updater, { note: 'Test note' });
 
-      expect(mockClaim.notes.length).toBe(1);
-      expect(mockClaim.notes[0].note).toBe('Test note');
+      expect(mockClaim.resolutionComment).toContain('Test note');
       expect(mockClaim.save).toHaveBeenCalled();
     });
 
@@ -363,11 +362,11 @@ describe('PayrollTrackingService', () => {
       const mockDispute = {
         _id: validDisputeId,
         status: DisputeStatus.UNDER_REVIEW,
-        resolutionNotes: [] as { note: string }[],
+        resolutionComment: '',
         save: jest.fn().mockResolvedValue(true),
         toObject: jest.fn().mockReturnValue({
           _id: validDisputeId,
-          resolutionNotes: [{ note: 'Test note' }],
+          resolutionComment: 'Test note',
         }),
       };
 
@@ -377,8 +376,7 @@ describe('PayrollTrackingService', () => {
         note: 'Test note',
       });
 
-      expect(mockDispute.resolutionNotes.length).toBe(1);
-      expect(mockDispute.resolutionNotes[0].note).toBe('Test note');
+      expect(mockDispute.resolutionComment).toContain('Test note');
       expect(mockDispute.save).toHaveBeenCalled();
     });
 
@@ -405,7 +403,7 @@ describe('PayrollTrackingService', () => {
       const mockDispute = {
         _id: validDisputeId,
         status: DisputeStatus.UNDER_REVIEW,
-        resolutionNotes: [] as { note?: string; role?: string }[],
+        resolutionComment: '',
         save: jest.fn().mockResolvedValue(true),
         toObject: jest.fn().mockReturnValue({
           _id: validDisputeId,
@@ -418,8 +416,7 @@ describe('PayrollTrackingService', () => {
       await service.managerApproveDispute(validDisputeId, managerId);
 
       expect(mockDispute.status).toBe(DisputeStatus.APPROVED);
-      expect(mockDispute.resolutionNotes.length).toBe(1);
-      expect(mockDispute.resolutionNotes[0].role).toBe('Payroll Manager');
+      expect(mockDispute.resolutionComment).toContain('Payroll Manager');
       expect(mockDispute.save).toHaveBeenCalled();
     });
 

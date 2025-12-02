@@ -51,24 +51,6 @@ export class claims {
 
   @Prop()
   resolutionComment?: string;
-
-  @Prop({
-    type: [
-      {
-        by: mongoose.Schema.Types.ObjectId,
-        role: String,
-        note: String,
-        date: Date,
-      },
-    ],
-    default: [],
-  })
-  notes?: {
-    by?: mongoose.Types.ObjectId;
-    role?: string;
-    note?: string;
-    date?: Date;
-  }[];
 }
 
 export const claimsSchema = SchemaFactory.createForClass(claims);
