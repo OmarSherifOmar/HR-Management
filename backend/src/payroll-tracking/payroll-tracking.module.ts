@@ -14,6 +14,7 @@ import {
 } from '../employee-profile/models/employee-profile.schema';
 
 import { PayrollConfigurationModule } from '../payroll-configuration/payroll-configuration.module';
+import { allowance, allowanceSchema } from '../payroll-configuration/models/allowance.schema';
 import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
 
 @Module({
@@ -37,6 +38,8 @@ import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.m
 
       // employee profile 
       { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+      // allowance (needed by PayrollTrackingService)
+      { name: allowance.name, schema: allowanceSchema },
     ]),
   ],
   controllers: [PayrollTrackingController],

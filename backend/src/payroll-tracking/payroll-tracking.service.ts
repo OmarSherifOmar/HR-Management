@@ -210,22 +210,25 @@ export class PayrollTrackingService {
     if (!claim) throw new NotFoundException('Claim not found');
 
     if (dto.status) {
-      if (!Object.values(ClaimStatus).includes(dto.status as ClaimStatus))
+      if (!Object.values(ClaimStatus).includes(dto.status))
         throw new BadRequestException(`Invalid claim status: ${dto.status}`);
-      claim.status = dto.status as ClaimStatus;
+      claim.status = dto.status;
     }
 
     if (dto.note) {
       const entry = {
         by: ensureObjectId(updater.userId),
         role: pickRole(updater.role),
-        note: dto.note as string,
+        note: dto.note,
         date: new Date(),
       };
 
-      const notes = (claim.notes ?? []) as (typeof entry)[];
-      notes.push(entry);
-      claim.notes = notes;
+      // Append note to resolutionComment
+      const existingComment = claim.resolutionComment ?? '';
+      const newEntry = `[${entry.date.toISOString()}] ${entry.role}: ${entry.note}`;
+      claim.resolutionComment = existingComment
+        ? `${existingComment}\n${newEntry}`
+        : newEntry;
     }
 
     await claim.save();
@@ -258,20 +261,23 @@ export class PayrollTrackingService {
     if (!dispute) throw new NotFoundException('Dispute not found');
 
     if (dto.status) {
-      dispute.status = dto.status as DisputeStatus;
+      dispute.status = dto.status;
     }
 
     if (dto.note) {
       const entry = {
         by: ensureObjectId(updater.userId),
         role: pickRole(updater.role),
-        note: dto.note as string,
+        note: dto.note,
         date: new Date(),
       };
 
-      const notes = (dispute.resolutionNotes ?? []) as (typeof entry)[];
-      notes.push(entry);
-      dispute.resolutionNotes = notes;
+      // Append note to resolutionComment
+      const existingComment = dispute.resolutionComment ?? '';
+      const newEntry = `[${entry.date.toISOString()}] ${entry.role}: ${entry.note}`;
+      dispute.resolutionComment = existingComment
+        ? `${existingComment}\n${newEntry}`
+        : newEntry;
     }
 
     await dispute.save();
@@ -294,9 +300,12 @@ export class PayrollTrackingService {
       date: new Date(),
     };
 
-    const notes = (dispute.resolutionNotes ?? []) as (typeof entry)[];
-    notes.push(entry);
-    dispute.resolutionNotes = notes;
+    // Append note to resolutionComment
+    const existingComment = dispute.resolutionComment ?? '';
+    const newEntry = `[${entry.date.toISOString()}] ${entry.role}: ${entry.note}`;
+    dispute.resolutionComment = existingComment
+      ? `${existingComment}\n${newEntry}`
+      : newEntry;
 
     await dispute.save();
     return dispute.toObject();
@@ -400,9 +409,12 @@ export class PayrollTrackingService {
         date: new Date(),
       };
 
-      const notes = (dispute.resolutionNotes ?? []) as (typeof note)[];
-      notes.push(note);
-      dispute.resolutionNotes = notes;
+      // Append note to resolutionComment
+      const existingComment = dispute.resolutionComment ?? '';
+      const newEntry = `[${note.date.toISOString()}] ${note.role}: ${note.note}`;
+      dispute.resolutionComment = existingComment
+        ? `${existingComment}\n${newEntry}`
+        : newEntry;
 
       await dispute.save();
     }
@@ -418,9 +430,12 @@ export class PayrollTrackingService {
         date: new Date(),
       };
 
-      const notes = (claim.notes ?? []) as (typeof note)[];
-      notes.push(note);
-      claim.notes = notes;
+      // Append note to resolutionComment
+      const existingComment = claim.resolutionComment ?? '';
+      const newEntry = `[${note.date.toISOString()}] ${note.role}: ${note.note}`;
+      claim.resolutionComment = existingComment
+        ? `${existingComment}\n${newEntry}`
+        : newEntry;
 
       await claim.save();
     }

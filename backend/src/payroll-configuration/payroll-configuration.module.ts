@@ -59,7 +59,15 @@ import { ConfigurationApprovalsController } from './controllers/configuration-ap
   providers: [TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService, AllowancesService,
     PayTypesService,
     PayGradesService,PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService],
-  exports:[TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService, AllowancesService,
+  exports:[
+    // re-export the allowance model provider so other modules can inject allowanceModel via @InjectModel
+    MongooseModule.forFeature([{ name: allowance.name, schema: allowanceSchema }]),
+    TaxRulesService,
+    InsuranceBracketsService,
+    CompanyWideSettingsService,
+    BackupService,
+    ConfigurationApprovalService,
+    AllowancesService,
     PayTypesService,
     PayGradesService,PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService]
 
