@@ -1,21 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EmployeeController } from './employee-profile.controller';
-import { EmployeeService } from './employee-profile.service';
-import { JwtService } from '@nestjs/jwt';
+import { EmployeeController } from '././employee-profile.controller';
 
 describe('EmployeeProfileController', () => {
-  let controller: EmployeeProfileController;
+  let controller: EmployeeController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EmployeeController],
-      providers: [
-        { provide: EmployeeService, useValue: {} },
-        { provide: JwtService, useValue: {} },
-      ],
     }).compile();
 
-    controller = module.get<EmployeeController>(EmployeeController);
+    controller = module.get<EmployeeController>(
+      EmployeeController,
+    );
   });
 
   it('should be defined', () => {

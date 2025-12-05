@@ -89,6 +89,9 @@ export class EmployeeProfile extends UserProfileBase {
 
   @Prop({ type: Number })
   lastAppraisalScore?: number;
+  
+  @Prop({ type: Number })
+  Bankaccount?: number;
 
   @Prop({ type: String })
   lastAppraisalRatingLabel?: string;

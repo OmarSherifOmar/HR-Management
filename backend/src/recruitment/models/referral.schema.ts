@@ -4,7 +4,7 @@ import { HydratedDocument, Types } from 'mongoose';
 @Schema({ timestamps: true })
 export class Referral {
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile', required: true })
   referringEmployeeId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
