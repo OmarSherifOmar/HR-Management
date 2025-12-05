@@ -7,7 +7,7 @@ export class AssessmentResult {
   @Prop({ type: Types.ObjectId, ref: 'Interview', required: true })
   interviewId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile', required: true })
   interviewerId: Types.ObjectId;
 
   @Prop()
