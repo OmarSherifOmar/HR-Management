@@ -71,7 +71,12 @@ export class AuthController {
       return {
         statusCode: HttpStatus.OK,
         message: 'Login successful',
-        user: result.payload,
+        user: {
+          email: signInDto.email,
+          name: result.payload.username,
+          role: result.payload.roles?.[0] || 'employee',
+          employeeNumber: result.payload.employeeNumber,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
