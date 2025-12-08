@@ -148,7 +148,8 @@ export class LeaveRequestService {
         );
       }
 
-      const availableBalance = entitlement.remaining - entitlement.pending;
+      // remaining already represents available balance (total - taken - pending)
+      const availableBalance = entitlement.remaining;
       if (durationDays > availableBalance) {
         throw new BadRequestException(
           `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${durationDays} days`,
@@ -340,7 +341,10 @@ export class LeaveRequestService {
       });
 
       if (entitlement) {
-        const availableBalance = entitlement.remaining - entitlement.pending + oldDuration;
+        // When modifying, oldDuration is already in pending, so add it back to get actual available
+        // remaining = total - taken - pending (where pending includes oldDuration)
+        // available for new request = remaining + oldDuration
+        const availableBalance = entitlement.remaining + oldDuration;
         if (newDuration > availableBalance) {
           throw new BadRequestException(
             `Insufficient leave balance. Available: ${availableBalance} days`,
@@ -1075,11 +1079,9 @@ export class LeaveRequestService {
         });
 
         if (entitlement) {
-          // For rejected requests, pending was already restored, so check remaining directly
-          const effectivePending = leaveRequest.status === LeaveStatus.REJECTED 
-            ? 0 
-            : entitlement.pending;
-          const availableBalance = entitlement.remaining - effectivePending;
+          // remaining already represents available balance
+          // For rejected requests, pending was already restored to remaining
+          const availableBalance = entitlement.remaining;
           
           if (leaveRequest.durationDays > availableBalance) {
             throw new BadRequestException(
