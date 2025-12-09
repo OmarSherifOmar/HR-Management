@@ -1,13 +1,21 @@
-import { IsEmail, IsEnum, IsMongoId, IsOptional, IsString } from "class-validator";
 import { SystemRole } from "../../employee-profile/enums/employee-profile.enums";
+import { IsArray, IsEmail, IsInt, isInt, IsMongoId, IsNumber, IsOptional, IsEnum, isString, IsString } from "class-validator";
+import { EmployeeProfile } from "../../employee-profile/models/employee-profile.schema";
+import { AddressSchema } from "../../employee-profile/models/user-schema";
 
 export class RegisterRequestDto {
   @IsString()
   @IsEmail()
-  email: string;
+  email: string
+  
+  @IsString()
+  number: string
 
   @IsString()
   name: string;
+  
+  @IsInt()
+  age: number;
 
   @IsString()
   password: string;

@@ -22,6 +22,8 @@ export class taxRules {
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
     createdBy?: mongoose.Types.ObjectId;
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
+    updatedBy?: mongoose.Types.ObjectId;
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
     approvedBy?: mongoose.Types.ObjectId;
     @Prop({})
     approvedAt?: Date
