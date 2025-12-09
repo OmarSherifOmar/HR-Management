@@ -60,28 +60,12 @@ export class AuthService {
         supervisorPositionId: dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined,
       });
 
-      // Assign role - if this fails, we need to clean up the employee
-      try {
-        await this.usersService.assignRole(employee._id, dto.role);
-      } catch (roleError) {
-        // If role assignment fails, delete the created employee to maintain data consistency
-        await this.usersService.deleteEmployee(employee._id);
-        console.error("ROLE ASSIGNMENT ERROR:", roleError);
-        throw new InternalServerErrorException("Failed to assign role to user. Registration rolled back.");
-      }
+      // Assign role
+      await this.usersService.assignRole(employee._id, dto.role);
 
       return employee;
     } catch (err) {
       console.error("REGISTRATION ERROR:", err);
-      
-      // If employee was created but something else failed, clean up
-      if (employee?._id) {
-        try {
-          await this.usersService.deleteEmployee(employee._id);
-        } catch (cleanupError) {
-          console.error("CLEANUP ERROR:", cleanupError);
-        }
-      }
       
       // Re-throw known exceptions
       if (err instanceof ConflictException || err instanceof BadRequestException) {
