@@ -111,7 +111,7 @@ export default function DashboardPage() {
       name: 'Leaves', 
       icon: <Calendar size={20} />,
       subItems: [
-        { name: 'Requests', href: '/dashboard/leaves' },
+        { name: 'Requests', href: '/leaves' },
         { name: 'Approvals', href: '/dashboard/leaves/approvals' },
         { name: 'Balance', href: '/dashboard/leaves/balance' },
         { name: 'Policies', href: '/dashboard/leaves/policies' },

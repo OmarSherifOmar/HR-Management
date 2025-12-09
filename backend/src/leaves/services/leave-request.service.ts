@@ -16,7 +16,7 @@ import { UpdateLeaveRequestDto } from '../dto/leave-request/update-leave-request
 import { LeaveStatus } from '../enums/leave-status.enum';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
 import { SystemRole } from '../../employee-profile/enums/employee-profile.enums';
-import { NotificationService } from './notification.service';
+import { LeavesNotificationService } from './leaves-notification.service';
 
 /**
  * Leave Request Service
@@ -46,7 +46,7 @@ export class LeaveRequestService {
     @InjectModel(LeavePolicy.name) private policyModel: Model<LeavePolicyDocument>,
     @InjectModel(Attachment.name) private attachmentModel: Model<AttachmentDocument>,
     private employeeService: EmployeeService,
-    private notificationService: NotificationService,
+    private notificationService: LeavesNotificationService,
   ) {}
 
   // ==================== SUBMIT NEW LEAVE REQUEST (REQ-015) ====================
