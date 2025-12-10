@@ -184,4 +184,6 @@ export class LeaveConfigurationController {
       dto.yearlyRate,
     );
   }
+
+  // ==================== VACATION PACKAGE ENDPOINTS (REQ-008) ====================
 }
