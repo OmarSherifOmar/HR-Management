@@ -10,12 +10,13 @@ export type insuranceBracketsDocument = HydratedDocument<insuranceBrackets>
 export class insuranceBrackets {
   @Prop({ required: true, unique: true })
   name: string; // insurance name like: social, health insurance
-  @Prop({ required: true, min: 0 })
-  amount: number;
+ 
   @Prop({ required: true, type: String, enum: ConfigStatus,default:ConfigStatus.DRAFT })
   status: ConfigStatus;// draft, approved, rejected
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
   createdBy?: mongoose.Types.ObjectId;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
+  updatedBy?: mongoose.Types.ObjectId;
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
   approvedBy?: mongoose.Types.ObjectId;
   @Prop({})
