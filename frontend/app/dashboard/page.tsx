@@ -49,7 +49,7 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3000/auth/logout', {
+      await fetch('http://localhost:3001/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
@@ -113,8 +113,15 @@ export default function DashboardPage() {
       subItems: [
         { name: 'Requests', href: '/leaves' },
         { name: 'Approvals', href: '/dashboard/leaves/approvals' },
-        { name: 'Balance', href: '/dashboard/leaves/balance' },
-        { name: 'Policies', href: '/dashboard/leaves/policies' },
+        { name: 'My Balance', href: '/dashboard/leaves/balance' },
+        ...(user?.role === 'HR Admin' ? [
+          { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
+          { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
+          { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
+          { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
+          { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
+          { name: 'Admin: Entitlements', href: '/dashboard/admin/entitlements' },
+        ] : []),
       ]
     },
     { 
