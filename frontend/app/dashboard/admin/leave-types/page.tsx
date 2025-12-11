@@ -56,7 +56,7 @@ export default function AdminLeaveTypesPage() {
   const fetchLeaveTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/leaves/types', {
+      const response = await fetch('http://localhost:3000/leaves/types', {
         method: 'GET',
         credentials: 'include',
       });
@@ -76,7 +76,7 @@ export default function AdminLeaveTypesPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3001/leaves/types/categories', {
+      const response = await fetch('http://localhost:3000/leaves/types/categories', {
         method: 'GET',
         credentials: 'include',
       });
@@ -98,7 +98,7 @@ export default function AdminLeaveTypesPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/leaves/types/${typeId}`, {
+      const response = await fetch(`http://localhost:3000/leaves/types/${typeId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -119,7 +119,7 @@ export default function AdminLeaveTypesPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/leaves/types/categories/${categoryId}`, {
+      const response = await fetch(`http://localhost:3000/leaves/types/categories/${categoryId}`, {
         method: 'DELETE',
         credentials: 'include',
       });

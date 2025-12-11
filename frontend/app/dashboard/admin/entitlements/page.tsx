@@ -41,7 +41,7 @@ export default function AdminEntitlementsPage() {
       setError(null);
       setResult(null);
 
-      const response = await fetch('http://localhost:3001/leaves/entitlements/process/monthly-accrual', {
+      const response = await fetch('http://localhost:3000/leaves/entitlements/process/monthly-accrual', {
         method: 'POST',
         credentials: 'include',
       });
@@ -73,7 +73,7 @@ export default function AdminEntitlementsPage() {
       setError(null);
       setResult(null);
 
-      const response = await fetch('http://localhost:3001/leaves/entitlements/process/year-end-carry-forward', {
+      const response = await fetch('http://localhost:3000/leaves/entitlements/process/year-end-carry-forward', {
         method: 'POST',
         credentials: 'include',
       });
@@ -105,7 +105,7 @@ export default function AdminEntitlementsPage() {
       setError(null);
       setResult(null);
 
-      const response = await fetch('http://localhost:3001/leaves/entitlements/process/expired-carry-forward', {
+      const response = await fetch('http://localhost:3000/leaves/entitlements/process/expired-carry-forward', {
         method: 'POST',
         credentials: 'include',
       });

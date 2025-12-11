@@ -77,7 +77,7 @@ export default function EligibilityRulesPage() {
       setError(null);
       
       // Fetch leave types
-      const leaveTypesResponse = await fetch('http://localhost:3002/leaves/types', {
+      const leaveTypesResponse = await fetch('http://localhost:3000/leaves/types', {
         credentials: 'include',
       });
 
@@ -90,7 +90,7 @@ export default function EligibilityRulesPage() {
       setLeaveTypes(leaveTypesData);
 
       // Fetch policies to get eligibility rules
-      const policiesResponse = await fetch('http://localhost:3002/leaves/configuration/policies', {
+      const policiesResponse = await fetch('http://localhost:3000/leaves/configuration/policies', {
         credentials: 'include',
       });
 
@@ -110,7 +110,7 @@ export default function EligibilityRulesPage() {
       }
 
       // Fetch positions
-      const positionsResponse = await fetch('http://localhost:3002/api/org/positions', {
+      const positionsResponse = await fetch('http://localhost:3000/api/org/positions', {
         credentials: 'include',
       });
 
@@ -161,7 +161,7 @@ export default function EligibilityRulesPage() {
         contractTypesAllowed: editContractTypes.length > 0 ? editContractTypes : undefined,
       };
 
-      const response = await fetch(`http://localhost:3002/leaves/eligibility/policy/${policy._id}`, {
+      const response = await fetch(`http://localhost:3000/leaves/eligibility/policy/${policy._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

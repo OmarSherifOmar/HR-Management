@@ -63,7 +63,7 @@ export default function CreateLeaveTypePage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3001/leaves/types/categories', {
+      const response = await fetch('http://localhost:3000/leaves/types/categories', {
         credentials: 'include',
       });
 
@@ -80,8 +80,8 @@ export default function CreateLeaveTypePage() {
     try {
       setLoading(true);
       const endpoint = formType === 'type' 
-        ? `http://localhost:3001/leaves/types/${editId}`
-        : `http://localhost:3001/leaves/types/categories/${editId}`;
+        ? `http://localhost:3000/leaves/types/${editId}`
+        : `http://localhost:3000/leaves/types/categories/${editId}`;
 
       const response = await fetch(endpoint, {
         credentials: 'include',
@@ -135,8 +135,8 @@ export default function CreateLeaveTypePage() {
       };
 
       const url = editId 
-        ? `http://localhost:3001/leaves/types/${editId}`
-        : 'http://localhost:3001/leaves/types';
+        ? `http://localhost:3000/leaves/types/${editId}`
+        : 'http://localhost:3000/leaves/types';
       
       const method = editId ? 'PUT' : 'POST';
 
@@ -175,8 +175,8 @@ export default function CreateLeaveTypePage() {
       };
 
       const url = editId 
-        ? `http://localhost:3001/leaves/types/categories/${editId}`
-        : 'http://localhost:3001/leaves/types/categories';
+        ? `http://localhost:3000/leaves/types/categories/${editId}`
+        : 'http://localhost:3000/leaves/types/categories';
       
       const method = editId ? 'PUT' : 'POST';
 

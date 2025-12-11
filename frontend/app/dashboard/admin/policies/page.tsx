@@ -58,7 +58,7 @@ export default function AdminPoliciesPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:3002/leaves/configuration/policies', {
+      const response = await fetch('http://localhost:3000/leaves/configuration/policies', {
         method: 'GET',
         credentials: 'include',
       });
@@ -85,7 +85,7 @@ export default function AdminPoliciesPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3002/leaves/configuration/policies/${policyId}`, {
+      const response = await fetch(`http://localhost:3000/leaves/configuration/policies/${policyId}`, {
         method: 'DELETE',
         credentials: 'include',
       });

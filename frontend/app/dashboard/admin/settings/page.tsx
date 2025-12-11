@@ -53,7 +53,7 @@ export default function AdminSettingsPage() {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/leaves/year-config', {
+      const response = await fetch('http://localhost:3000/leaves/year-config', {
         method: 'GET',
         credentials: 'include',
       });
@@ -85,7 +85,7 @@ export default function AdminSettingsPage() {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch('http://localhost:3001/leaves/year-config', {
+      const response = await fetch('http://localhost:3000/leaves/year-config', {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -126,7 +126,7 @@ export default function AdminSettingsPage() {
       setSaving(true);
       setError(null);
 
-      const response = await fetch('http://localhost:3001/leaves/year-config/reset-to-default', {
+      const response = await fetch('http://localhost:3000/leaves/year-config/reset-to-default', {
         method: 'POST',
         credentials: 'include',
       });

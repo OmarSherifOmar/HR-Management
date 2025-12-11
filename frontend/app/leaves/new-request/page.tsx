@@ -353,7 +353,6 @@ export default function NewLeaveRequestPage() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  min={new Date().toISOString().split('T')[0]}
                   className={`w-full bg-[#1a1a1a] border ${
                     formErrors.startDate ? 'border-red-500' : 'border-gray-700'
                   } rounded-lg pl-12 pr-4 py-3 text-white focus:outline-none focus:border-blue-500`}
@@ -378,7 +377,7 @@ export default function NewLeaveRequestPage() {
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
-                  min={formData.startDate || new Date().toISOString().split('T')[0]}
+                  min={formData.startDate}
                   className={`w-full bg-[#1a1a1a] border ${
                     formErrors.endDate ? 'border-red-500' : 'border-gray-700'
                   } rounded-lg pl-12 pr-4 py-3 text-white focus:outline-none focus:border-blue-500`}
