@@ -4,6 +4,7 @@ import { useAuth, authenticatedFetch } from '../context/AuthContext';
 import DashboardLayout from '../components/DashboardLayout';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Plus,
   FileText,
@@ -31,14 +32,42 @@ type LeaveRequest = {
 };
 
 export default function LeaveRequestsPage() {
+  const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [cancellingRequest, setCancellingRequest] = useState(false);
+  const [cancelError, setCancelError] = useState('');
 
   useEffect(() => {
     fetchLeaveRequests();
   }, []);
+
+  const cancelLeaveRequest = async (requestId: string) => {
+    try {
+      setCancellingRequest(true);
+      setCancelError('');
+      
+      const response = await authenticatedFetch(`http://localhost:3000/leave-requests/${requestId}/cancel`, {
+        method: 'PATCH',
+      });
+
+      if (response.ok) {
+        // Refresh the leave requests list
+        await fetchLeaveRequests();
+        setSelectedRequest(null);
+      } else {
+        const result = await response.json();
+        setCancelError(result.message || 'Failed to cancel leave request');
+      }
+    } catch (err: any) {
+      setCancelError(err.message || 'An error occurred while cancelling the request');
+      console.error('Error cancelling leave request:', err);
+    } finally {
+      setCancellingRequest(false);
+    }
+  };
 
   const fetchLeaveRequests = async () => {
     try {
@@ -155,7 +184,7 @@ export default function LeaveRequestsPage() {
             </div>
 
             <Link
-              href="/dashboard/leaves/create"
+              href="/leaves/new-request"
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
               <Plus size={18} />
@@ -318,24 +347,61 @@ export default function LeaveRequestsPage() {
                 <p className="text-sm text-white">{formatDate(selectedRequest.createdAt)}</p>
               </div>
 
+              {/* Cancel Error Alert */}
+              {cancelError && (
+                <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="text-red-500 mt-0.5" size={20} />
+                  <div>
+                    <h3 className="text-red-500 font-semibold">Error</h3>
+                    <p className="text-gray-300 text-sm mt-1">{cancelError}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={() => setSelectedRequest(null)}
+                  onClick={() => {
+                    setSelectedRequest(null);
+                    setCancelError('');
+                  }}
                   className="flex-1 px-4 py-2 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-lg transition-colors"
+                  disabled={cancellingRequest}
                 >
                   Close
                 </button>
                 {selectedRequest.status === 'pending' && (
-                  <button
-                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                    onClick={() => {
-                      // Add cancel logic here
-                      alert('Cancel functionality to be implemented');
-                    }}
-                  >
-                    Cancel Request
-                  </button>
+                  <>
+                    <button
+                      onClick={() => router.push(`/leaves/edit/${selectedRequest._id}`)}
+                      className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                      disabled={cancellingRequest}
+                    >
+                      <FileText size={18} />
+                      Edit Request
+                    </button>
+                    <button
+                      className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to cancel this leave request? This action cannot be undone.')) {
+                          cancelLeaveRequest(selectedRequest._id);
+                        }
+                      }}
+                      disabled={cancellingRequest}
+                    >
+                      {cancellingRequest ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                          Cancelling...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle size={18} />
+                          Cancel Request
+                        </>
+                      )}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
