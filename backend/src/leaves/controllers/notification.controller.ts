@@ -6,7 +6,7 @@ import {
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
-import { NotificationService } from '../services/notification.service';
+import { LeavesNotificationService } from '../services/leaves-notification.service';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 
 // Extended Request interface with user property
@@ -38,8 +38,8 @@ function getUserId(req: AuthenticatedRequest): string {
  * Notifications are created by various services throughout the leaves subsystem.
  */
 @Controller('notifications')
-export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+export class LeavesNotificationController {
+  constructor(private readonly notificationService: LeavesNotificationService) {}
 
   /**
    * GET /notifications

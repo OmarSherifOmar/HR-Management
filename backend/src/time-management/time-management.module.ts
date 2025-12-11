@@ -13,6 +13,7 @@ import { ShiftTypeModule } from './modules/shift-type.module';
 import { ShiftModule } from './modules/shift.module';
 import { ShiftAssignmentModule } from './modules/shift-assignment.module';
 import { ScheduleRuleModule } from './modules/schedule-rule.module';
+import { NotificationService } from './services/notification.service';
 
 
 @Module({
@@ -32,7 +33,7 @@ import { ScheduleRuleModule } from './modules/schedule-rule.module';
     ScheduleRuleModule,
   ],
   controllers: [TimeManagementController],
-  providers: [TimeManagementService],
-  exports: [ShiftTypeModule, ShiftModule, ShiftAssignmentModule, ScheduleRuleModule],
+  providers: [TimeManagementService, NotificationService],
+  exports: [ShiftTypeModule, ShiftModule, ShiftAssignmentModule, ScheduleRuleModule, NotificationService],
 })
 export class TimeManagementModule {}

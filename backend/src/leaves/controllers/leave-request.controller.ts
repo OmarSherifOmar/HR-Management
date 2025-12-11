@@ -60,6 +60,7 @@ function getUserId(req: AuthenticatedRequest, fallback?: string): string {
  * - View their leave requests and history
  */
 @Controller('leave-requests')
+@UseGuards(AuthGuard)
 export class LeaveRequestController {
   constructor(private readonly leaveRequestService: LeaveRequestService) {}
 
