@@ -11,7 +11,8 @@ type LeaveCategory = {
   description: string;
 };
 
-type AttachmentType = 'MEDICAL_CERTIFICATE' | 'SUPPORTING_DOCUMENT' | 'PROOF_OF_EVENT' | 'TRAVEL_DOCUMENT' | 'OTHER';
+// Backend enum values
+type AttachmentType = 'medical' | 'document' | 'other';
 
 export default function CreateLeaveTypePage() {
   const { user, isLoggedIn, isLoading } = useAuth();
@@ -33,7 +34,7 @@ export default function CreateLeaveTypePage() {
   const [paid, setPaid] = useState(true);
   const [deductible, setDeductible] = useState(true);
   const [requiresAttachment, setRequiresAttachment] = useState(false);
-  const [attachmentType, setAttachmentType] = useState<AttachmentType>('OTHER');
+  const [attachmentType, setAttachmentType] = useState<AttachmentType>('other');
   const [minTenureMonths, setMinTenureMonths] = useState<number | ''>('');
   const [maxDurationDays, setMaxDurationDays] = useState<number | ''>('');
 
@@ -63,7 +64,7 @@ export default function CreateLeaveTypePage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3001/leaves/types/categories', {
+      const response = await fetch('http://localhost:3000/leaves/types/categories', {
         credentials: 'include',
       });
 
@@ -80,8 +81,8 @@ export default function CreateLeaveTypePage() {
     try {
       setLoading(true);
       const endpoint = formType === 'type' 
-        ? `http://localhost:3001/leaves/types/${editId}`
-        : `http://localhost:3001/leaves/types/categories/${editId}`;
+        ? `http://localhost:3000/leaves/types/${editId}`
+        : `http://localhost:3000/leaves/types/categories/${editId}`;
 
       const response = await fetch(endpoint, {
         credentials: 'include',
@@ -101,7 +102,7 @@ export default function CreateLeaveTypePage() {
         setPaid(data.paid ?? true);
         setDeductible(data.deductible ?? true);
         setRequiresAttachment(data.requiresAttachment ?? false);
-        setAttachmentType(data.attachmentType || 'OTHER');
+        setAttachmentType(data.attachmentType || 'other');
         setMinTenureMonths(data.minTenureMonths || '');
         setMaxDurationDays(data.maxDurationDays || '');
       } else {
@@ -135,8 +136,8 @@ export default function CreateLeaveTypePage() {
       };
 
       const url = editId 
-        ? `http://localhost:3001/leaves/types/${editId}`
-        : 'http://localhost:3001/leaves/types';
+        ? `http://localhost:3000/leaves/types/${editId}`
+        : 'http://localhost:3000/leaves/types';
       
       const method = editId ? 'PUT' : 'POST';
 
@@ -175,8 +176,8 @@ export default function CreateLeaveTypePage() {
       };
 
       const url = editId 
-        ? `http://localhost:3001/leaves/types/categories/${editId}`
-        : 'http://localhost:3001/leaves/types/categories';
+        ? `http://localhost:3000/leaves/types/categories/${editId}`
+        : 'http://localhost:3000/leaves/types/categories';
       
       const method = editId ? 'PUT' : 'POST';
 
@@ -389,11 +390,9 @@ export default function CreateLeaveTypePage() {
                       onChange={(e) => setAttachmentType(e.target.value as AttachmentType)}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
                     >
-                      <option value="MEDICAL_CERTIFICATE">Medical Certificate</option>
-                      <option value="SUPPORTING_DOCUMENT">Supporting Document</option>
-                      <option value="PROOF_OF_EVENT">Proof of Event</option>
-                      <option value="TRAVEL_DOCUMENT">Travel Document</option>
-                      <option value="OTHER">Other</option>
+                      <option value="medical">Medical</option>
+                      <option value="document">Document</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
                 )}

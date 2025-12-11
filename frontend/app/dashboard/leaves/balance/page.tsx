@@ -1,13 +1,7 @@
 'use client';
 
-import DashboardLayout from '../../components/DashboardLayout';
 import { useEffect, useState } from 'react';
-import {
-  Calendar,
-  TrendingUp,
-  Clock,
-  AlertCircle
-} from 'lucide-react';
+import { Clock, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
 
 interface LeaveBalance {
   leaveType: {
@@ -69,16 +63,38 @@ export default function MyBalancePage() {
     }
   };
 
-  return (
-    <DashboardLayout
-      title="My Leave Balance"
-      description="View your current leave balances, accrued days, and available entitlements"
-    >
-      {loading ? (
-        <div className="bg-gray-800 rounded-lg p-8 text-center">
-          <div className="text-gray-400">Loading balance...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-400">Loading your leave balance...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="text-red-500 mt-0.5" size={20} />
+          <div>
+            <h3 className="text-red-500 font-semibold">Error Loading Balance</h3>
+            <p className="text-gray-300 text-sm mt-1">{error}</p>
+          </div>
         </div>
-      ) : balances.length === 0 ? (
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">My Leave Balance</h1>
+        <p className="text-gray-400">
+          View your current leave balances, accrued days, and available entitlements
+        </p>
+      </div>
+
+      {balances.length === 0 ? (
         <div className="bg-gray-800 rounded-lg p-8 text-center">
           <Calendar className="mx-auto text-gray-500 mb-4" size={48} />
           <h3 className="text-xl font-semibold text-white mb-2">No Leave Entitlements</h3>
@@ -203,17 +219,6 @@ export default function MyBalancePage() {
           ))}
         </div>
       )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 flex items-start gap-3 mt-6">
-          <AlertCircle className="text-red-500 mt-0.5" size={20} />
-          <div>
-            <h3 className="text-red-500 font-semibold">Error Loading Balance</h3>
-            <p className="text-gray-300 text-sm mt-1">{error}</p>
-          </div>
-        </div>
-      )}
-    </DashboardLayout>
+    </div>
   );
 }

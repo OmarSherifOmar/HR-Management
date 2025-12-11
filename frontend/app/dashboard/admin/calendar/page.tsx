@@ -60,7 +60,7 @@ export default function CalendarPage() {
 
   const fetchCalendars = async () => {
     try {
-      const response = await fetch('http://localhost:3002/leaves/calendar/years', {
+      const response = await fetch('http://localhost:3000/leaves/calendar/years', {
         credentials: 'include',
       });
       if (response.ok) {
@@ -76,7 +76,7 @@ export default function CalendarPage() {
 
   const fetchCalendarByYear = async (year: number) => {
     try {
-      const response = await fetch(`http://localhost:3002/leaves/calendar/year/${year}`, {
+      const response = await fetch(`http://localhost:3000/leaves/calendar/year/${year}`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -93,7 +93,7 @@ export default function CalendarPage() {
 
   const createCalendar = async () => {
     try {
-      const response = await fetch(`http://localhost:3002/leaves/calendar/year/${selectedYear}`, {
+      const response = await fetch(`http://localhost:3000/leaves/calendar/year/${selectedYear}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -128,7 +128,7 @@ export default function CalendarPage() {
         payload.endDate = new Date(holidayForm.endDate).toISOString();
       }
 
-      const response = await fetch(`http://localhost:3002/leaves/calendar/year/${selectedYear}/holidays`, {
+      const response = await fetch(`http://localhost:3000/leaves/calendar/year/${selectedYear}/holidays`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -155,7 +155,7 @@ export default function CalendarPage() {
     if (!confirm('Are you sure you want to delete this holiday?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/leaves/calendar/year/${selectedYear}/holidays/${holidayId}`, {
+      const response = await fetch(`http://localhost:3000/leaves/calendar/year/${selectedYear}/holidays/${holidayId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -175,7 +175,7 @@ export default function CalendarPage() {
     e.preventDefault();
 
     try {
-      const response = await fetch(`http://localhost:3002/leaves/calendar/year/${selectedYear}/blocked-periods`, {
+      const response = await fetch(`http://localhost:3000/leaves/calendar/year/${selectedYear}/blocked-periods`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -206,7 +206,7 @@ export default function CalendarPage() {
     if (!confirm('Are you sure you want to delete this blocked period?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/leaves/calendar/year/${selectedYear}/blocked-periods/${index}`, {
+      const response = await fetch(`http://localhost:3000/leaves/calendar/year/${selectedYear}/blocked-periods/${index}`, {
         method: 'DELETE',
         credentials: 'include',
       });
