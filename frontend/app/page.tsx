@@ -41,7 +41,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/auth/login', {
+      const response = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ export default function Home() {
 
       if (response.ok) {
         if (data.user) {
-          login(data.user);
+          login(data.user, data.expiresIn || '1h');
         }
         router.push('/dashboard');
       } else {
