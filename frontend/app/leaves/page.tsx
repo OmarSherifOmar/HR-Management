@@ -206,13 +206,6 @@ export default function LeaveRequestsPage() {
                   ? "You haven't submitted any leave requests yet."
                   : `You don't have any ${filter} leave requests.`}
               </p>
-              <Link
-                href="/dashboard/leaves/create"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                <Plus size={18} />
-                Create Your First Request
-              </Link>
             </div>
           ) : (
             <div className="grid gap-4">
