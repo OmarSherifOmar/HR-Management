@@ -46,9 +46,3 @@ body {
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-
-/* Firefox scrollbar */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #4a5568 transparent;
-}
