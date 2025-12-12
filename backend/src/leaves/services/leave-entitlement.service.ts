@@ -9,6 +9,7 @@ import { CreateLeaveEntitlementDto } from '../dto/leave-entitlement/create-leave
 import { UpdateLeaveEntitlementDto } from '../dto/leave-entitlement/update-leave-entitlement.dto';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
 import { AccrualSuspensionService } from './accrual-suspension.service';
+import { LeaveYearConfigService } from './leave-year-config.service';
 import { AccrualMethod } from '../enums/accrual-method.enum';
 import { RoundingRule } from '../enums/rounding-rule.enum';
 import { AdjustmentType } from '../enums/adjustment-type.enum';
@@ -31,6 +32,7 @@ export class LeaveEntitlementService {
     @InjectModel(LeaveType.name) private leaveTypeModel: Model<LeaveTypeDocument>,
     @InjectModel(LeaveAdjustment.name) private adjustmentModel: Model<LeaveAdjustmentDocument>,
     private employeeService: EmployeeService,
+    private leaveYearConfigService: LeaveYearConfigService,
     @Inject(forwardRef(() => AccrualSuspensionService))
     private accrualSuspensionService: AccrualSuspensionService,
   ) {}
@@ -76,7 +78,31 @@ export class LeaveEntitlementService {
     });
 
     // Calculate initial values based on policy
-    const yearlyEntitlement = createEntitlementDto.yearlyEntitlement ?? policy?.yearlyRate ?? 0;
+    let yearlyEntitlement = createEntitlementDto.yearlyEntitlement ?? policy?.yearlyRate ?? 0;
+    
+    // Calculate next reset date using LeaveYearConfigService
+    const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
+      new Date(),
+      employee.dateOfHire ? new Date(employee.dateOfHire) : undefined,
+    );
+    const nextResetDate = leaveYearDates.nextResetDate;
+    
+    // Apply pro-rating for first year if enabled in config
+    const leaveYearConfig = await this.leaveYearConfigService.getConfig();
+    if (leaveYearConfig.proRateFirstYear && employee.dateOfHire) {
+      const hireDate = new Date(employee.dateOfHire);
+      const isFirstYear = this.isWithinFirstLeaveYear(hireDate, leaveYearDates);
+      
+      if (isFirstYear) {
+        const proRatedAmount = this.leaveYearConfigService.calculateProRatedEntitlement(
+          yearlyEntitlement,
+          hireDate,
+        );
+        console.log(`Pro-rating applied: ${yearlyEntitlement} days → ${proRatedAmount} days (first year)`);
+        yearlyEntitlement = proRatedAmount;
+      }
+    }
+    
     const remaining = yearlyEntitlement - (createEntitlementDto.taken ?? 0);
 
     const entitlement = new this.entitlementModel({
@@ -86,6 +112,7 @@ export class LeaveEntitlementService {
       yearlyEntitlement,
       remaining: createEntitlementDto.remaining ?? remaining,
       lastAccrualDate: createEntitlementDto.lastAccrualDate ?? new Date(),
+      nextResetDate, // (REQ-012) Leave year config integration
     });
 
     return entitlement.save();
@@ -370,10 +397,18 @@ export class LeaveEntitlementService {
             carryForwardAmount = policy.maxCarryForward;
           }
 
-          // Set expiry date if configured
-          const nextResetDate = policy.expiryAfterMonths
+          // Calculate next reset date using LeaveYearConfigService
+          const employee = await this.employeeService.findById(entitlement.employeeId.toString());
+          const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
+            new Date(),
+            employee?.dateOfHire ? new Date(employee.dateOfHire) : undefined,
+          );
+          const nextResetDate = leaveYearDates.nextResetDate;
+
+          // Apply expiry after months if configured (overrides leave year config)
+          const expiryDate = policy.expiryAfterMonths
             ? new Date(new Date().setMonth(new Date().getMonth() + policy.expiryAfterMonths))
-            : undefined;
+            : nextResetDate;
 
           // Reset for new year
           entitlement.carryForward = carryForwardAmount;
@@ -382,8 +417,9 @@ export class LeaveEntitlementService {
           entitlement.taken = 0;
           entitlement.pending = 0;
           entitlement.remaining = entitlement.yearlyEntitlement + carryForwardAmount;
-          entitlement.nextResetDate = nextResetDate;
+          entitlement.nextResetDate = expiryDate;
           
+          console.log(`Reset entitlement for employee ${entitlement.employeeId}: next reset on ${expiryDate}`);
           await entitlement.save();
           processed++;
         } else {
@@ -529,7 +565,30 @@ export class LeaveEntitlementService {
             }
             
             // Calculate entitlement based on policy
-            const entitlement = this.calculatePolicyEntitlement(policy, employee);
+            let entitlement = this.calculatePolicyEntitlement(policy, employee);
+            
+            // Calculate next reset date using LeaveYearConfigService
+            const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
+              new Date(),
+              employee.dateOfHire ? new Date(employee.dateOfHire) : undefined,
+            );
+            const nextResetDate = leaveYearDates.nextResetDate;
+            
+            // Apply pro-rating for first year if enabled in config
+            const leaveYearConfig = await this.leaveYearConfigService.getConfig();
+            if (leaveYearConfig.proRateFirstYear && employee.dateOfHire) {
+              const hireDate = new Date(employee.dateOfHire);
+              const isFirstYear = this.isWithinFirstLeaveYear(hireDate, leaveYearDates);
+              
+              if (isFirstYear) {
+                const proRatedAmount = this.leaveYearConfigService.calculateProRatedEntitlement(
+                  entitlement,
+                  hireDate,
+                );
+                console.log(`[Auto-Create] Pro-rating applied for ${leaveType.code}: ${entitlement} → ${proRatedAmount} days`);
+                entitlement = proRatedAmount;
+              }
+            }
             
             // Grant full yearly entitlement upfront (all days available immediately)
             // Create the entitlement
@@ -544,6 +603,7 @@ export class LeaveEntitlementService {
               pending: 0,
               remaining: entitlement, // All days available
               lastAccrualDate: new Date(),
+              nextResetDate, // (REQ-012) Leave year config integration
             });
           }
         } catch (policyError) {
@@ -661,6 +721,18 @@ export class LeaveEntitlementService {
       default:
         return 0;
     }
+  }
+
+  /**
+   * Check if employee is within their first leave year
+   */
+  private isWithinFirstLeaveYear(hireDate: Date, leaveYearDates: any): boolean {
+    const now = new Date();
+    const oneYearAfterHire = new Date(hireDate);
+    oneYearAfterHire.setFullYear(oneYearAfterHire.getFullYear() + 1);
+    
+    // Employee is in first year if current date is before their first anniversary
+    return now < oneYearAfterHire;
   }
 
   private applyRoundingRule(value: number, rule: RoundingRule): number {
