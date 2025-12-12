@@ -1,8 +1,8 @@
 'use client';
 
-import { useAuth } from '../context/AuthContext';
+import { useAuth, authenticatedFetch } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, useRef } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard,
@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Target,
   Clock,
-  Bell
+  Bell,
+  X
 } from 'lucide-react';
 
 type MenuItem = {
@@ -30,18 +31,84 @@ interface DashboardLayoutProps {
   description?: string;
 }
 
+interface Notification {
+  _id: string;
+  to: string;
+  type: string;
+  message: string;
+  createdAt: string;
+}
+
 export default function DashboardLayout({ children, title, description }: DashboardLayoutProps) {
   const { user, isLoggedIn, isLoading, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
   const [closeTimeout, setCloseTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
       router.replace('/');
     }
   }, [isLoading, isLoggedIn, router]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    if (notificationsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [notificationsOpen]);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const response = await authenticatedFetch('http://localhost:3000/notifications?limit=20');
+      
+      if (response.ok) {
+        const result = await response.json();
+        setNotifications(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const toggleNotifications = () => {
+    if (!notificationsOpen) {
+      fetchNotifications();
+    }
+    setNotificationsOpen(!notificationsOpen);
+  };
+
+  const formatNotificationTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   const handleMenuEnter = (menuName: string) => {
     if (closeTimeout) {
@@ -267,10 +334,76 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
-                  <Bell size={20} />
-                  <span className="absolute top-0 right-0 inline-block w-2 h-2"></span>
-                </button>
+                <div className="relative" ref={notificationRef}>
+                  <button 
+                    onClick={toggleNotifications}
+                    className="relative p-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <Bell size={20} />
+                    {notifications.length > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full">
+                        {notifications.length > 9 ? '9+' : notifications.length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  {notificationsOpen && (
+                    <div className="absolute right-0 mt-2 w-96 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 z-50 max-h-[500px] overflow-hidden flex flex-col">
+                      <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                        <h3 className="text-white font-semibold">Notifications</h3>
+                        <button 
+                          onClick={() => setNotificationsOpen(false)}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <div className="overflow-y-auto flex-1">
+                        {loadingNotifications ? (
+                          <div className="p-8 text-center text-gray-400">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                            <p className="mt-2 text-sm">Loading notifications...</p>
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="p-8 text-center text-gray-400">
+                            <Bell size={48} className="mx-auto mb-3 opacity-50" />
+                            <p className="text-sm">No notifications yet</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-gray-700">
+                            {notifications.map((notification) => (
+                              <div
+                                key={notification._id}
+                                className="px-4 py-3 hover:bg-[#333333] transition-colors"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="mt-1">
+                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Bell size={16} className="text-white" />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-blue-400 mb-1 uppercase">
+                                      {notification.type}
+                                    </p>
+                                    <p className="text-sm text-gray-300 mb-1">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {formatNotificationTime(notification.createdAt)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-semibold">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
