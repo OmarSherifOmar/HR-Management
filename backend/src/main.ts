@@ -25,6 +25,14 @@ const routes: string[] = [];
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS for frontend
+  app.enableCors({
+    origin: ['http://localhost:3001', 'http://localhost:3000'], // Your frontend URL and same origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  });
+
   // Get the NestJS mongoose connection and register Department model globally
   // This fixes position.schema.ts middleware that uses model(Department.name)
   const connection = app.get(getConnectionToken());
