@@ -15,6 +15,9 @@ export class AttendanceRecord{
     @Prop({type: Types.ObjectId, ref: 'EmployeeProfile', required: true})
     employeeId: Types.ObjectId;
 
+    @Prop({ type: Date, required: true })
+    date: Date;
+
     @Prop({default: []})
     punches: Punch[];
 
