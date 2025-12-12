@@ -16,6 +16,9 @@ export class employeeSigningBonus {
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: signingBonus.name, required: true })
     signingBonusId: mongoose.Types.ObjectId;
 
+    @Prop({required: true})
+    givenAmount:number; // for sake of editing signingBonus amount manually given to this employee
+
     @Prop({ type: Date })
     paymentDate?: Date;
 

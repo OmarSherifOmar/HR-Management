@@ -22,6 +22,7 @@ import { AuthModule } from './auth/auth.module';
     ConfigModule.forRoot({ isGlobal: true,
       envFilePath: ['.env'],
      }),
+    // AuthModule removed (will be replaced by new auth implementation)
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

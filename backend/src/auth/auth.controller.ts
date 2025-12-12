@@ -27,8 +27,32 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  async signIn(@Body() signInDto: SignInDto, @Res({ passthrough: true }) res: Response) {
+  async signIn(
+    @Body() signInDto: SignInDto, 
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response
+  ) {
     try {
+      // Check if user is already logged in
+      const token = req.cookies?.token || req.headers['authorization']?.split(' ')[1];
+      if (token) {
+        try {
+          // Verify if the token is still valid
+          const jwtService = this.authService['jwtService'];
+          await jwtService.verifyAsync(token);
+          throw new HttpException(
+            { statusCode: HttpStatus.BAD_REQUEST, message: 'You are already logged in' },
+            HttpStatus.BAD_REQUEST
+          );
+        } catch (verifyError) {
+          // Token is invalid or expired, allow login to proceed
+          if (verifyError instanceof HttpException) {
+            throw verifyError;
+          }
+          // Token verification failed, continue with login
+        }
+      }
+
       const result = await this.authService.signIn(signInDto.email, signInDto.password);
 
       const isProd = process.env.NODE_ENV === 'production';
@@ -47,7 +71,12 @@ export class AuthController {
       return {
         statusCode: HttpStatus.OK,
         message: 'Login successful',
-        user: result.payload,
+        user: {
+          email: signInDto.email,
+          name: result.payload.username,
+          role: result.payload.roles?.[0] || 'employee',
+          employeeNumber: result.payload.employeeNumber,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -65,10 +94,33 @@ export class AuthController {
       const result = await this.authService.register(registerRequestDto);
       return { statusCode: HttpStatus.CREATED, message: 'User registered successfully', data: result };
     } catch (error) {
-      if (error.status === 409) {
-        throw new HttpException({ statusCode: HttpStatus.CONFLICT, message: 'User already exists' }, HttpStatus.CONFLICT);
+      // Re-throw HTTP exceptions as-is
+      if (error instanceof HttpException) {
+        throw error;
       }
-      throw new HttpException({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'An error occurred during registration' }, HttpStatus.INTERNAL_SERVER_ERROR);
+      
+      // Handle specific error types
+      if (error.status === HttpStatus.CONFLICT) {
+        throw new HttpException(
+          { statusCode: HttpStatus.CONFLICT, message: error.message || 'User already exists' }, 
+          HttpStatus.CONFLICT
+        );
+      }
+      
+      if (error.status === HttpStatus.BAD_REQUEST) {
+        throw new HttpException(
+          { statusCode: HttpStatus.BAD_REQUEST, message: error.message || 'Invalid registration data' }, 
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      
+      // Log the error for debugging
+      console.error('Registration error:', error);
+      
+      throw new HttpException(
+        { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'An error occurred during registration. Please try again.' }, 
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 

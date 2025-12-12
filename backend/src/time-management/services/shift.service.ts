@@ -88,6 +88,32 @@ export class ShiftService {
   }
 
   /**
+   * Get shift by ID (alias for findById for compatibility)
+   */
+  async getById(id: string | Types.ObjectId): Promise<ShiftDocument | null> {
+    const shiftId = typeof id === 'string' ? id : id.toString();
+    try {
+      return await this.findById(shiftId);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Get rest days for a shift (returns array of day numbers: 0=Sunday, 6=Saturday)
+   * Note: Currently returns empty array as restDays field is not in Shift schema
+   * TODO: Add restDays field to Shift schema if needed
+   */
+  async getRestDaysForShift(shiftId: string | Types.ObjectId): Promise<number[]> {
+    const shift = await this.getById(shiftId);
+    if (!shift) {
+      return [];
+    }
+    // TODO: Return actual rest days when field is added to schema
+    return [];
+  }
+
+  /**
    * Find active shifts only
    */
   async findActive(): Promise<ShiftDocument[]> {
