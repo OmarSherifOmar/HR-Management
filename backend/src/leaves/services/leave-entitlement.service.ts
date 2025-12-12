@@ -450,6 +450,8 @@ export class LeaveEntitlementService {
       taken: number;
       pending: number;
       remaining: number;
+      requiresAttachment?: boolean;
+      attachmentType?: string;
     }[];
   }> {
     // Check if employee exists
@@ -461,7 +463,7 @@ export class LeaveEntitlementService {
     // Find existing entitlements
     let entitlements = await this.entitlementModel
       .find({ employeeId: new Types.ObjectId(employeeId) })
-      .populate('leaveTypeId', 'code name')
+      .populate('leaveTypeId', 'code name requiresAttachment attachmentType')
       .exec();
 
     // If no entitlements exist, auto-create them based on policies
@@ -471,7 +473,7 @@ export class LeaveEntitlementService {
       // Fetch the newly created entitlements
       entitlements = await this.entitlementModel
         .find({ employeeId: new Types.ObjectId(employeeId) })
-        .populate('leaveTypeId', 'code name')
+        .populate('leaveTypeId', 'code name requiresAttachment attachmentType')
         .exec();
     }
 
@@ -490,6 +492,8 @@ export class LeaveEntitlementService {
         taken: e.taken,
         pending: e.pending,
         remaining: e.remaining,
+        requiresAttachment: leaveType.requiresAttachment,
+        attachmentType: leaveType.attachmentType,
       };
     });
 

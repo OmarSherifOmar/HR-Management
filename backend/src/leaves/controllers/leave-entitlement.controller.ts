@@ -79,6 +79,8 @@ export class LeaveEntitlementController {
         id: b.leaveTypeId,
         name: b.leaveTypeName,
         code: b.leaveTypeCode,
+        requiresAttachment: b.requiresAttachment,
+        attachmentType: b.attachmentType,
       },
       // "used rounded vacation balance must be displayed"
       accrued: Math.round(b.accrued * 100) / 100,           // Accrued vacation days (rounded)

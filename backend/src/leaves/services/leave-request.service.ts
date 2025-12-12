@@ -849,9 +849,13 @@ export class LeaveRequestService {
 
   /**
    * Get leave requests pending HR review
-   * Returns requests where manager has approved but HR hasn't acted yet
+   * Pool system: Returns all requests where manager has approved, any HR can process
+   * The HR user who processes it will be recorded in decidedBy
    */
   async getRequestsForHRReview(hrManagerId: string): Promise<LeaveRequestDocument[]> {
+    // Note: hrManagerId parameter kept for potential future filtering (e.g., by department)
+    // but currently all HR users see the same pool
+
     return this.leaveRequestModel
       .find({
         status: LeaveStatus.PENDING,
@@ -868,6 +872,28 @@ export class LeaveRequestService {
       .populate('leaveTypeId', 'code name')
       .populate('attachmentId')
       .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
+   * Get all leave requests that were rejected by manager but HR step is still pending
+   * These can be overridden by HR Managers/Admins
+   */
+  async getRejectedRequestsForHR(): Promise<LeaveRequestDocument[]> {
+    return this.leaveRequestModel
+      .find({
+        status: LeaveStatus.REJECTED,
+        'approvalFlow': {
+          $elemMatch: {
+            role: 'hr_manager',
+            status: 'pending',
+          },
+        },
+      })
+      .populate('employeeId', 'firstName lastName employeeNumber primaryDepartmentId')
+      .populate('leaveTypeId', 'code name')
+      .populate('attachmentId')
+      .sort({ updatedAt: -1 })
       .exec();
   }
 
@@ -905,14 +931,17 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step
+    // Find HR step and verify assignment
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
-      (step) => step.role === 'hr_manager' && step.status === 'pending',
+      (step) =>
+        step.role === 'hr_manager' &&
+        step.status === 'pending' &&
+        step.decidedBy?.toString() === hrManagerId,
     );
 
     if (hrStepIndex === -1) {
-      throw new BadRequestException(
-        'This request has already been processed by HR',
+      throw new ForbiddenException(
+        'You are not authorized to finalize this request or it has already been processed',
       );
     }
 
@@ -992,16 +1021,21 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step
+    // Find HR step (pool system - any HR can process)
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
-      (step) => step.role === 'hr_manager',
+      (step) => step.role === 'hr_manager' && step.status === 'pending',
     );
 
-    if (hrStepIndex !== -1) {
-      leaveRequest.approvalFlow[hrStepIndex].status = 'rejected';
-      leaveRequest.approvalFlow[hrStepIndex].decidedBy = new Types.ObjectId(hrManagerId);
-      leaveRequest.approvalFlow[hrStepIndex].decidedAt = new Date();
+    if (hrStepIndex === -1) {
+      throw new BadRequestException(
+        'This request has already been processed by HR',
+      );
     }
+
+    // Update HR rejection step - record who processed it
+    leaveRequest.approvalFlow[hrStepIndex].status = 'rejected';
+    leaveRequest.approvalFlow[hrStepIndex].decidedBy = new Types.ObjectId(hrManagerId);
+    leaveRequest.approvalFlow[hrStepIndex].decidedAt = new Date();
 
     // Mark request as rejected
     leaveRequest.status = LeaveStatus.REJECTED;
@@ -1397,7 +1431,7 @@ export class LeaveRequestService {
    * 1. Employee has supervisorPositionId → the position they report to
    * 2. Manager has primaryPositionId → their own position
    * 3. Find employee where primaryPositionId == supervisorPositionId → that's the manager
-   * 4. Find HR Manager from system roles
+   * 4. HR step uses pool system - any HR Manager/Admin can process (decidedBy set when they act)
    */
   private async buildApprovalFlow(employeeId: string): Promise<{
     role: string;
@@ -1438,38 +1472,17 @@ export class LeaveRequestService {
       decidedBy: directManagerId,
     });
 
-    // 2. Find HR Manager
-    const hrManager = await this.findHRManager();
+    // 2. HR Manager - not pre-assigned, any HR can pick it up from the pool
     approvalFlow.push({
       role: 'hr_manager',
       status: 'pending',
-      decidedBy: hrManager || undefined,
+      decidedBy: undefined, // Will be set when HR actually processes the request
     });
 
     return approvalFlow;
   }
 
-  /**
-   * Find an active HR Manager from system roles
-   */
-  private async findHRManager(): Promise<Types.ObjectId | null> {
-    try {
-      // Query the employee_system_roles collection for HR Manager role
-      const hrManagerRole = await this.employeeService['systemRoleModel']?.findOne({
-        roles: { $in: [SystemRole.HR_MANAGER, 'HR Manager'] },
-        isActive: true,
-      });
 
-      if (hrManagerRole?.employeeProfileId) {
-        return hrManagerRole.employeeProfileId;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error finding HR Manager:', error);
-      return null;
-    }
-  }
 
   /**
    * Check for irregular leave patterns (e.g., Friday-Monday pattern)

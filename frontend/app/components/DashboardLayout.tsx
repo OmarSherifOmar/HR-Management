@@ -183,8 +183,11 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: 'Requests', href: '/leaves' },
         { name: 'New Request', href: '/leaves/new-request' },
         { name: 'My Balance', href: '/leaves/balance' },
-        ...(user?.role === 'department head' || user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
+        ...(user?.role === 'department head' || user?.role === 'HR Manager' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
+        ] : []),
+        ...(user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
+          { name: 'HR Reviews', href: '/leaves/hr/pending-reviews' },
         ] : []),
         ...(user?.role === 'HR Admin' ? [
           { name: 'Admin: Policies', href: '/dashboard/admin/policies' },

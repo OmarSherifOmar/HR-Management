@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Eye,
   Loader,
-  MessageSquare
+  MessageSquare,
+  Download
 } from 'lucide-react';
 
 interface Employee {
@@ -31,8 +32,8 @@ interface LeaveType {
 
 interface Attachment {
   _id: string;
-  filename: string;
-  mimetype: string;
+  originalName: string;
+  fileType: string;
   size: number;
 }
 
@@ -309,15 +310,28 @@ export default function ManagerPendingReviewsPage() {
                     {/* Attachment */}
                     {request.attachmentId && (
                       <div className="mb-4">
-                        <div className="flex items-center gap-2 text-blue-400 text-sm">
-                          <FileText size={16} />
-                          <span>Attachment: {request.attachmentId.filename}</span>
-                          <button
-                            onClick={() => window.open(`http://localhost:3000/attachments/${request.attachmentId?._id}`, '_blank')}
-                            className="text-blue-400 hover:text-blue-300"
+                        <p className="text-xs text-gray-400 mb-2">Attachment</p>
+                        <div className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText className="text-blue-400" size={20} />
+                            <div>
+                              <p className="text-white text-sm font-medium">
+                                {request.attachmentId.originalName}
+                              </p>
+                              <p className="text-gray-400 text-xs">
+                                {request.attachmentId.fileType?.toUpperCase()} • {(request.attachmentId.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <a
+                            href={`http://localhost:3000/attachments/${request.attachmentId._id}/download`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
                           >
-                            <Eye size={16} />
-                          </button>
+                            <Download size={16} />
+                            Download
+                          </a>
                         </div>
                       </div>
                     )}
