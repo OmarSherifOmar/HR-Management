@@ -320,15 +320,6 @@ export default function AdminLeaveTypesPage() {
                       <h3 className="text-lg font-semibold text-white">
                         {category.name}
                       </h3>
-                      {category.isPaid ? (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-900/30 text-green-400 inline-block mt-2">
-                          Paid
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400 inline-block mt-2">
-                          Unpaid
-                        </span>
-                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
