@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '../../../context/AuthContext';
+import DashboardLayout from '../../../components/DashboardLayout';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Shield, Plus, Edit2, Trash2, Calendar, Users, Clock, Settings } from 'lucide-react';
@@ -113,7 +114,10 @@ export default function AdminPoliciesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-6">
+    <DashboardLayout
+      title="Leave Policy Management"
+      description="Configure and manage leave policies for the organization"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -122,9 +126,6 @@ export default function AdminPoliciesPage() {
               <Shield className="text-blue-500" size={28} />
               Leave Policy Management
             </h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Configure and manage leave policies for the organization
-            </p>
           </div>
           <button
             onClick={() => router.push('/dashboard/admin/policies/create')}
@@ -238,6 +239,6 @@ export default function AdminPoliciesPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

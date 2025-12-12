@@ -58,7 +58,7 @@ export default function CreatePolicyPage() {
 
   const fetchLeaveTypes = async () => {
     try {
-      const response = await fetch('http://localhost:3001/leaves/types', {
+      const response = await fetch('http://localhost:3000/leaves/types', {
         credentials: 'include',
       });
 
@@ -74,7 +74,7 @@ export default function CreatePolicyPage() {
   const fetchExistingPolicy = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/leaves/configuration/policies/${editId}`, {
+      const response = await fetch(`http://localhost:3000/leaves/configuration/policies/${editId}`, {
         credentials: 'include',
       });
 
@@ -110,8 +110,9 @@ export default function CreatePolicyPage() {
       const payload = {
         leaveTypeId,
         accrualMethod,
-        monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : undefined,
-        yearlyRate: yearlyRate !== '' ? Number(yearlyRate) : undefined,
+        // Only send the rate field relevant to the accrual method
+        monthlyRate: accrualMethod === 'monthly' && monthlyRate !== '' ? Number(monthlyRate) : undefined,
+        yearlyRate: (accrualMethod === 'yearly' || accrualMethod === 'per-term') && yearlyRate !== '' ? Number(yearlyRate) : undefined,
         carryForwardAllowed,
         maxCarryForward: maxCarryForward !== '' ? Number(maxCarryForward) : undefined,
         expiryAfterMonths: expiryAfterMonths !== '' ? Number(expiryAfterMonths) : undefined,
@@ -121,8 +122,8 @@ export default function CreatePolicyPage() {
       };
 
       const url = editId 
-        ? `http://localhost:3001/leaves/configuration/policies/${editId}`
-        : 'http://localhost:3001/leaves/configuration/policies';
+        ? `http://localhost:3000/leaves/configuration/policies/${editId}`
+        : 'http://localhost:3000/leaves/configuration/policies';
       
       const method = editId ? 'PUT' : 'POST';
 
@@ -255,36 +256,72 @@ export default function CreatePolicyPage() {
                   <option value="round_down">Round Down</option>
                 </select>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Monthly Rate (days)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={monthlyRate}
-                  onChange={(e) => setMonthlyRate(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  placeholder="0.00"
-                  min="0"
-                />
-              </div>
+            {/* Rate Field - Conditional based on Accrual Method */}
+            <div className="mt-4">
+              {accrualMethod === 'monthly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Monthly Accrual Rate (days per month) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={monthlyRate}
+                    onChange={(e) => setMonthlyRate(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    placeholder="e.g., 1.75 (21 days per year ÷ 12 months)"
+                    min="0"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Days accrued per month of service
+                  </p>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Yearly Rate (days)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={yearlyRate}
-                  onChange={(e) => setYearlyRate(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  placeholder="0.00"
-                  min="0"
-                />
-              </div>
+              {accrualMethod === 'yearly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Yearly Entitlement (total days per year) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={yearlyRate}
+                    onChange={(e) => setYearlyRate(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    placeholder="e.g., 21 (full year entitlement)"
+                    min="0"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Total days granted at the start of each leave year
+                  </p>
+                </div>
+              )}
+
+              {accrualMethod === 'per-term' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Yearly Entitlement (total days per year) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={yearlyRate}
+                    onChange={(e) => setYearlyRate(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    placeholder="e.g., 21"
+                    min="0"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Total yearly entitlement (divided by number of terms)
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

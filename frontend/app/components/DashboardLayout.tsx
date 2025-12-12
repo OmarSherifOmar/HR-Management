@@ -187,6 +187,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
           { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
           { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
           { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
+          { name: 'Admin: Personalized Entitlements', href: '/dashboard/admin/personalized-entitlements' },
           { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
           { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
           { name: 'Admin: Entitlements', href: '/dashboard/admin/entitlements' },

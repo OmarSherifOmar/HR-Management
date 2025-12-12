@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Calculator, PlayCircle, Calendar, Users, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import DashboardLayout from '../../../components/DashboardLayout';
 
 type ProcessResult = {
   success: boolean;
@@ -140,18 +141,11 @@ export default function AdminEntitlementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-6">
+    <DashboardLayout 
+      title="Entitlement Calculations & Scheduling" 
+      description="Update entitlement calculations and process scheduled operations"
+    >
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Calculator className="text-orange-500" size={28} />
-            Entitlement Calculations & Scheduling
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Update entitlement calculations and process scheduled operations
-          </p>
-        </div>
 
         {/* Messages */}
         {error && (
@@ -353,6 +347,6 @@ export default function AdminEntitlementsPage() {
           </ul>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

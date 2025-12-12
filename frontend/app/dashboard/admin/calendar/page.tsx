@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import DashboardLayout from '../../../components/DashboardLayout';
 import { Calendar as CalendarIcon, Plus, Trash2, Edit, X, Ban } from 'lucide-react';
 
 type Holiday = {
@@ -239,13 +240,13 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="p-6">
+    <DashboardLayout
+      title="Calendar & Blocked Days"
+      description="Configure public holidays and blocked periods for leave requests"
+    >
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Calendar & Blocked Days</h1>
-          <p className="text-gray-400 mt-1">
-            Configure public holidays and blocked periods for leave requests
-          </p>
         </div>
         <div className="flex items-center gap-4">
           <select
@@ -551,6 +552,6 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }
