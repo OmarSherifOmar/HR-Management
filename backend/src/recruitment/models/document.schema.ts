@@ -5,7 +5,7 @@ import { DocumentType } from '../enums/document-type.enum';
 @Schema({ timestamps: true })
 export class Document {
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile' })
   ownerId: Types.ObjectId;
 
   @Prop({

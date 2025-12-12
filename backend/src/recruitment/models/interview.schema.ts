@@ -22,7 +22,7 @@ export class Interview {
   @Prop({ enum: InterviewMethod })
   method: InterviewMethod;
 
-  @Prop([{ type: Types.ObjectId, ref: 'User' }])
+  @Prop([{ type: Types.ObjectId, ref: 'EmployeeProfile' }])
   panel: Types.ObjectId[];
 
   @Prop()
