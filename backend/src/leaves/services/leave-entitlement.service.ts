@@ -12,6 +12,7 @@ import { AccrualSuspensionService } from './accrual-suspension.service';
 import { AccrualMethod } from '../enums/accrual-method.enum';
 import { RoundingRule } from '../enums/rounding-rule.enum';
 import { AdjustmentType } from '../enums/adjustment-type.enum';
+import { ContractType } from '../../employee-profile/enums/employee-profile.enums';
 
 /**
  * Leave Entitlement Service
@@ -451,12 +452,33 @@ export class LeaveEntitlementService {
       remaining: number;
     }[];
   }> {
-    const entitlements = await this.entitlementModel
+    // Check if employee exists
+    const employee = await this.employeeService.findById(employeeId);
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${employeeId} not found`);
+    }
+
+    // Find existing entitlements
+    let entitlements = await this.entitlementModel
       .find({ employeeId: new Types.ObjectId(employeeId) })
       .populate('leaveTypeId', 'code name')
       .exec();
 
-    const balances = entitlements.map((e) => {
+    // If no entitlements exist, auto-create them based on policies
+    if (entitlements.length === 0) {
+      await this.autoCreateEntitlementsForEmployee(employeeId, employee);
+      
+      // Fetch the newly created entitlements
+      entitlements = await this.entitlementModel
+        .find({ employeeId: new Types.ObjectId(employeeId) })
+        .populate('leaveTypeId', 'code name')
+        .exec();
+    }
+
+    // Filter out entitlements with null leaveTypeId
+    const validEntitlements = entitlements.filter((e) => e.leaveTypeId != null);
+
+    const balances = validEntitlements.map((e) => {
       const leaveType = e.leaveTypeId as any;
       return {
         leaveTypeId: leaveType._id?.toString() || e.leaveTypeId.toString(),
@@ -475,6 +497,148 @@ export class LeaveEntitlementService {
       employeeId,
       balances,
     };
+  }
+
+  /**
+   * Auto-create entitlements for an employee based on applicable policies
+   */
+  private async autoCreateEntitlementsForEmployee(employeeId: string, employee: any): Promise<void> {
+    try {
+      // Get all leave policies
+      const policies = await this.leavePolicyModel
+        .find()
+        .populate('leaveTypeId')
+        .exec();
+
+      if (!policies || policies.length === 0) {
+        console.log(`No leave policies found for employee ${employeeId}`);
+        return;
+      }
+
+      for (const policy of policies) {
+        try {
+          // Check if policy is eligible for this employee
+          const isEligible = await this.checkPolicyEligibility(policy, employee);
+          
+          if (isEligible) {
+            const leaveType = policy.leaveTypeId as any;
+            
+            if (!leaveType) {
+              console.error(`Policy ${policy._id} has no leaveTypeId`);
+              continue;
+            }
+            
+            // Calculate entitlement based on policy
+            const entitlement = this.calculatePolicyEntitlement(policy, employee);
+            
+            // Grant full yearly entitlement upfront (all days available immediately)
+            // Create the entitlement
+            await this.entitlementModel.create({
+              employeeId: new Types.ObjectId(employeeId),
+              leaveTypeId: policy.leaveTypeId,
+              yearlyEntitlement: entitlement,
+              accruedActual: entitlement, // Grant full entitlement immediately
+              accruedRounded: entitlement, // Grant full entitlement immediately
+              carryForward: 0,
+              taken: 0,
+              pending: 0,
+              remaining: entitlement, // All days available
+              lastAccrualDate: new Date(),
+            });
+          }
+        } catch (policyError) {
+          console.error(`Error processing policy ${policy._id}:`, policyError);
+          // Continue with other policies
+        }
+      }
+    } catch (error) {
+      console.error(`Error in autoCreateEntitlementsForEmployee:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a policy is eligible for an employee
+   */
+  private async checkPolicyEligibility(policy: LeavePolicyDocument, employee: any): Promise<boolean> {
+    // If no eligibility rules, policy applies to all
+    if (!policy.eligibility || Object.keys(policy.eligibility).length === 0) {
+      return true;
+    }
+
+    const eligibility = policy.eligibility;
+
+    // Check contract type
+    if (eligibility.contractType && eligibility.contractType.length > 0) {
+      if (!eligibility.contractType.includes(employee.contractType)) {
+        return false;
+      }
+    }
+
+    // Check nationality
+    if (eligibility.nationality) {
+      if (employee.nationality !== eligibility.nationality) {
+        return false;
+      }
+    }
+
+    // Check minimum tenure
+    if (eligibility.minTenureMonths) {
+      const tenureMonths = this.calculateTenureMonths(employee.dateOfHire);
+      if (tenureMonths < eligibility.minTenureMonths) {
+        return false;
+      }
+    }
+
+    // Check gender
+    if (eligibility.gender) {
+      if (employee.gender !== eligibility.gender) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Calculate policy entitlement for an employee
+   */
+  private calculatePolicyEntitlement(policy: LeavePolicyDocument, employee: any): number {
+    // Use yearly rate from policy as the base entitlement
+    let entitlement = policy.yearlyRate || 0;
+    
+    console.log('calculatePolicyEntitlement:', {
+      yearlyRate: policy.yearlyRate,
+      monthlyRate: policy.monthlyRate,
+      accrualMethod: policy.accrualMethod,
+      entitlement: entitlement
+    });
+
+    // Check for tenure-based increases
+    if (policy.eligibility?.tenureBasedIncrease) {
+      const tenureMonths = this.calculateTenureMonths(employee.dateOfHire);
+      const tenureYears = Math.floor(tenureMonths / 12);
+      
+      const increases = policy.eligibility.tenureBasedIncrease;
+      for (const increase of increases) {
+        if (tenureYears >= increase.yearsOfService) {
+          entitlement = increase.entitlement;
+        }
+      }
+    }
+    
+    console.log('Final calculated entitlement:', entitlement);
+
+    return entitlement;
+  }
+
+  /**
+   * Calculate employee tenure in months
+   */
+  private calculateTenureMonths(dateOfHire: Date): number {
+    const now = new Date();
+    const hireDate = new Date(dateOfHire);
+    return this.calculateMonthsDifference(hireDate, now);
   }
 
   // ==================== HELPER METHODS ====================
@@ -546,5 +710,25 @@ export class LeaveEntitlementService {
     console.log('Running scheduled expiry check...');
     const result = await this.processExpiredCarryForward();
     console.log(`Expiry check completed. Processed: ${result.processed}, Expired days: ${result.expired}`);
+  }
+
+  /**
+   * Fix existing entitlements - grant full yearly entitlement upfront
+   */
+  async fixExistingEntitlements(): Promise<{ updated: number }> {
+    const entitlements = await this.entitlementModel.find({
+      accruedActual: 0,
+      accruedRounded: 0,
+    });
+
+    let updated = 0;
+    for (const entitlement of entitlements) {
+      entitlement.accruedActual = entitlement.yearlyEntitlement;
+      entitlement.accruedRounded = entitlement.yearlyEntitlement;
+      await entitlement.save();
+      updated++;
+    }
+
+    return { updated };
   }
 }

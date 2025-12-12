@@ -235,4 +235,15 @@ export class LeaveEntitlementController {
   async processExpiredCarryForward() {
     return this.entitlementService.processExpiredCarryForward();
   }
+
+  /**
+   * Fix existing entitlements with zero accrued days
+   * POST /leaves/entitlements/fix-existing
+   */
+  @Post('fix-existing')
+  @Roles(Role.HR_ADMIN)
+  async fixExistingEntitlements() {
+    return this.entitlementService.fixExistingEntitlements();
+  }
+
 }

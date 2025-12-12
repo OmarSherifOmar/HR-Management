@@ -12,7 +12,7 @@ import { BalanceAdjustmentController } from './controllers/balance-adjustment.co
 import { LeaveRoleManagementController } from './controllers/leave-role-management.controller';
 import { LeaveRequestController } from './controllers/leave-request.controller';
 import { AttachmentController } from './controllers/attachment.controller';
-import { NotificationController } from './controllers/notification.controller';
+import { LeavesNotificationController } from './controllers/notification.controller';
 import { LeaveAccrualController } from './controllers/leave-accrual.controller';
 import { AccrualSuspensionController } from './controllers/accrual-suspension.controller';
 import { PayrollSyncController } from './controllers/payroll-sync.controller';
@@ -29,7 +29,7 @@ import { BalanceAdjustmentService } from './services/balance-adjustment.service'
 import { LeaveRoleManagementService } from './services/leave-role-management.service';
 import { LeaveRequestService } from './services/leave-request.service';
 import { AttachmentService } from './services/attachment.service';
-import { NotificationService } from './services/notification.service';
+import { LeavesNotificationService } from './services/leaves-notification.service';
 import { LeaveAccrualService } from './services/leave-accrual.service';
 import { AccrualSuspensionService } from './services/accrual-suspension.service';
 import { PayrollSyncService } from './services/payroll-sync.service';
@@ -43,7 +43,6 @@ import { LeaveAdjustment, LeaveAdjustmentSchema } from './models/leave-adjustmen
 import { Calendar, CalendarSchema } from './models/calendar.schema';
 import { Attachment, AttachmentSchema } from './models/attachment.schema';
 import { Holiday, HolidaySchema } from '../time-management/models/holiday.schema';
-import { NotificationLog, NotificationLogSchema } from '../time-management/models/notification-log.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { TimeManagementModule } from '../time-management/time-management.module';
 import { OrganizationStructureModule } from '../organization-structure/organization-structure.module';
@@ -55,11 +54,10 @@ import { JwtModule } from '@nestjs/jwt';
     {name:LeavePolicy.name, schema:LeavePolicySchema},
     {name:LeaveEntitlement.name, schema:LeaveEntitlementSchema},
     {name: LeaveCategory.name, schema:LeaveCategorySchema},
-    {name: LeaveAdjustment.name, schema:LeaveAdjustmentSchema},
+    {name:LeaveAdjustment.name, schema:LeaveAdjustmentSchema},
     {name:Calendar.name, schema:CalendarSchema},
     {name:Attachment.name, schema: AttachmentSchema},
-    {name:Holiday.name, schema:HolidaySchema},
-    {name:NotificationLog.name, schema:NotificationLogSchema}
+    {name:Holiday.name, schema:HolidaySchema}
   ]),EmployeeProfileModule,TimeManagementModule,OrganizationStructureModule,
   JwtModule.register({
     secret: process.env.JWT_SECRET || 'defaultSecret',
@@ -79,7 +77,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveRoleManagementController,
     LeaveRequestController,
     AttachmentController,
-    NotificationController,
+    LeavesNotificationController,
     LeaveAccrualController,
     AccrualSuspensionController,
     PayrollSyncController,
@@ -98,7 +96,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveRoleManagementService,
     LeaveRequestService,
     AttachmentService,
-    NotificationService,
+    LeavesNotificationService,
     LeaveAccrualService,
     AccrualSuspensionService,
     PayrollSyncService,
@@ -117,7 +115,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveRoleManagementService,
     LeaveRequestService,
     AttachmentService,
-    NotificationService,
+    LeavesNotificationService,
     LeaveAccrualService,
     AccrualSuspensionService,
     PayrollSyncService,

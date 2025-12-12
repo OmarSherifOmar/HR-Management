@@ -90,7 +90,7 @@ export class PersonalizedEntitlementService {
   async getEntitlementsByEmployeeId(employeeId: string): Promise<LeaveEntitlementDocument[]> {
     return this.leaveEntitlementModel
       .find({ employeeId: new Types.ObjectId(employeeId) })
-      .populate('leaveTypeId')
+      .populate('leaveTypeId', 'code name')
       .exec();
   }
 
