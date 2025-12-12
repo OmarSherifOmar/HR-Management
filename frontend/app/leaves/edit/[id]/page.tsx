@@ -487,17 +487,15 @@ export default function EditLeaveRequestPage() {
               </div>
             </div>
 
-            {selectedLeaveType && (
+            {selectedLeaveType?.requiresAttachment && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Attachment {selectedLeaveType.requiresAttachment && <span className="text-red-500">*</span>}
+                  Attachment <span className="text-red-500">*</span>
                 </label>
                 
-                {selectedLeaveType.requiresAttachment && (
-                  <p className="text-sm text-gray-400 mb-3">
-                    This leave type requires an attachment. Accepted formats: PDF, JPEG, PNG, GIF, DOC, DOCX (max 5MB)
-                  </p>
-                )}
+                <p className="text-sm text-gray-400 mb-3">
+                  This leave type requires an attachment. Accepted formats: PDF, JPEG, PNG, GIF, DOC, DOCX (max 5MB)
+                </p>
 
                 {!selectedFile && !formData.attachmentId ? (
                   <div>
