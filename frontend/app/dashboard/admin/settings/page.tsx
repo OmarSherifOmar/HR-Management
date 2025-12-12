@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Settings, Calendar, Clock, TrendingUp, Save, RefreshCw, AlertCircle } from 'lucide-react';
+import DashboardLayout from '../../../components/DashboardLayout';
 
 type LeaveYearConfig = {
   leaveYearStartMonth: number;
@@ -173,20 +174,11 @@ export default function AdminSettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-6">
+    <DashboardLayout 
+      title="Leave Configuration Settings" 
+      description="Configure accrual rates, carry-over, and rounding settings"
+    >
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Settings className="text-purple-500" size={28} />
-              Leave Configuration Settings
-            </h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Configure accrual rates, carry-over, and rounding settings
-            </p>
-          </div>
-        </div>
 
         {/* Messages */}
         {error && (
@@ -368,6 +360,6 @@ export default function AdminSettingsPage() {
           </ul>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

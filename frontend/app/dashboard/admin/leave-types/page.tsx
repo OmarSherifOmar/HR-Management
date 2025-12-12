@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '../../../context/AuthContext';
+import DashboardLayout from '../../../components/DashboardLayout';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Tag, Plus, Edit2, Trash2, Folder, AlertCircle } from 'lucide-react';
@@ -147,7 +148,10 @@ export default function AdminLeaveTypesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-6">
+    <DashboardLayout
+      title="Leave Types & Categories"
+      description="Define and manage leave types available in the system"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -156,9 +160,6 @@ export default function AdminLeaveTypesPage() {
               <Tag className="text-green-500" size={28} />
               Leave Types & Categories
             </h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Define and manage leave types available in the system
-            </p>
           </div>
           <button
             onClick={() => router.push(`/dashboard/admin/leave-types/create?type=${activeTab === 'types' ? 'type' : 'category'}`)}
@@ -349,6 +350,6 @@ export default function AdminLeaveTypesPage() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

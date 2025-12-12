@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Plus, TrendingUp, TrendingDown, DollarSign, RotateCcw, Search } from 'lucide-react';
+import DashboardLayout from '../../../components/DashboardLayout';
 
 interface LeaveType {
   _id: string;
@@ -281,13 +282,11 @@ export default function PersonalizedEntitlementsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Personalized Entitlements</h1>
-        <p className="text-gray-400">
-          Assign and manage individual employee leave entitlements and adjustments
-        </p>
-      </div>
+    <DashboardLayout 
+      title="Personalized Entitlements" 
+      description="Assign and manage individual employee leave entitlements and adjustments"
+    >
+      <div className="max-w-7xl mx-auto">
 
       {/* Action Buttons */}
       <div className="flex gap-3 mb-6">
@@ -628,6 +627,7 @@ export default function PersonalizedEntitlementsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

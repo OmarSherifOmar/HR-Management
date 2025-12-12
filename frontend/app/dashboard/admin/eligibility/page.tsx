@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Shield, Edit2, Save, X, AlertCircle, CheckCircle } from 'lucide-react';
+import DashboardLayout from '../../../components/DashboardLayout';
 
 type LeaveType = {
   _id: string;
@@ -236,18 +237,11 @@ export default function EligibilityRulesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-6">
+    <DashboardLayout 
+      title="Eligibility Rules Management" 
+      description="Set eligibility requirements for each leave policy based on tenure, position, and contract type"
+    >
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Shield className="text-purple-500" size={28} />
-            Eligibility Rules Management
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Set eligibility requirements for each leave policy based on tenure, position, and contract type
-          </p>
-        </div>
 
         {/* Success Message */}
         {success && (
@@ -501,6 +495,6 @@ export default function EligibilityRulesPage() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
