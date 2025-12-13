@@ -10,16 +10,14 @@ import {
 } from 'lucide-react';
 
 interface LeaveBalance {
-  leaveType: {
-    id: string;
-    name: string;
-    code: string;
-  };
+  leaveTypeId: string;
+  leaveTypeName: string;
+  leaveTypeCode: string;
   accrued: number;
   taken: number;
   remaining: number;
   pending: number;
-  carryOver: number;
+  carryForward: number;
   yearlyEntitlement: number;
 }
 
@@ -50,15 +48,32 @@ export default function MyBalancePage() {
 
       const result = await response.json();
       
-      // Handle different response structures
-      if (result.balances) {
-        setBalances(result.balances);
-      } else if (result.data?.balances) {
-        setBalances(result.data.balances);
-      } else {
-        console.error('Unexpected response structure:', result);
-        throw new Error('Unexpected response format');
-      }
+      // Map API response and calculate accrued-based available balance
+      const mappedBalances = result.data.balances.map((balance: any) => {
+        // Ensure all numeric fields have default values
+        const accrued = Number(balance.accrued) || 0;
+        const carryForward = Number(balance.carryForward) || 0;
+        const taken = Number(balance.taken) || 0;
+        const pending = Number(balance.pending) || 0;
+        const yearlyEntitlement = Number(balance.yearlyEntitlement) || 0;
+        
+        const accruedBalance = accrued + carryForward;
+        const availableBalance = accruedBalance - taken - pending;
+        
+        return {
+          leaveTypeId: balance.leaveTypeId,
+          leaveTypeName: balance.leaveTypeName,
+          leaveTypeCode: balance.leaveTypeCode,
+          accrued,
+          taken,
+          pending,
+          carryForward,
+          yearlyEntitlement,
+          remaining: Math.max(0, availableBalance)
+        };
+      });
+      
+      setBalances(mappedBalances);
       
       setError('');
     } catch (err: any) {
@@ -88,16 +103,16 @@ export default function MyBalancePage() {
         </div>
       ) : (
         <div className="grid gap-6">
-          {balances.map((balance) => (
+          {balances.map((balance, index) => (
             <div
-              key={balance.leaveType.id}
+              key={balance.leaveTypeId || `balance-${index}`}
               className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors"
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{balance.leaveType.name}</h2>
-                  <p className="text-gray-400 text-sm">Code: {balance.leaveType.code}</p>
+                  <h2 className="text-2xl font-bold text-white">{balance.leaveTypeName}</h2>
+                  <p className="text-gray-400 text-sm">Code: {balance.leaveTypeCode}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold text-blue-500">{balance.remaining}</div>
@@ -131,9 +146,9 @@ export default function MyBalancePage() {
                 <div className="bg-gray-700/50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock size={16} className="text-blue-400" />
-                    <span className="text-xs text-gray-400 uppercase">Carry Over</span>
+                    <span className="text-xs text-gray-400 uppercase">Carry Forward</span>
                   </div>
-                  <div className="text-2xl font-bold text-blue-400">{balance.carryOver}</div>
+                  <div className="text-2xl font-bold text-blue-400">{balance.carryForward}</div>
                   <div className="text-xs text-gray-500 mt-1">From previous year</div>
                 </div>
 
@@ -161,9 +176,9 @@ export default function MyBalancePage() {
               {/* Progress Bar */}
               <div className="mt-6">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-400">Usage Progress</span>
+                  <span className="text-gray-400">Usage Progress (Based on Accrued Balance)</span>
                   <span className="text-gray-400">
-                    {balance.taken + balance.pending} / {balance.yearlyEntitlement + balance.carryOver} days
+                    {balance.taken + balance.pending} / {balance.accrued + balance.carryForward} days
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
@@ -172,14 +187,14 @@ export default function MyBalancePage() {
                     <div
                       className="bg-red-500"
                       style={{
-                        width: `${((balance.taken / (balance.yearlyEntitlement + balance.carryOver)) * 100).toFixed(1)}%`,
+                        width: `${((balance.taken / (balance.accrued + balance.carryForward)) * 100).toFixed(1)}%`,
                       }}
                     />
                     {/* Pending portion */}
                     <div
                       className="bg-yellow-500"
                       style={{
-                        width: `${((balance.pending / (balance.yearlyEntitlement + balance.carryOver)) * 100).toFixed(1)}%`,
+                        width: `${((balance.pending / (balance.accrued + balance.carryForward)) * 100).toFixed(1)}%`,
                       }}
                     />
                   </div>

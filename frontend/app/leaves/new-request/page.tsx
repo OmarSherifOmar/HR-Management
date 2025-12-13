@@ -64,14 +64,20 @@ export default function NewLeaveRequestPage() {
       if (response.ok) {
         const result = await response.json();
         // Extract leave types from balance data
-        const types = result.data.balances.map((balance: any) => ({
-          id: balance.leaveType.id,
-          name: balance.leaveType.name,
-          code: balance.leaveType.code,
-          remaining: balance.remaining,
-          requiresAttachment: balance.leaveType.requiresAttachment,
-          attachmentType: balance.leaveType.attachmentType
-        }));
+        const types = result.data.balances.map((balance: any) => {
+          // Calculate available balance based on accrued days (not full yearly entitlement)
+          const accruedBalance = balance.accrued + balance.carryForward;
+          const availableBalance = accruedBalance - balance.taken - balance.pending;
+          
+          return {
+            id: balance.leaveTypeId,
+            name: balance.leaveTypeName,
+            code: balance.leaveTypeCode,
+            remaining: Math.max(0, availableBalance), // Ensure non-negative
+            requiresAttachment: balance.requiresAttachment,
+            attachmentType: balance.attachmentType
+          };
+        });
         setLeaveTypes(types);
       }
     } catch (err: any) {
@@ -410,17 +416,15 @@ export default function NewLeaveRequestPage() {
             </div>
 
             {/* Attachment Upload (Conditional) */}
-            {selectedLeaveType && (
+            {selectedLeaveType?.requiresAttachment && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Attachment {selectedLeaveType.requiresAttachment && <span className="text-red-500">*</span>}
+                  Attachment <span className="text-red-500">*</span>
                 </label>
                 
-                {selectedLeaveType.requiresAttachment && (
-                  <p className="text-sm text-gray-400 mb-3">
-                    This leave type requires an attachment. Accepted formats: PDF, JPEG, PNG, GIF, DOC, DOCX (max 5MB)
-                  </p>
-                )}
+                <p className="text-sm text-gray-400 mb-3">
+                  This leave type requires an attachment. Accepted formats: PDF, JPEG, PNG, GIF, DOC, DOCX (max 5MB)
+                </p>
 
                 {!selectedFile && !formData.attachmentId ? (
                   <div>

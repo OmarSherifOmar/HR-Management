@@ -148,11 +148,14 @@ export class LeaveRequestService {
         );
       }
 
-      // remaining already represents available balance (total - taken - pending)
-      const availableBalance = entitlement.remaining;
+      // Calculate available balance based on accrued days (not full yearly entitlement)
+      // Employee can only use what they've accrued so far
+      const accruedBalance = entitlement.accruedRounded + entitlement.carryForward;
+      const availableBalance = accruedBalance - entitlement.taken - entitlement.pending;
+      
       if (durationDays > availableBalance) {
         throw new BadRequestException(
-          `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${durationDays} days`,
+          `Insufficient accrued leave balance. Available: ${availableBalance} days (Accrued: ${entitlement.accruedRounded}, Carry Forward: ${entitlement.carryForward}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending}), Requested: ${durationDays} days`,
         );
       }
     }
@@ -410,13 +413,14 @@ export class LeaveRequestService {
       });
 
       if (entitlement) {
+        // Calculate available balance based on accrued days (not full yearly entitlement)
         // When modifying, oldDuration is already in pending, so add it back to get actual available
-        // remaining = total - taken - pending (where pending includes oldDuration)
-        // available for new request = remaining + oldDuration
-        const availableBalance = entitlement.remaining + oldDuration;
+        const accruedBalance = entitlement.accruedRounded + entitlement.carryForward;
+        const availableBalance = accruedBalance - entitlement.taken - entitlement.pending + oldDuration;
+        
         if (newDuration > availableBalance) {
           throw new BadRequestException(
-            `Insufficient leave balance. Available: ${availableBalance} days`,
+            `Insufficient accrued leave balance. Available: ${availableBalance} days (Accrued: ${entitlement.accruedRounded}, Carry Forward: ${entitlement.carryForward}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending - oldDuration}), Requested: ${newDuration} days`,
           );
         }
       }
@@ -918,9 +922,13 @@ export class LeaveRequestService {
 
   /**
    * Get leave requests pending HR review
-   * Returns requests where manager has approved but HR hasn't acted yet
+   * Pool system: Returns all requests where manager has approved, any HR can process
+   * The HR user who processes it will be recorded in decidedBy
    */
   async getRequestsForHRReview(hrManagerId: string): Promise<LeaveRequestDocument[]> {
+    // Note: hrManagerId parameter kept for potential future filtering (e.g., by department)
+    // but currently all HR users see the same pool
+
     return this.leaveRequestModel
       .find({
         status: LeaveStatus.PENDING,
@@ -937,6 +945,28 @@ export class LeaveRequestService {
       .populate('leaveTypeId', 'code name')
       .populate('attachmentId')
       .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
+   * Get all leave requests that were rejected by manager but HR step is still pending
+   * These can be overridden by HR Managers/Admins
+   */
+  async getRejectedRequestsForHR(): Promise<LeaveRequestDocument[]> {
+    return this.leaveRequestModel
+      .find({
+        status: LeaveStatus.REJECTED,
+        'approvalFlow': {
+          $elemMatch: {
+            role: 'hr_manager',
+            status: 'pending',
+          },
+        },
+      })
+      .populate('employeeId', 'firstName lastName employeeNumber primaryDepartmentId')
+      .populate('leaveTypeId', 'code name')
+      .populate('attachmentId')
+      .sort({ updatedAt: -1 })
       .exec();
   }
 
@@ -974,14 +1004,17 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step
+    // Find HR step and verify assignment
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
-      (step) => step.role === 'hr_manager' && step.status === 'pending',
+      (step) =>
+        step.role === 'hr_manager' &&
+        step.status === 'pending' &&
+        step.decidedBy?.toString() === hrManagerId,
     );
 
     if (hrStepIndex === -1) {
-      throw new BadRequestException(
-        'This request has already been processed by HR',
+      throw new ForbiddenException(
+        'You are not authorized to finalize this request or it has already been processed',
       );
     }
 
@@ -1061,16 +1094,21 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step
+    // Find HR step (pool system - any HR can process)
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
-      (step) => step.role === 'hr_manager',
+      (step) => step.role === 'hr_manager' && step.status === 'pending',
     );
 
-    if (hrStepIndex !== -1) {
-      leaveRequest.approvalFlow[hrStepIndex].status = 'rejected';
-      leaveRequest.approvalFlow[hrStepIndex].decidedBy = new Types.ObjectId(hrManagerId);
-      leaveRequest.approvalFlow[hrStepIndex].decidedAt = new Date();
+    if (hrStepIndex === -1) {
+      throw new BadRequestException(
+        'This request has already been processed by HR',
+      );
     }
+
+    // Update HR rejection step - record who processed it
+    leaveRequest.approvalFlow[hrStepIndex].status = 'rejected';
+    leaveRequest.approvalFlow[hrStepIndex].decidedBy = new Types.ObjectId(hrManagerId);
+    leaveRequest.approvalFlow[hrStepIndex].decidedAt = new Date();
 
     // Mark request as rejected
     leaveRequest.status = LeaveStatus.REJECTED;
@@ -1466,7 +1504,7 @@ export class LeaveRequestService {
    * 1. Employee has supervisorPositionId → the position they report to
    * 2. Manager has primaryPositionId → their own position
    * 3. Find employee where primaryPositionId == supervisorPositionId → that's the manager
-   * 4. Find HR Manager from system roles
+   * 4. HR step uses pool system - any HR Manager/Admin can process (decidedBy set when they act)
    */
   private async buildApprovalFlow(employeeId: string, policy: any): Promise<{
     role: string;
@@ -1485,108 +1523,48 @@ export class LeaveRequestService {
     const approvalWorkflow = policy?.eligibility?.approvalWorkflow || {};
     const requiresSupervisorApproval = approvalWorkflow.requiresSupervisorApproval !== false; // default true
     const requiresHRApproval = approvalWorkflow.requiresHRApproval !== false; // default true
-    const approvalLevels = approvalWorkflow.approvalLevels || [];
 
     // Get employee to find their supervisor position
     const employee = await this.employeeService.findById(employeeId);
     console.log('Employee:', employeeId, 'supervisorPositionId:', employee?.supervisorPositionId);
-    console.log('Approval workflow config:', { requiresSupervisorApproval, requiresHRApproval, approvalLevels: approvalLevels.length });
 
-    // Add approval levels based on configuration
-    if (approvalLevels.length > 0) {
-      // Use configured multi-level approval
-      for (const level of approvalLevels) {
-        if (level.type === 'supervisor' || level.type === 'manager') {
-          // Find Direct Manager
-          let directManagerId: Types.ObjectId | undefined;
-          if (employee?.supervisorPositionId) {
-            const positionIdStr = employee.supervisorPositionId.toString();
-            console.log('Looking for manager with primaryPositionId:', positionIdStr);
-            const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
-            console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
-            if (manager?._id) {
-              directManagerId = manager._id as Types.ObjectId;
-            }
-          }
-          approvalFlow.push({
-            role: level.type,
-            status: 'pending',
-            decidedBy: directManagerId,
-          });
-        } else if (level.type === 'hr') {
-          // Find HR Manager
-          const hrManager = await this.findHRManager();
-          approvalFlow.push({
-            role: 'hr',
-            status: 'pending',
-            decidedBy: hrManager || undefined,
-          });
-        } else if (level.type === 'department_head') {
-          // Department head approval
-          approvalFlow.push({
-            role: 'department_head',
-            status: 'pending',
-            decidedBy: undefined, // Will be determined based on department
-          });
+    // 1. Find Direct Manager (if supervisor approval is required)
+    if (requiresSupervisorApproval) {
+      let directManagerId: Types.ObjectId | undefined;
+
+      if (employee?.supervisorPositionId) {
+        // Find the employee whose primaryPositionId matches this supervisorPositionId
+        const positionIdStr = employee.supervisorPositionId.toString();
+        console.log('Looking for manager with primaryPositionId:', positionIdStr);
+        
+        const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
+        console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
+
+        if (manager?._id) {
+          directManagerId = manager._id as Types.ObjectId;
         }
       }
-    } else {
-      // Use simple supervisor + HR approval flags
-      if (requiresSupervisorApproval) {
-        // 1. Find Direct Manager
-        let directManagerId: Types.ObjectId | undefined;
-        if (employee?.supervisorPositionId) {
-          const positionIdStr = employee.supervisorPositionId.toString();
-          console.log('Looking for manager with primaryPositionId:', positionIdStr);
-          const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
-          console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
-          if (manager?._id) {
-            directManagerId = manager._id as Types.ObjectId;
-          }
-        }
-        approvalFlow.push({
-          role: 'direct_manager',
-          status: 'pending',
-          decidedBy: directManagerId,
-        });
-      }
 
-      if (requiresHRApproval) {
-        // 2. Find HR Manager
-        const hrManager = await this.findHRManager();
-        approvalFlow.push({
-          role: 'hr_manager',
-          status: 'pending',
-          decidedBy: hrManager || undefined,
-        });
-      }
+      approvalFlow.push({
+        role: 'direct_manager',
+        status: 'pending',
+        decidedBy: directManagerId,
+      });
     }
 
-    console.log('Built approval flow:', approvalFlow.map(step => step.role));
+    // 2. HR Manager - not pre-assigned, any HR can pick it up from the pool (if HR approval is required)
+    if (requiresHRApproval) {
+      approvalFlow.push({
+        role: 'hr_manager',
+        status: 'pending',
+        decidedBy: undefined, // Will be set when HR actually processes the request
+      });
+    }
+
     return approvalFlow;
   }
 
-  /**
-   * Find an active HR Manager from system roles
-   */
-  private async findHRManager(): Promise<Types.ObjectId | null> {
-    try {
-      // Query the employee_system_roles collection for HR Manager role
-      const hrManagerRole = await this.employeeService['systemRoleModel']?.findOne({
-        roles: { $in: [SystemRole.HR_MANAGER, 'HR Manager'] },
-        isActive: true,
-      });
 
-      if (hrManagerRole?.employeeProfileId) {
-        return hrManagerRole.employeeProfileId;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error finding HR Manager:', error);
-      return null;
-    }
-  }
 
   /**
    * Check for irregular leave patterns (e.g., Friday-Monday pattern)

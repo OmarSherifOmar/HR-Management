@@ -477,11 +477,33 @@ export class LeaveRequestController {
    */
   @Get('hr/pending-reviews')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async getRequestsForHRReview(@Req() req: AuthenticatedRequest) {
     const hrManagerId = getUserId(req);
 
     const leaveRequests = await this.leaveRequestService.getRequestsForHRReview(hrManagerId);
+
+    return {
+      success: true,
+      data: leaveRequests,
+      count: leaveRequests.length,
+    };
+  }
+
+  /**
+   * GET /leave-requests/hr/rejected-requests
+   * 
+   * Get all leave requests that were rejected by HR
+   * These requests can be overridden by HR Managers/Admins
+   * 
+   * @param req - Request object containing authenticated HR manager
+   * @returns List of rejected leave requests
+   */
+  @Get('hr/rejected-requests')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
+  async getRejectedRequestsForHR(@Req() req: AuthenticatedRequest) {
+    const leaveRequests = await this.leaveRequestService.getRejectedRequestsForHR();
 
     return {
       success: true,
@@ -503,7 +525,7 @@ export class LeaveRequestController {
    */
   @Patch(':id/hr/finalize')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async hrFinalizeRequest(
     @Param('id') id: string,
     @Body() decisionDto: ManagerDecisionDto,
@@ -536,7 +558,7 @@ export class LeaveRequestController {
    */
   @Patch(':id/hr/reject')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async hrRejectRequest(
     @Param('id') id: string,
     @Body() decisionDto: ManagerDecisionDto,
@@ -571,7 +593,7 @@ export class LeaveRequestController {
    */
   @Patch(':id/hr/override')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async hrOverrideDecision(
     @Param('id') id: string,
     @Body() overrideDto: HROverrideDto,
@@ -610,7 +632,7 @@ export class LeaveRequestController {
    */
   @Post('hr/bulk-finalize')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async bulkFinalizeRequests(
     @Body() bulkDto: BulkRequestActionDto,
     @Req() req: AuthenticatedRequest,
@@ -642,7 +664,7 @@ export class LeaveRequestController {
    */
   @Post('hr/bulk-reject')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async bulkRejectRequests(
     @Body() bulkDto: BulkRequestActionDto,
     @Req() req: AuthenticatedRequest,
@@ -674,7 +696,7 @@ export class LeaveRequestController {
    */
   @Post('hr/bulk-override')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async bulkOverrideRequests(
     @Body() bulkDto: BulkOverrideActionDto,
     @Req() req: AuthenticatedRequest,
