@@ -537,6 +537,8 @@ export default function EditLeaveRequestPage() {
                     <button
                       type="button"
                       onClick={handleFileRemove}
+                      aria-label="Remove attachment"
+                      title="Remove attachment"
                       className="text-gray-400 hover:text-red-400 transition-colors"
                       disabled={submitting || uploadingFile}
                     >

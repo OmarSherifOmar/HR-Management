@@ -179,7 +179,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
     {
       name: 'Leaves',
       icon: <Calendar size={20} />,
-      subItems: [
+      subItems: [{ name: 'My leaves', href: '/leaves/history' },
         { name: 'Requests', href: '/leaves' },
         { name: 'New Request', href: '/leaves/new-request' },
             { name: 'My Balance', href: '/leaves/balance' },
