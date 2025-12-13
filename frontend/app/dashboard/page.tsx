@@ -2,7 +2,7 @@
 
 import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/DashboardLayout';
-import { 
+import {
   FileInput,
   UserPlus,
   Banknote,
