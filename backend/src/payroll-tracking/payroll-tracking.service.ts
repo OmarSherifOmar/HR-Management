@@ -246,101 +246,6 @@ export class PayrollTrackingService {
     };
   }
 
-  async getPayslipsForEmployee(employeeId: string) {
-    const slips = await this.payslipModel
-      .find({ employeeId: new Types.ObjectId(employeeId) })
-      .sort({ createdAt: -1 })
-      .lean<LeanPayslip[]>();
-
-    return slips.map((p) => ({
-      _id: p._id,
-      month: p.createdAt?.toISOString?.().slice(0, 7),
-      generatedAt: p.createdAt,
-      paymentStatus: p.paymentStatus,
-      grossSalary: p.totalGrossSalary,
-      totalDeductions: p.totaDeductions ?? 0,
-      netPay: p.netPay,
-    }));
-  }
-
-  async getPayslipById(employeeId: string, slipId: string) {
-    const slip = await this.payslipModel
-      .findOne({
-        _id: new Types.ObjectId(slipId),
-        employeeId: new Types.ObjectId(employeeId),
-      })
-      .lean<LeanPayslip>();
-
-    if (!slip) throw new NotFoundException('Payslip not found');
-
-    const employee = await this.employeeModel
-      .findById(employeeId)
-      .populate<{
-        payGradeId: PopulatedPayGrade | null;
-      }>({ path: 'payGradeId' })
-      .lean<PopulatedEmployee>();
-
-    const dispute = await this.disputeModel
-      .findOne({ payslipId: slip._id })
-      .lean<{
-        disputeId: string;
-        status: string;
-        description: string;
-        resolutionComment?: string;
-        rejectionReason?: string;
-        updatedAt?: Date;
-      }>();
-
-    return {
-      _id: slip._id,
-      month: slip.createdAt.toISOString().slice(0, 7),
-      generatedAt: slip.createdAt,
-      paymentStatus: slip.paymentStatus,
-      contractType: employee?.contractType ?? null,
-      workType: employee?.workType ?? null,
-      baseSalary: slip.earningsDetails?.baseSalary ?? 0,
-      grossSalary: slip.totalGrossSalary,
-      totalDeductions: slip.totaDeductions ?? 0,
-      netPay: slip.netPay,
-      allowances: slip.earningsDetails?.allowances ?? [],
-      bonuses: slip.earningsDetails?.bonuses ?? [],
-      benefits: slip.earningsDetails?.benefits ?? [],
-      refunds: slip.earningsDetails?.refunds ?? [],
-      taxes: slip.deductionsDetails?.taxes ?? [],
-      insurances: slip.deductionsDetails?.insurances ?? [],
-      penalties: slip.deductionsDetails?.penalties ?? null,
-      unpaidLeaveDays: slip.deductionsDetails?.penalties?.unpaidLeaveDays ?? 0,
-      dispute: dispute
-        ? {
-            disputeId: dispute.disputeId,
-            status: dispute.status,
-            description: dispute.description,
-            resolutionComment: dispute.resolutionComment ?? null,
-            rejectionReason: dispute.rejectionReason ?? null,
-            updatedAt: dispute.updatedAt ?? null,
-          }
-        : null,
-    };
-  }
-  async listTaxDocumentsForEmployee(employeeId: string | null) {
-    if (!employeeId) return [];
-    const slips = await this.payslipModel
-      .find({ employeeId: new Types.ObjectId(employeeId) })
-      .sort({ createdAt: -1 })
-      .lean<LeanPayslip[]>();
-
-    return slips.map((slip) => ({
-      payrollRunId: slip.payrollRunId?.toString() ?? null,
-      taxYear: slip.createdAt?.getFullYear() ?? new Date().getFullYear(),
-      totalTaxWithheld:
-        slip.deductionsDetails?.taxes?.reduce(
-          (sum, t) => sum + (t.amount ?? 0),
-          0,
-        ) ?? 0,
-      generatedAt: slip.createdAt,
-    }));
-  }
-
   /**
    * Generate a CSV for tax documents for a specific year
    */
@@ -519,8 +424,8 @@ export class PayrollTrackingService {
     return dispute;
   }
 
-  async listDisputes(filter?: { status?: string }) {
-    const query: { status?: DisputeStatus } = {};
+  async listDisputes(filter?: { status?: string; employeeId?: string }) {
+    const query: { status?: DisputeStatus; employeeId?: Types.ObjectId } = {};
     if (filter?.status) {
       if (
         !Object.values(DisputeStatus).includes(filter.status as DisputeStatus)
