@@ -182,7 +182,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       subItems: [
         { name: 'Requests', href: '/leaves' },
         { name: 'New Request', href: '/leaves/new-request' },
-        { name: 'My Balance', href: '/leaves/balance' },
+            { name: 'My Balance', href: '/leaves/balance' },
+            { name: 'History', href: '/dashboard/leaves/history' },
         ...(user?.role === 'department head' || user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
         ] : []),
@@ -343,6 +344,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                 <div className="relative" ref={notificationRef}>
                   <button 
                     onClick={toggleNotifications}
+                    aria-label="Toggle notifications"
+                    title="Notifications"
                     className="relative p-2 text-gray-400 hover:text-white transition-colors"
                   >
                     <Bell size={20} />
@@ -360,6 +363,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                         <h3 className="text-white font-semibold">Notifications</h3>
                         <button 
                           onClick={() => setNotificationsOpen(false)}
+                          aria-label="Close notifications"
+                          title="Close notifications"
                           className="text-gray-400 hover:text-white transition-colors"
                         >
                           <X size={18} />

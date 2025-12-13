@@ -1,18 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { LeavesController } from './controllers/leaves.controller';
+
+import { LeaveRequestController } from './controllers/leave-request.controller';            
+
+    
+
+
 
 describe('LeavesController', () => {
-  let controller: LeavesController;
+  let controller: LeaveRequestController;
+
+
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [LeavesController],
+      controllers: [LeaveRequestController],
     }).compile();
 
-    controller = module.get<LeavesController>(LeavesController);
+    controller = module.get<LeaveRequestController>(LeaveRequestController);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
-  });
-});
+  });;;;;
+});;;
