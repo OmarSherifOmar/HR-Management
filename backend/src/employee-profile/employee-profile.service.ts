@@ -115,6 +115,19 @@ async findById(id: string): Promise<EmployeeProfileDocument | null> {
     }
 }
 
+async findByPrimaryPositionId(positionId: string): Promise<EmployeeProfileDocument | null> {
+    if (!positionId || !Types.ObjectId.isValid(positionId)) return null;
+
+    try {
+        const employee = await this.employeeModel
+            .findOne({ primaryPositionId: new Types.ObjectId(positionId) })
+            .exec();
+        return employee;
+    } catch (error) {
+        return null;
+    }
+}
+
  async getMyProfile(userId: string) {
     const employee = await this.findById(userId);
 

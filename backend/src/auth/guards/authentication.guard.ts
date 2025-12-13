@@ -12,7 +12,9 @@ dotenv.config();
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     // Check if route is marked as @Public()
@@ -33,11 +35,14 @@ export class AuthGuard implements CanActivate {
 
     try {
       const decoded: any = verify(token, String(process.env.JWT_SECRET));
-      // Fix: payload is at root level, not in decoded.user
+      // Set user properties that controllers expect
       req['user'] = {
-        employeeId: decoded.sub,
+        _id: decoded.sub,
+        sub: decoded.sub,
+        id: decoded.sub,
         employeeNumber: decoded.employeeNumber,
         roles: decoded.roles,
+        role: decoded.roles?.[0],
         username: decoded.username,
       };
       return true;
