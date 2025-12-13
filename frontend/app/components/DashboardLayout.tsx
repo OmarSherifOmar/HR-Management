@@ -192,6 +192,9 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         ...(user?.role === 'HR Admin' ? [
           { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
           { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
+          { name: 'Admin: Parameters', href: '/dashboard/admin/parameters' },
+          { name: 'Admin: Special Absence Types', href: '/dashboard/admin/special-absence' },
+          { name: 'Admin: Leave Year Config', href: '/dashboard/admin/leave-year' },
           { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
           { name: 'Admin: Personalized Entitlements', href: '/dashboard/admin/personalized-entitlements' },
           { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },

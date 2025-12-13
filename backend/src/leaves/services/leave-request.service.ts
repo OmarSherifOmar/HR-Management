@@ -172,8 +172,77 @@ export class LeaveRequestService {
       }
     }
 
-    // 12. Determine initial approval flow based on employee's manager
-    const approvalFlow = await this.buildApprovalFlow(employeeId);
+    // 11.5 Enforce special absence rules (cumulative tracking, occurrence tracking)
+    const specialAbsenceRule = policy?.eligibility?.specialAbsenceRule;
+    if (specialAbsenceRule) {
+      // Check cumulative tracking (e.g., sick leave over 3 years: max 360 days)
+      if (specialAbsenceRule.trackCumulatively && specialAbsenceRule.cumulativeMaxDays) {
+        const cumulativePeriodYears = specialAbsenceRule.cumulativePeriodYears || 3;
+        const periodStartDate = new Date();
+        periodStartDate.setFullYear(periodStartDate.getFullYear() - cumulativePeriodYears);
+
+        // Count total days taken in the cumulative period
+        const cumulativeTaken = await this.leaveRequestModel.aggregate([
+          {
+            $match: {
+              employeeId: new Types.ObjectId(employeeId),
+              leaveTypeId: new Types.ObjectId(createDto.leaveTypeId),
+              status: { $in: [LeaveStatus.APPROVED, LeaveStatus.PENDING] },
+              'dates.from': { $gte: periodStartDate },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalDays: { $sum: '$durationDays' },
+            },
+          },
+        ]);
+
+        const totalCumulativeDays = (cumulativeTaken[0]?.totalDays || 0) + durationDays;
+        if (totalCumulativeDays > specialAbsenceRule.cumulativeMaxDays) {
+          throw new BadRequestException(
+            `Cumulative limit exceeded: ${specialAbsenceRule.cumulativeMaxDays} days allowed over ${cumulativePeriodYears} years. ` +
+            `You have used ${cumulativeTaken[0]?.totalDays || 0} days, requesting ${durationDays} days.`,
+          );
+        }
+        console.log(`Cumulative tracking: ${totalCumulativeDays}/${specialAbsenceRule.cumulativeMaxDays} days used`);
+      }
+
+      // Check occurrence tracking (e.g., maternity leave: max 3 times)
+      if (specialAbsenceRule.trackOccurrences && specialAbsenceRule.maxOccurrences) {
+        const occurrenceCount = await this.leaveRequestModel.countDocuments({
+          employeeId: new Types.ObjectId(employeeId),
+          leaveTypeId: new Types.ObjectId(createDto.leaveTypeId),
+          status: LeaveStatus.APPROVED,
+        });
+
+        if (occurrenceCount >= specialAbsenceRule.maxOccurrences) {
+          throw new BadRequestException(
+            `Maximum occurrences exceeded: ${specialAbsenceRule.maxOccurrences} times allowed. ` +
+            `You have already used this leave type ${occurrenceCount} times.`,
+          );
+        }
+        console.log(`Occurrence tracking: ${occurrenceCount + 1}/${specialAbsenceRule.maxOccurrences} occurrences`);
+      }
+    }
+
+    // 12. Determine initial approval flow based on policy configuration
+    const approvalFlow = await this.buildApprovalFlow(employeeId, policy);
+
+    // 12.5 Check for auto-approve threshold
+    const autoApproveUnderDays = policy?.eligibility?.approvalWorkflow?.autoApproveUnderDays;
+    let initialStatus = LeaveStatus.PENDING;
+    
+    if (autoApproveUnderDays && durationDays < autoApproveUnderDays) {
+      console.log(`Auto-approving leave request: ${durationDays} days < ${autoApproveUnderDays} days threshold`);
+      initialStatus = LeaveStatus.APPROVED;
+      // Mark all approval steps as approved
+      approvalFlow.forEach(step => {
+        step.status = 'approved';
+        step.decidedAt = new Date();
+      });
+    }
 
     // 13. Check for irregular pattern (e.g., Friday/Monday pattern)
     const irregularPatternFlag = this.checkIrregularPattern(fromDate, toDate);
@@ -192,7 +261,7 @@ export class LeaveRequestService {
         ? new Types.ObjectId(createDto.attachmentId)
         : undefined,
       approvalFlow,
-      status: LeaveStatus.PENDING,
+      status: initialStatus,
       irregularPatternFlag,
     });
 
@@ -1433,7 +1502,7 @@ export class LeaveRequestService {
    * 3. Find employee where primaryPositionId == supervisorPositionId → that's the manager
    * 4. HR step uses pool system - any HR Manager/Admin can process (decidedBy set when they act)
    */
-  private async buildApprovalFlow(employeeId: string): Promise<{
+  private async buildApprovalFlow(employeeId: string, policy: any): Promise<{
     role: string;
     status: string;
     decidedBy?: Types.ObjectId;
@@ -1446,26 +1515,88 @@ export class LeaveRequestService {
       decidedAt?: Date;
     }[] = [];
 
+    // Get approval workflow configuration from policy
+    const approvalWorkflow = policy?.eligibility?.approvalWorkflow || {};
+    const requiresSupervisorApproval = approvalWorkflow.requiresSupervisorApproval !== false; // default true
+    const requiresHRApproval = approvalWorkflow.requiresHRApproval !== false; // default true
+    const approvalLevels = approvalWorkflow.approvalLevels || [];
+
     // Get employee to find their supervisor position
     const employee = await this.employeeService.findById(employeeId);
     console.log('Employee:', employeeId, 'supervisorPositionId:', employee?.supervisorPositionId);
+    console.log('Approval workflow config:', { requiresSupervisorApproval, requiresHRApproval, approvalLevels: approvalLevels.length });
 
-    // 1. Find Direct Manager
-    let directManagerId: Types.ObjectId | undefined;
+    // Add approval levels based on configuration
+    if (approvalLevels.length > 0) {
+      // Use configured multi-level approval
+      for (const level of approvalLevels) {
+        if (level.type === 'supervisor' || level.type === 'manager') {
+          // Find Direct Manager
+          let directManagerId: Types.ObjectId | undefined;
+          if (employee?.supervisorPositionId) {
+            const positionIdStr = employee.supervisorPositionId.toString();
+            console.log('Looking for manager with primaryPositionId:', positionIdStr);
+            const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
+            console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
+            if (manager?._id) {
+              directManagerId = manager._id as Types.ObjectId;
+            }
+          }
+          approvalFlow.push({
+            role: level.type,
+            status: 'pending',
+            decidedBy: directManagerId,
+          });
+        } else if (level.type === 'hr') {
+          // Find HR Manager
+          const hrManager = await this.findHRManager();
+          approvalFlow.push({
+            role: 'hr',
+            status: 'pending',
+            decidedBy: hrManager || undefined,
+          });
+        } else if (level.type === 'department_head') {
+          // Department head approval
+          approvalFlow.push({
+            role: 'department_head',
+            status: 'pending',
+            decidedBy: undefined, // Will be determined based on department
+          });
+        }
+      }
+    } else {
+      // Use simple supervisor + HR approval flags
+      if (requiresSupervisorApproval) {
+        // 1. Find Direct Manager
+        let directManagerId: Types.ObjectId | undefined;
+        if (employee?.supervisorPositionId) {
+          const positionIdStr = employee.supervisorPositionId.toString();
+          console.log('Looking for manager with primaryPositionId:', positionIdStr);
+          const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
+          console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
+          if (manager?._id) {
+            directManagerId = manager._id as Types.ObjectId;
+          }
+        }
+        approvalFlow.push({
+          role: 'direct_manager',
+          status: 'pending',
+          decidedBy: directManagerId,
+        });
+      }
 
-    if (employee?.supervisorPositionId) {
-      // Find the employee whose primaryPositionId matches this supervisorPositionId
-      const positionIdStr = employee.supervisorPositionId.toString();
-      console.log('Looking for manager with primaryPositionId:', positionIdStr);
-      
-      const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
-      console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
-
-      if (manager?._id) {
-        directManagerId = manager._id as Types.ObjectId;
+      if (requiresHRApproval) {
+        // 2. Find HR Manager
+        const hrManager = await this.findHRManager();
+        approvalFlow.push({
+          role: 'hr_manager',
+          status: 'pending',
+          decidedBy: hrManager || undefined,
+        });
       }
     }
 
+<<<<<<< HEAD
     approvalFlow.push({
       role: 'direct_manager',
       status: 'pending',
@@ -1479,6 +1610,9 @@ export class LeaveRequestService {
       decidedBy: undefined, // Will be set when HR actually processes the request
     });
 
+=======
+    console.log('Built approval flow:', approvalFlow.map(step => step.role));
+>>>>>>> 1847f81afdf0d9a38013ea722aa4746c03b44312
     return approvalFlow;
   }
 
