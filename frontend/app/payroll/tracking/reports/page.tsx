@@ -34,7 +34,8 @@ export default function ReportsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole") || "";
+    const userStr = localStorage.getItem("user");
+    const role = userStr ? JSON.parse(userStr).role || "" : "";
     const adminRoles = [
       "admin",
       "system_admin",
@@ -103,19 +104,19 @@ export default function ReportsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-[#1a1a2e] p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h3 className="text-yellow-800 font-semibold mb-2">
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+            <h3 className="text-yellow-400 font-semibold mb-2">
               Access Restricted
             </h3>
-            <p className="text-yellow-600">
+            <p className="text-yellow-300">
               Payroll reports are only available to authorized personnel
               (Payroll Specialists, Managers, Finance Staff, and System Admins).
             </p>
             <Link
               href="/payroll/tracking"
-              className="mt-4 inline-block px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              className="mt-4 inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
             >
               ← Back to Tracking
             </Link>
@@ -127,67 +128,65 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-teal-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading reports...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading reports...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2">
               Payroll Reports
             </h1>
-            <p className="text-lg text-gray-600">
-              Generate and view payroll analytics
-            </p>
+            <p className="text-gray-400">Generate and view payroll analytics</p>
           </div>
           <Link
             href="/payroll/tracking"
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
             ← Back to Tracking
           </Link>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm mb-2">Total Gross Payroll</p>
-            <p className="text-3xl font-bold text-teal-600">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-[#232340] rounded-xl p-5 border border-gray-700/50">
+            <p className="text-gray-400 text-sm mb-1">Total Gross Payroll</p>
+            <p className="text-2xl font-bold text-teal-400">
               {formatCurrency(overallTotals.totalGross)}
             </p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm mb-2">Total Net Payroll</p>
-            <p className="text-3xl font-bold text-green-600">
+          <div className="bg-[#232340] rounded-xl p-5 border border-gray-700/50">
+            <p className="text-gray-400 text-sm mb-1">Total Net Payroll</p>
+            <p className="text-2xl font-bold text-green-400">
               {formatCurrency(overallTotals.totalNet)}
             </p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm mb-2">Total Payslips</p>
-            <p className="text-3xl font-bold text-gray-900">
+          <div className="bg-[#232340] rounded-xl p-5 border border-gray-700/50">
+            <p className="text-gray-400 text-sm mb-1">Total Payslips</p>
+            <p className="text-2xl font-bold text-white">
               {overallTotals.count}
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6 overflow-hidden">
+        <div className="bg-[#232340] rounded-xl mb-6 overflow-hidden border border-gray-700/50">
           <div className="flex">
             <button
               onClick={() => setActiveTab("payroll")}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === "payroll"
                   ? "bg-teal-600 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "text-gray-400 hover:bg-[#2a2a4a]"
               }`}
             >
               📊 Payroll Summary
@@ -197,7 +196,7 @@ export default function ReportsPage() {
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === "department"
                   ? "bg-teal-600 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "text-gray-400 hover:bg-[#2a2a4a]"
               }`}
             >
               🏢 Department Reports
@@ -207,9 +206,9 @@ export default function ReportsPage() {
 
         {/* Payroll Summary Tab */}
         {activeTab === "payroll" && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-[#232340] rounded-xl p-6 border border-gray-700/50">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-white">
                 Payroll Run Summary
               </h2>
               <div className="flex items-center gap-4">
@@ -217,11 +216,11 @@ export default function ReportsPage() {
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <button
                   onClick={fetchPayrollReports}
-                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                 >
                   Filter
                 </button>
@@ -229,15 +228,15 @@ export default function ReportsPage() {
             </div>
 
             {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">{error}</p>
+              <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p className="text-red-400">{error}</p>
               </div>
             )}
 
             {payrollReports.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📊</div>
-                <p className="text-gray-600 text-lg">No payroll data found</p>
+                <p className="text-gray-400 text-lg">No payroll data found</p>
                 <p className="text-gray-500 mt-2">
                   Payroll summaries will appear here after payroll runs are
                   processed
@@ -245,51 +244,54 @@ export default function ReportsPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-700/50">
+                  <thead className="bg-[#1a1a2e]">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Payroll Run ID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Total Gross
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Total Net
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Payslips Count
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Avg. Net Per Employee
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-700/50">
                     {payrollReports.map((report) => (
-                      <tr key={report._id} className="hover:bg-gray-50">
+                      <tr
+                        key={report._id}
+                        className="hover:bg-[#2a2a4a] transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-white">
                             {report._id || "N/A"}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-teal-600">
+                          <div className="text-sm font-semibold text-teal-400">
                             {formatCurrency(report.totalGross)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-green-600">
+                          <div className="text-sm font-semibold text-green-400">
                             {formatCurrency(report.totalNet)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-white">
                             {report.count}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-400">
                             {report.count > 0
                               ? formatCurrency(report.totalNet / report.count)
                               : "-"}
@@ -306,9 +308,9 @@ export default function ReportsPage() {
 
         {/* Department Reports Tab */}
         {activeTab === "department" && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-[#232340] rounded-xl p-6 border border-gray-700/50">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
+              <h2 className="text-xl font-bold text-white mb-4">
                 Department Payroll Report
               </h2>
               <div className="flex items-center gap-4">
@@ -317,7 +319,7 @@ export default function ReportsPage() {
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
                   placeholder="Enter Department ID"
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 w-64"
+                  className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 w-64"
                 />
                 <button
                   onClick={() => {
@@ -325,7 +327,7 @@ export default function ReportsPage() {
                       fetchDepartmentReport(selectedDepartment);
                     }
                   }}
-                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                   disabled={!selectedDepartment}
                 >
                   Generate Report
@@ -338,36 +340,36 @@ export default function ReportsPage() {
                 {departmentReports.map((report, idx) => (
                   <div
                     key={idx}
-                    className="border border-gray-200 rounded-lg p-6"
+                    className="border border-gray-700/50 rounded-xl p-6 bg-[#1a1a2e]"
                   >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="text-lg font-semibold text-white mb-4">
                       {report.departmentName ||
                         `Department ${report.departmentId}`}
                     </h3>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Total Employees</span>
-                        <span className="font-medium">
+                        <span className="text-gray-400">Total Employees</span>
+                        <span className="font-medium text-white">
                           {report.totalEmployees}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Total Gross</span>
-                        <span className="font-medium text-teal-600">
+                        <span className="text-gray-400">Total Gross</span>
+                        <span className="font-medium text-teal-400">
                           {formatCurrency(report.totalGross)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Total Deductions</span>
-                        <span className="font-medium text-red-600">
+                        <span className="text-gray-400">Total Deductions</span>
+                        <span className="font-medium text-red-400">
                           {formatCurrency(report.totalDeductions)}
                         </span>
                       </div>
-                      <div className="flex justify-between border-t pt-3">
-                        <span className="text-gray-900 font-semibold">
+                      <div className="flex justify-between border-t border-gray-700/50 pt-3">
+                        <span className="text-white font-semibold">
                           Total Net
                         </span>
-                        <span className="font-bold text-green-600">
+                        <span className="font-bold text-green-400">
                           {formatCurrency(report.totalNet)}
                         </span>
                       </div>
@@ -378,7 +380,7 @@ export default function ReportsPage() {
             ) : (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🏢</div>
-                <p className="text-gray-600 text-lg">
+                <p className="text-gray-400 text-lg">
                   Enter a department ID to generate a report
                 </p>
               </div>
@@ -387,28 +389,28 @@ export default function ReportsPage() {
         )}
 
         {/* Export Options */}
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="mt-6 bg-[#232340] rounded-xl p-6 border border-gray-700/50">
+          <h3 className="text-lg font-semibold text-white mb-4">
             Export Options
           </h3>
           <div className="flex gap-4">
             <button
               onClick={() => alert("CSV export coming soon!")}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
             >
               <span>📥</span>
               Export as CSV
             </button>
             <button
               onClick={() => alert("PDF export coming soon!")}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
             >
               <span>📄</span>
               Export as PDF
             </button>
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
               <span>🖨️</span>
               Print Report

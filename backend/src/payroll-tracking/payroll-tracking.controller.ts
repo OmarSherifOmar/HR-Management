@@ -339,6 +339,30 @@ export class PayrollTrackingController {
     return await this.svc.listTaxDocumentsForEmployee(userId);
   }
 
+  @Get('tax-documents/mine/:year/download')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async downloadMyTaxDocument(
+    @Req() req: Request & { user?: { sub?: string } },
+    @Param('year') yearStr: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+
+    const year = parseInt(yearStr, 10);
+    if (isNaN(year)) throw new BadRequestException('Invalid year');
+
+    const csvBuffer = await this.svc.downloadTaxDocumentCsv(employeeId, year);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="tax_document_${year}.csv"`,
+    );
+
+    return csvBuffer;
+  }
+
   @Get('reports/payroll')
   @Roles(
     Role.PAYROLL_SPECIALIST,
@@ -409,6 +433,12 @@ export class PayrollTrackingController {
   @Roles(Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
   async getTransparency() {
     return this.svc.transparencySummary();
+  }
+
+  @Get('refunds/pending')
+  @Roles(Role.FINANCE_STAFF)
+  async getPendingRefunds() {
+    return this.svc.getPendingRefunds();
   }
 
   @Post('refunds')
@@ -562,5 +592,21 @@ export class PayrollTrackingController {
     const employeeId = req.user?.sub;
     if (!employeeId) throw new ForbiddenException('User ID missing in token');
     return this.svc.calculateUnpaidLeaveDeductions(employeeId);
+  }
+
+  @Get('me/salary-history')
+  async getMySalaryHistory(@Req() req: Request & { user?: { sub?: string } }) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getSalaryHistory(employeeId);
+  }
+
+  @Get('me/employer-contributions')
+  async getMyEmployerContributions(
+    @Req() req: Request & { user?: { sub?: string } },
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getEmployerContributions(employeeId);
   }
 }

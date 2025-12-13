@@ -252,38 +252,38 @@ export default function CalculationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading calculations...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading calculations...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2">
               Salary Calculations
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-gray-400">
               View detailed breakdowns of your salary and deductions
             </p>
           </div>
           <Link
             href="/payroll/tracking"
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
             ← Back to Tracking
           </Link>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6 overflow-hidden">
+        <div className="bg-[#232340] rounded-xl mb-6 overflow-hidden border border-gray-700/50">
           <div className="flex overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -292,7 +292,7 @@ export default function CalculationsPage() {
                 className={`flex-shrink-0 px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "bg-indigo-600 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-400 hover:bg-[#2a2a4a]"
                 }`}
               >
                 <span className="mr-2">{tab.icon}</span>
@@ -303,40 +303,40 @@ export default function CalculationsPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-[#232340] rounded-xl p-6 border border-gray-700/50">
           {/* Base Salary Tab */}
           {activeTab === "salary" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Base Salary Information
               </h2>
               {baseSalary ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-indigo-50 rounded-lg p-6">
-                    <p className="text-sm text-indigo-600 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-5">
+                    <p className="text-sm text-indigo-400 mb-1">
                       Your Base Salary
                     </p>
-                    <p className="text-3xl font-bold text-indigo-900">
+                    <p className="text-2xl font-bold text-indigo-300">
                       {formatCurrency(baseSalary.baseSalary)}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">Full-Time Base</p>
-                    <p className="text-3xl font-bold text-gray-900">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">Full-Time Base</p>
+                    <p className="text-2xl font-bold text-white">
                       {baseSalary.fullTimeBase
                         ? formatCurrency(baseSalary.fullTimeBase)
                         : "N/A"}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">Work Fraction</p>
-                    <p className="text-3xl font-bold text-gray-900">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">Work Fraction</p>
+                    <p className="text-2xl font-bold text-white">
                       {(baseSalary.fraction * 100).toFixed(0)}%
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Base salary information not available.
                 </p>
               )}
@@ -351,12 +351,12 @@ export default function CalculationsPage() {
           {/* Leave Compensation Tab */}
           {activeTab === "leave" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Leave Compensation Calculator
               </h2>
               <div className="mb-6 flex items-end gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Remaining Leave Days
                   </label>
                   <input
@@ -364,7 +364,7 @@ export default function CalculationsPage() {
                     value={remainingDays}
                     onChange={(e) => setRemainingDays(e.target.value)}
                     min="0"
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <button
@@ -375,32 +375,32 @@ export default function CalculationsPage() {
                 </button>
               </div>
               {leaveCompensation && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-green-50 rounded-lg p-6">
-                    <p className="text-sm text-green-600 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-5">
+                    <p className="text-sm text-green-400 mb-1">
                       Estimated Compensation
                     </p>
-                    <p className="text-3xl font-bold text-green-900">
+                    <p className="text-2xl font-bold text-green-300">
                       {formatCurrency(leaveCompensation.compensation)}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">Daily Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">Daily Rate</p>
+                    <p className="text-xl font-bold text-white">
                       {formatCurrency(leaveCompensation.dailyRate)}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">
                       Working Days/Month
                     </p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-xl font-bold text-white">
                       {leaveCompensation.workingDaysPerMonth}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">Base Salary</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">Base Salary</p>
+                    <p className="text-xl font-bold text-white">
                       {formatCurrency(leaveCompensation.baseSalary)}
                     </p>
                   </div>
@@ -417,27 +417,27 @@ export default function CalculationsPage() {
           {/* Transport Allowance Tab */}
           {activeTab === "commute" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Transport Allowance
               </h2>
               {commuteCompensation ? (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-blue-50 rounded-lg p-6">
-                      <p className="text-sm text-blue-600 mb-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-5">
+                      <p className="text-sm text-blue-400 mb-1">
                         Monthly Allowance
                       </p>
-                      <p className="text-3xl font-bold text-blue-900">
+                      <p className="text-2xl font-bold text-blue-300">
                         {formatCurrency(
                           commuteCompensation.monthlyTransportAllowance
                         )}
                       </p>
                     </div>
-                    <div className="bg-blue-50 rounded-lg p-6">
-                      <p className="text-sm text-blue-600 mb-2">
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-5">
+                      <p className="text-sm text-blue-400 mb-1">
                         Annual Allowance
                       </p>
-                      <p className="text-3xl font-bold text-blue-900">
+                      <p className="text-2xl font-bold text-blue-300">
                         {formatCurrency(
                           commuteCompensation.annualTransportAllowance
                         )}
@@ -445,31 +445,34 @@ export default function CalculationsPage() {
                     </div>
                   </div>
                   {commuteCompensation.breakdown.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <div className="rounded-xl overflow-hidden border border-gray-700/50">
+                      <table className="min-w-full divide-y divide-gray-700/50">
+                        <thead className="bg-[#1a1a2e]">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Name
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Amount
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Source
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-700/50">
                           {commuteCompensation.breakdown.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="px-6 py-4 text-sm text-gray-900">
+                            <tr
+                              key={idx}
+                              className="hover:bg-[#2a2a4a] transition-colors"
+                            >
+                              <td className="px-6 py-4 text-sm text-white">
                                 {item.name}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-900">
+                              <td className="px-6 py-4 text-sm text-white">
                                 {formatCurrency(item.amount)}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600">
+                              <td className="px-6 py-4 text-sm text-gray-400">
                                 {item.source}
                               </td>
                             </tr>
@@ -480,7 +483,7 @@ export default function CalculationsPage() {
                   )}
                 </>
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Transport allowance information not available.
                 </p>
               )}
@@ -495,23 +498,23 @@ export default function CalculationsPage() {
           {/* Tax Deductions Tab */}
           {activeTab === "taxes" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Tax Deductions
               </h2>
               {taxBreakdown ? (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-red-50 rounded-lg p-6">
-                      <p className="text-sm text-red-600 mb-2">Total Tax</p>
-                      <p className="text-3xl font-bold text-red-900">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5">
+                      <p className="text-sm text-red-400 mb-1">Total Tax</p>
+                      <p className="text-2xl font-bold text-red-300">
                         {formatCurrency(taxBreakdown.totalTax)}
                       </p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <p className="text-sm text-gray-600 mb-2">
+                    <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                      <p className="text-sm text-gray-400 mb-1">
                         Taxable Income
                       </p>
-                      <p className="text-3xl font-bold text-gray-900">
+                      <p className="text-2xl font-bold text-white">
                         {taxBreakdown.taxableIncome
                           ? formatCurrency(taxBreakdown.taxableIncome)
                           : "N/A"}
@@ -519,37 +522,40 @@ export default function CalculationsPage() {
                     </div>
                   </div>
                   {taxBreakdown.taxes.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <div className="rounded-xl overflow-hidden border border-gray-700/50">
+                      <table className="min-w-full divide-y divide-gray-700/50">
+                        <thead className="bg-[#1a1a2e]">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Tax Type
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Amount
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Rate
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Rule/Reference
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-700/50">
                           {taxBreakdown.taxes.map((tax, idx) => (
-                            <tr key={idx}>
-                              <td className="px-6 py-4 text-sm text-gray-900">
+                            <tr
+                              key={idx}
+                              className="hover:bg-[#2a2a4a] transition-colors"
+                            >
+                              <td className="px-6 py-4 text-sm text-white">
                                 {tax.name}
                               </td>
-                              <td className="px-6 py-4 text-sm font-medium text-red-600">
+                              <td className="px-6 py-4 text-sm font-medium text-red-400">
                                 {formatCurrency(tax.amount)}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600">
+                              <td className="px-6 py-4 text-sm text-gray-400">
                                 {tax.rate ? `${tax.rate}%` : "N/A"}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                              <td className="px-6 py-4 text-sm text-gray-400 max-w-xs truncate">
                                 {tax.rule || "-"}
                               </td>
                             </tr>
@@ -560,7 +566,7 @@ export default function CalculationsPage() {
                   )}
                 </>
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Tax breakdown information not available.
                 </p>
               )}
@@ -575,27 +581,27 @@ export default function CalculationsPage() {
           {/* Insurance Tab */}
           {activeTab === "insurance" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Insurance Contributions
               </h2>
               {insuranceBreakdown ? (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-teal-50 rounded-lg p-6">
-                      <p className="text-sm text-teal-600 mb-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-5">
+                      <p className="text-sm text-teal-400 mb-1">
                         Your Contributions
                       </p>
-                      <p className="text-3xl font-bold text-teal-900">
+                      <p className="text-2xl font-bold text-teal-300">
                         {formatCurrency(
                           insuranceBreakdown.totalEmployeeContributions
                         )}
                       </p>
                     </div>
-                    <div className="bg-teal-50 rounded-lg p-6">
-                      <p className="text-sm text-teal-600 mb-2">
+                    <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-5">
+                      <p className="text-sm text-teal-400 mb-1">
                         Employer Contributions
                       </p>
-                      <p className="text-3xl font-bold text-teal-900">
+                      <p className="text-2xl font-bold text-teal-300">
                         {formatCurrency(
                           insuranceBreakdown.totalEmployerContributions
                         )}
@@ -603,37 +609,40 @@ export default function CalculationsPage() {
                     </div>
                   </div>
                   {insuranceBreakdown.insurances.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <div className="rounded-xl overflow-hidden border border-gray-700/50">
+                      <table className="min-w-full divide-y divide-gray-700/50">
+                        <thead className="bg-[#1a1a2e]">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Insurance Type
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Employee Share
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Employer Share
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Total
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-700/50">
                           {insuranceBreakdown.insurances.map((ins, idx) => (
-                            <tr key={idx}>
-                              <td className="px-6 py-4 text-sm text-gray-900">
+                            <tr
+                              key={idx}
+                              className="hover:bg-[#2a2a4a] transition-colors"
+                            >
+                              <td className="px-6 py-4 text-sm text-white">
                                 {ins.name}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600">
+                              <td className="px-6 py-4 text-sm text-gray-400">
                                 {formatCurrency(ins.employeeShare)}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600">
+                              <td className="px-6 py-4 text-sm text-gray-400">
                                 {formatCurrency(ins.employerShare)}
                               </td>
-                              <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                              <td className="px-6 py-4 text-sm font-medium text-white">
                                 {formatCurrency(ins.total)}
                               </td>
                             </tr>
@@ -644,7 +653,7 @@ export default function CalculationsPage() {
                   )}
                 </>
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Insurance breakdown information not available.
                 </p>
               )}
@@ -659,45 +668,48 @@ export default function CalculationsPage() {
           {/* Misconduct Deductions Tab */}
           {activeTab === "misconduct" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Misconduct Deductions
               </h2>
               {misconductDeductions ? (
                 <>
-                  <div className="bg-orange-50 rounded-lg p-6 mb-6">
-                    <p className="text-sm text-orange-600 mb-2">
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-5 mb-6">
+                    <p className="text-sm text-orange-400 mb-1">
                       Total Deductions
                     </p>
-                    <p className="text-3xl font-bold text-orange-900">
+                    <p className="text-2xl font-bold text-orange-300">
                       {formatCurrency(misconductDeductions.total)}
                     </p>
                   </div>
                   {misconductDeductions.items.length > 0 ? (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <div className="rounded-xl overflow-hidden border border-gray-700/50">
+                      <table className="min-w-full divide-y divide-gray-700/50">
+                        <thead className="bg-[#1a1a2e]">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Type
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Amount
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                               Reason
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-700/50">
                           {misconductDeductions.items.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="px-6 py-4 text-sm text-gray-900">
+                            <tr
+                              key={idx}
+                              className="hover:bg-[#2a2a4a] transition-colors"
+                            >
+                              <td className="px-6 py-4 text-sm text-white">
                                 {item.name}
                               </td>
-                              <td className="px-6 py-4 text-sm font-medium text-orange-600">
+                              <td className="px-6 py-4 text-sm font-medium text-orange-400">
                                 {formatCurrency(item.amount)}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600">
+                              <td className="px-6 py-4 text-sm text-gray-400">
                                 {item.reason || "-"}
                               </td>
                             </tr>
@@ -706,13 +718,13 @@ export default function CalculationsPage() {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-gray-600">
+                    <p className="text-gray-400">
                       No misconduct deductions found.
                     </p>
                   )}
                 </>
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Misconduct deductions information not available.
                 </p>
               )}
@@ -727,36 +739,36 @@ export default function CalculationsPage() {
           {/* Unpaid Leave Tab */}
           {activeTab === "unpaid" && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-xl font-bold text-white mb-6">
                 Unpaid Leave Deductions
               </h2>
               {unpaidLeaveDeductions ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-purple-50 rounded-lg p-6">
-                    <p className="text-sm text-purple-600 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-5">
+                    <p className="text-sm text-purple-400 mb-1">
                       Total Deduction
                     </p>
-                    <p className="text-3xl font-bold text-purple-900">
+                    <p className="text-2xl font-bold text-purple-300">
                       {formatCurrency(unpaidLeaveDeductions.totalDeduction)}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">
                       Unpaid Leave Days
                     </p>
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-white">
                       {unpaidLeaveDeductions.unpaidLeaveDays}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-sm text-gray-600 mb-2">Daily Rate</p>
-                    <p className="text-3xl font-bold text-gray-900">
+                  <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
+                    <p className="text-sm text-gray-400 mb-1">Daily Rate</p>
+                    <p className="text-2xl font-bold text-white">
                       {formatCurrency(unpaidLeaveDeductions.dailyRate)}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Unpaid leave deductions information not available.
                 </p>
               )}

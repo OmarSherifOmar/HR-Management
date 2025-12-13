@@ -161,6 +161,90 @@ export class PayrollTrackingService {
     private readonly allowanceModel: Model<allowanceDocument>,
   ) {}
 
+  /**
+   * Get salary history for an employee - all payslips with salary information
+   */
+  async getSalaryHistory(employeeId: string) {
+    const slips = await this.payslipModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    return slips.map((p) => ({
+      _id: p._id,
+      month: p.createdAt?.toISOString?.().slice(0, 7),
+      year: p.createdAt?.getFullYear(),
+      generatedAt: p.createdAt,
+      paymentStatus: p.paymentStatus,
+      baseSalary: p.earningsDetails?.baseSalary ?? 0,
+      grossSalary: p.totalGrossSalary,
+      totalDeductions: p.totaDeductions ?? 0,
+      netPay: p.netPay,
+      allowances: p.earningsDetails?.allowances ?? [],
+      bonuses: p.earningsDetails?.bonuses ?? [],
+    }));
+  }
+
+  /**
+   * Get employer contributions (insurance employer share) for an employee
+   */
+  async getEmployerContributions(employeeId: string) {
+    const slips = await this.payslipModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    if (slips.length === 0) {
+      return {
+        history: [],
+        latestMonth: null,
+        totalEmployerContributions: 0,
+        note: 'No payslips found for employee',
+      };
+    }
+
+    const history = slips.map((slip) => {
+      const insurances = slip.deductionsDetails?.insurances ?? [];
+      const contributions = insurances.map((ins: Record<string, unknown>) => {
+        const amount = (ins.amount as number) ?? 0;
+        const employerRate = (ins.employerRate as number) ?? 0;
+        const employeeRate = (ins.employeeRate as number) ?? 0;
+        const totalRate = employerRate + employeeRate;
+        // Calculate employer's share based on rates
+        const employerShare =
+          totalRate > 0 ? (amount * employerRate) / employeeRate : 0;
+
+        return {
+          name: (ins.name as string) ?? 'Insurance',
+          employeeShare: Math.round(amount * 100) / 100,
+          employerShare: Math.round(employerShare * 100) / 100,
+          employerRate,
+          employeeRate,
+        };
+      });
+
+      const totalEmployer = contributions.reduce(
+        (sum, c) => sum + c.employerShare,
+        0,
+      );
+
+      return {
+        payslipId: slip._id,
+        month: slip.createdAt?.toISOString?.().slice(0, 7),
+        year: slip.createdAt?.getFullYear(),
+        contributions,
+        totalEmployerContributions: Math.round(totalEmployer * 100) / 100,
+      };
+    });
+
+    return {
+      history,
+      latestMonth: history[0]?.month ?? null,
+      totalEmployerContributions: history[0]?.totalEmployerContributions ?? 0,
+      note: 'Employer contributions are the portion paid by the company for insurance/benefits',
+    };
+  }
+
   async getPayslipsForEmployee(employeeId: string) {
     const slips = await this.payslipModel
       .find({ employeeId: new Types.ObjectId(employeeId) })
@@ -254,6 +338,55 @@ export class PayrollTrackingService {
         ) ?? 0,
       generatedAt: slip.createdAt,
     }));
+  }
+
+  /**
+   * Generate a CSV for tax documents for a specific year
+   */
+  async downloadTaxDocumentCsv(employeeId: string, year: number) {
+    const slips = await this.payslipModel
+      .find({
+        employeeId: new Types.ObjectId(employeeId),
+      })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    // Filter by year
+    const yearSlips = slips.filter(
+      (slip) => slip.createdAt?.getFullYear() === year,
+    );
+
+    if (yearSlips.length === 0) {
+      throw new NotFoundException(`No tax records found for year ${year}`);
+    }
+
+    // Build CSV content
+    const rows: string[] = [];
+    rows.push('Tax Year,Pay Period,Tax Type,Amount,Generated Date');
+
+    let totalWithheld = 0;
+    for (const slip of yearSlips) {
+      const payPeriod = slip.createdAt?.toISOString().slice(0, 7) ?? 'N/A';
+      const generatedDate = slip.createdAt?.toISOString().slice(0, 10) ?? 'N/A';
+      const taxes = slip.deductionsDetails?.taxes ?? [];
+
+      for (const tax of taxes) {
+        const taxRecord = tax as Record<string, unknown>;
+        const rawName = taxRecord.name;
+        const taxName = typeof rawName === 'string' ? rawName : 'Tax';
+        const taxAmount = Number(taxRecord.amount ?? 0);
+        totalWithheld += taxAmount;
+        rows.push(
+          `${year},${payPeriod},${taxName},${taxAmount.toFixed(2)},${generatedDate}`,
+        );
+      }
+    }
+
+    // Add total row
+    rows.push('');
+    rows.push(`TOTAL TAX WITHHELD FOR ${year},,,$${totalWithheld.toFixed(2)},`);
+
+    return Buffer.from(rows.join('\n'), 'utf-8');
   }
 
   async getClaimsForEmployee(employeeId: string) {

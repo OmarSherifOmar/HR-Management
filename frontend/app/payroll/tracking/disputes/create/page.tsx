@@ -37,11 +37,18 @@ export default function CreateDisputePage() {
         `http://localhost:3000/payroll-tracking/me/payslips`,
         { credentials: "include" }
       );
-      if (!response.ok) throw new Error("Failed to fetch payslips");
+      console.log("Payslips response status:", response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to fetch payslips:", errorText);
+        throw new Error("Failed to fetch payslips");
+      }
       const data = await response.json();
+      console.log("Fetched payslips:", data);
       setPayslips(data);
     } catch (err) {
       console.error("Error fetching payslips:", err);
+      setError("Failed to load payslips. Please make sure you are logged in.");
     } finally {
       setLoadingPayslips(false);
     }
@@ -106,24 +113,24 @@ export default function CreateDisputePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold text-white mb-2">
             Raise a Dispute
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-300">
             Report discrepancies in your payroll
           </p>
         </div>
 
         {/* Warning Message */}
-        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-semibold text-yellow-900 mb-2">
+        <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+          <h3 className="font-semibold text-yellow-300 mb-2">
             ⚠️ Before You Submit
           </h3>
-          <p className="text-sm text-yellow-800">
+          <p className="text-sm text-yellow-200">
             Please ensure you have reviewed your payslip carefully. Disputes
             should only be raised for genuine discrepancies such as incorrect
             calculations, missing allowances, or unauthorized deductions.
@@ -132,46 +139,59 @@ export default function CreateDisputePage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800">{error}</p>
+          <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+            <p className="text-red-400">{error}</p>
           </div>
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-[#16213e] rounded-xl shadow-lg p-6 border border-gray-700">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Select Payslip */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Select Payslip <span className="text-red-500">*</span>
               </label>
               {loadingPayslips ? (
-                <p className="text-gray-500">Loading payslips...</p>
+                <p className="text-gray-400">Loading payslips...</p>
+              ) : payslips.length === 0 ? (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                  <p className="text-yellow-300">
+                    No payslips found. You need at least one payslip to create a
+                    dispute.
+                  </p>
+                  <Link
+                    href="/payroll/tracking/payslips"
+                    className="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block"
+                  >
+                    Go to Payslips →
+                  </Link>
+                </div>
               ) : (
                 <select
                   name="payslipId"
                   value={formData.payslipId}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-[#1a1a2e] border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
                   <option value="">-- Select a payslip --</option>
                   {payslips.map((slip) => (
                     <option key={slip._id} value={slip._id}>
-                      {slip.month} - Net Pay: $
+                      {slip.month || "Unknown date"} - Net Pay: $
                       {slip.netPay?.toLocaleString() || 0}
                     </option>
                   ))}
                 </select>
               )}
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-400">
                 Select the payslip you want to dispute
               </p>
             </div>
 
             {/* Disputed Amount (Optional) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Disputed Amount (USD){" "}
                 <span className="text-gray-400">(Optional)</span>
               </label>
@@ -183,16 +203,16 @@ export default function CreateDisputePage() {
                 step="0.01"
                 min="0.01"
                 placeholder="0.00"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-[#1a1a2e] border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-400">
                 Enter the amount in question if applicable
               </p>
             </div>
 
             {/* Reason */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Reason for Dispute <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -201,20 +221,20 @@ export default function CreateDisputePage() {
                 onChange={handleChange}
                 rows={6}
                 placeholder="Please describe the issue in detail. Include specific items, expected amounts vs actual amounts, and any supporting information..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-[#1a1a2e] border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                 required
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-400">
                 Be as specific as possible to help us investigate quickly
               </p>
             </div>
 
             {/* Common Dispute Types */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+              <h3 className="font-semibold text-blue-400 mb-3">
                 Common Dispute Categories
               </h3>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+              <div className="grid grid-cols-2 gap-2 text-sm text-blue-300">
                 <div>• Incorrect base salary</div>
                 <div>• Missing allowances</div>
                 <div>• Wrong tax deductions</div>
@@ -231,13 +251,13 @@ export default function CreateDisputePage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                className="flex-1 px-6 py-3 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed font-medium shadow-lg"
               >
                 {loading ? "Submitting..." : "Submit Dispute"}
               </button>
               <Link
                 href="/payroll/tracking/disputes"
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                className="px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-colors font-medium shadow-lg"
               >
                 Cancel
               </Link>
@@ -246,8 +266,8 @@ export default function CreateDisputePage() {
         </div>
 
         {/* Process Timeline */}
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">
+        <div className="mt-6 bg-[#16213e] rounded-xl shadow-lg p-6 border border-gray-700">
+          <h3 className="font-semibold text-white mb-4">
             Dispute Resolution Process
           </h3>
           <div className="space-y-4">
@@ -256,8 +276,8 @@ export default function CreateDisputePage() {
                 1
               </div>
               <div>
-                <p className="font-medium text-gray-900">Submit Dispute</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-white">Submit Dispute</p>
+                <p className="text-sm text-gray-300">
                   Your dispute is logged in our system
                 </p>
               </div>
@@ -267,8 +287,8 @@ export default function CreateDisputePage() {
                 2
               </div>
               <div>
-                <p className="font-medium text-gray-900">Specialist Review</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-white">Specialist Review</p>
+                <p className="text-sm text-gray-300">
                   Payroll specialist investigates (2-3 days)
                 </p>
               </div>
@@ -278,8 +298,8 @@ export default function CreateDisputePage() {
                 3
               </div>
               <div>
-                <p className="font-medium text-gray-900">Manager Approval</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-white">Manager Approval</p>
+                <p className="text-sm text-gray-300">
                   Manager reviews and approves resolution
                 </p>
               </div>
@@ -289,8 +309,8 @@ export default function CreateDisputePage() {
                 4
               </div>
               <div>
-                <p className="font-medium text-gray-900">Resolution</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-white">Resolution</p>
+                <p className="text-sm text-gray-300">
                   Refund processed in next payroll cycle
                 </p>
               </div>

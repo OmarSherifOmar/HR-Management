@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
+import { FiSend, FiEye, FiCheckCircle, FiXCircle } from "react-icons/fi";
 
 interface Claim {
   _id: string;
@@ -22,18 +23,14 @@ interface Claim {
 }
 
 export default function ClaimDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const claimId = params?.claimId as string;
 
   const [claim, setClaim] = useState<Claim | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [employeeId, setEmployeeId] = useState<string>("");
 
   useEffect(() => {
-    const storedEmployeeId = localStorage.getItem("employeeId") || "";
-    setEmployeeId(storedEmployeeId);
     if (claimId) {
       fetchClaimDetail(claimId);
     } else {
@@ -263,8 +260,8 @@ export default function ClaimDetailPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Timeline</h2>
           <div className="space-y-4">
             <div className="flex items-start">
-              <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                1
+              <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                <FiSend className="text-lg" />
               </div>
               <div className="ml-4 flex-1">
                 <p className="font-semibold text-gray-900">Claim Submitted</p>
@@ -276,8 +273,8 @@ export default function ClaimDetailPage() {
 
             {claim.status !== "PENDING" && (
               <div className="flex items-start">
-                <div className="flex-shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
-                  2
+                <div className="flex-shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white">
+                  <FiEye className="text-lg" />
                 </div>
                 <div className="ml-4 flex-1">
                   <p className="font-semibold text-gray-900">Under Review</p>
@@ -291,9 +288,13 @@ export default function ClaimDetailPage() {
                 <div
                   className={`flex-shrink-0 w-10 h-10 ${
                     claim.status === "APPROVED" ? "bg-green-500" : "bg-red-500"
-                  } rounded-full flex items-center justify-center text-white font-bold`}
+                  } rounded-full flex items-center justify-center text-white`}
                 >
-                  3
+                  {claim.status === "APPROVED" ? (
+                    <FiCheckCircle className="text-lg" />
+                  ) : (
+                    <FiXCircle className="text-lg" />
+                  )}
                 </div>
                 <div className="ml-4 flex-1">
                   <p className="font-semibold text-gray-900">

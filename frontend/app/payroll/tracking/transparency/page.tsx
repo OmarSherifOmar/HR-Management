@@ -21,7 +21,8 @@ export default function TransparencyPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole") || "";
+    const userStr = localStorage.getItem("user");
+    const role = userStr ? JSON.parse(userStr).role || "" : "";
     const authorizedRoles = [
       "admin",
       "system_admin",
