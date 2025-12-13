@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AttendanceRecord } from '../models/attendance-record.schema';
@@ -39,6 +39,7 @@ export class PolicyService {
     private readonly shiftService: ShiftService,
     private readonly holidayService: HolidayService,
     private readonly shiftAssignmentService: ShiftAssignmentService,
+    @Inject(forwardRef(() => AttendanceService))
     private readonly attendanceService: AttendanceService,
     private readonly correctionsService: CorrectionService,
     private readonly notificationService: NotificationService,

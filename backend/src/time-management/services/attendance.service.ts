@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AttendanceRecord, AttendanceRecordDocument } from '../models/attendance-record.schema';
@@ -23,6 +23,7 @@ export class AttendanceService {
     private readonly shiftService: ShiftService,
     private readonly holidayService: HolidayService,
     private readonly shiftAssignmentService: ShiftAssignmentService,
+    @Inject(forwardRef(() => PolicyService))
     private readonly policyService: PolicyService,
   ) {}
 
@@ -41,7 +42,7 @@ export class AttendanceService {
     // find or create today's attendance record by punches range
     let record = await this.attendanceModel.findOne({ employeeId, 'punches.time': { $gte: start, $lte: end } });
     if (!record) {
-      record = new this.attendanceModel({ employeeId, punches: [] });
+      record = new this.attendanceModel({ employeeId, date: start, punches: [] });
     }
 
     // TODO integrate policies

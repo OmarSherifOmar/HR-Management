@@ -159,7 +159,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: 'Time Management',
       icon: <Clock size={20} />,
       subItems: [
-        { name: 'Attendance', href: '/dashboard/time-management' },
+        { name: 'Attendance', href: '/dashboard/time-management/attendance' },
         { name: 'Schedules', href: '/dashboard/time-management/schedules' },
         { name: 'Overtime', href: '/dashboard/time-management/overtime' },
       ],
