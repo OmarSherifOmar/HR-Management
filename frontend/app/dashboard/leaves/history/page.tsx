@@ -148,6 +148,16 @@ export default function LeavesHistoryDashboard() {
 
   const filteredHistory = applyFiltersAndSort();
 
+  const filtersActive = (
+    filterType !== 'all' ||
+    filterStatus !== 'all' ||
+    Boolean(filterDept.trim()) ||
+    Boolean(dateFrom) ||
+    Boolean(dateTo) ||
+    sortBy !== 'date' ||
+    sortOrder !== 'desc'
+  );
+
   if (loading) {
     return (
       <DashboardLayout title="Leave History" description="Your past requests and balance overview">
@@ -262,7 +272,7 @@ export default function LeavesHistoryDashboard() {
               />
             </div>
 
-            <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-3 mt-3">
               <input
                 aria-label="Filter by department"
                 title="Filter by department"
@@ -295,10 +305,13 @@ export default function LeavesHistoryDashboard() {
               </div>
 
               <button
+                aria-label="Clear filters"
+                title="Clear filters"
                 onClick={() => { setFilterType('all'); setFilterStatus('all'); setDateFrom(''); setDateTo(''); setFilterDept(''); setSortBy('date'); setSortOrder('desc'); }}
-                className="ml-auto text-sm text-gray-400 hover:text-white"
+                className={`ml-auto px-3 py-2 text-sm rounded ${filtersActive ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-transparent text-gray-500 cursor-not-allowed'}`}
+                disabled={!filtersActive}
               >
-                Reset
+                Clear
               </button>
             </div>
           </div>
