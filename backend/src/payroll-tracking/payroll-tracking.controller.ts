@@ -302,6 +302,14 @@ export class PayrollTrackingController {
     return this.svc.getClaimsForEmployee(userId);
   }
 
+  @Get('disputes/mine')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async getMyDisputes(@Req() req: AuthenticatedRequest) {
+    const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.listDisputes({ employeeId: userId });
+  }
+
   @Get('claims/:id')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
   async getMyClaimById(
@@ -487,22 +495,23 @@ export class PayrollTrackingController {
   async downloadMyPayslip(
     @Req() req: Request & { user?: { sub?: string } },
     @Param('id') payslipId: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const employeeId = req.user?.sub;
     if (!employeeId) throw new ForbiddenException('User ID missing in token');
 
-    const csvBuffer = await this.svc.downloadPayslipCsv(employeeId, payslipId);
-    if (!csvBuffer)
+    const pdfBuffer = await this.svc.generatePayslipPdf(employeeId, payslipId);
+    if (!pdfBuffer || !pdfBuffer.length)
       throw new NotFoundException('Payslip not found or access denied');
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="payslip_${payslipId}.csv"`,
+      `attachment; filename="payslip_${payslipId}.pdf"`,
     );
 
-    return csvBuffer;
+    // Send raw PDF bytes so the client receives a downloadable PDF file.
+    res.end(pdfBuffer);
   }
 
   @Get('me/base-salary')

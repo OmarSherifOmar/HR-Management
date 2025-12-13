@@ -33,6 +33,7 @@ import {
   allowance,
   allowanceDocument,
 } from '../payroll-configuration/models/allowance.schema';
+import PDFDocument from 'pdfkit';
 
 import { PayrollReportQueryDto } from './dto/payroll-report-query.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
@@ -523,12 +524,21 @@ export class PayrollTrackingService {
     if (filter?.status) {
       if (
         !Object.values(DisputeStatus).includes(filter.status as DisputeStatus)
-      )
+      ) {
         throw new BadRequestException(
           `Invalid dispute status: ${filter.status}`,
         );
+      }
       query.status = filter.status as DisputeStatus;
     }
+
+    if (filter?.employeeId) {
+      if (!Types.ObjectId.isValid(filter.employeeId)) {
+        throw new BadRequestException('Invalid employee id');
+      }
+      query.employeeId = new Types.ObjectId(filter.employeeId);
+    }
+
     return this.disputeModel.find(query).sort({ createdAt: -1 }).lean();
   }
 
@@ -726,20 +736,191 @@ export class PayrollTrackingService {
     return refund.toObject();
   }
 
-  async downloadPayslipCsv(employeeId: string, slipId: string) {
+  async getPayslipsForEmployee(employeeId: string) {
+    const slips = await this.payslipModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    return slips.map((p) => ({
+      _id: p._id,
+      month: p.createdAt?.toISOString?.().slice(0, 7),
+      generatedAt: p.createdAt,
+      paymentStatus: p.paymentStatus,
+      grossSalary: p.totalGrossSalary,
+      totalDeductions: p.totaDeductions ?? 0,
+      netPay: p.netPay,
+    }));
+  }
+
+  async listTaxDocumentsForEmployee(employeeId: string | null) {
+    if (!employeeId) return [];
+    const slips = await this.payslipModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    return slips.map((slip) => ({
+      payrollRunId: slip.payrollRunId?.toString() ?? null,
+      taxYear: slip.createdAt?.getFullYear() ?? new Date().getFullYear(),
+      totalTaxWithheld:
+        slip.deductionsDetails?.taxes?.reduce(
+          (sum, t) => sum + (t.amount ?? 0),
+          0,
+        ) ?? 0,
+      generatedAt: slip.createdAt,
+    }));
+  }
+
+  async generateTaxDocumentsPdf(employeeId: string | null): Promise<Buffer> {
+    const docs = await this.listTaxDocumentsForEmployee(employeeId);
+
+    if (!docs.length) {
+      throw new NotFoundException('No tax documents found for employee');
+    }
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      doc.fontSize(18).text('Tax Documents Summary', { align: 'center' }).moveDown();
+
+      doc.fontSize(12).text('Year  |  Total Tax Withheld').moveDown(0.5);
+
+      for (const d of docs) {
+        doc.text(`${d.taxYear}  |  ${d.totalTaxWithheld}`);
+      }
+
+      doc.end();
+    });
+  }
+
+  async getPayslipById(employeeId: string, slipId: string) {
+    let slip: LeanPayslip | null = null;
+
+    // Support special keyword "latest" so routes like
+    // /payroll-tracking/me/payslips/latest and
+    // /payroll-tracking/me/payslips/latest/download work without 500 errors.
+    if (slipId === 'latest') {
+      slip = await this.payslipModel
+        .findOne({ employeeId: new Types.ObjectId(employeeId) })
+        .sort({ createdAt: -1 })
+        .lean<LeanPayslip>();
+    } else {
+      if (!Types.ObjectId.isValid(slipId)) {
+        throw new BadRequestException('Invalid payslip id');
+      }
+
+      slip = await this.payslipModel
+        .findOne({
+          _id: new Types.ObjectId(slipId),
+          employeeId: new Types.ObjectId(employeeId),
+        })
+        .lean<LeanPayslip>();
+    }
+
+    if (!slip) throw new NotFoundException('Payslip not found');
+
+    const employee = await this.employeeModel
+      .findById(employeeId)
+      .populate<{
+        payGradeId: PopulatedPayGrade | null;
+      }>({ path: 'payGradeId' })
+      .lean<PopulatedEmployee>();
+
+    const dispute = await this.disputeModel
+      .findOne({ payslipId: slip._id })
+      .lean<{
+        disputeId: string;
+        status: string;
+        description: string;
+        resolutionComment?: string;
+        rejectionReason?: string;
+        updatedAt?: Date;
+      }>();
+
+    return {
+      _id: slip._id,
+      month: slip.createdAt.toISOString().slice(0, 7),
+      generatedAt: slip.createdAt,
+      paymentStatus: slip.paymentStatus,
+      contractType: employee?.contractType ?? null,
+      workType: employee?.workType ?? null,
+      baseSalary: slip.earningsDetails?.baseSalary ?? 0,
+      grossSalary: slip.totalGrossSalary,
+      totalDeductions: slip.totaDeductions ?? 0,
+      netPay: slip.netPay,
+      allowances: slip.earningsDetails?.allowances ?? [],
+      bonuses: slip.earningsDetails?.bonuses ?? [],
+      benefits: slip.earningsDetails?.benefits ?? [],
+      refunds: slip.earningsDetails?.refunds ?? [],
+      taxes: slip.deductionsDetails?.taxes ?? [],
+      insurances: slip.deductionsDetails?.insurances ?? [],
+      penalties: slip.deductionsDetails?.penalties ?? null,
+      unpaidLeaveDays: slip.deductionsDetails?.penalties?.unpaidLeaveDays ?? 0,
+      dispute: dispute
+        ? {
+            disputeId: dispute.disputeId,
+            status: dispute.status,
+            description: dispute.description,
+            resolutionComment: dispute.resolutionComment ?? null,
+            rejectionReason: dispute.rejectionReason ?? null,
+            updatedAt: dispute.updatedAt ?? null,
+          }
+        : null,
+    };
+  }
+
+  async generatePayslipPdf(employeeId: string, slipId: string): Promise<Buffer> {
     const slip = await this.getPayslipById(employeeId, slipId);
 
-    const lines = [
-      'Field,Value',
-      `Month,${slip.month}`,
-      `Status,${slip.paymentStatus}`,
-      `Base Salary,${slip.baseSalary}`,
-      `Gross Salary,${slip.grossSalary}`,
-      `Total Deductions,${slip.totalDeductions}`,
-      `Net Pay,${slip.netPay}`,
-    ];
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
 
-    return Buffer.from(lines.join('\n'), 'utf8');
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      doc.fontSize(18).text('Payslip', { align: 'center' }).moveDown();
+
+      doc.fontSize(12);
+      doc.text(`Month: ${slip.month}`);
+      doc.text(`Status: ${slip.paymentStatus}`);
+      doc.moveDown();
+      doc.text(`Base Salary: ${slip.baseSalary}`);
+      doc.text(`Gross Salary: ${slip.grossSalary}`);
+      doc.text(`Total Deductions: ${slip.totalDeductions}`);
+      doc.text(`Net Pay: ${slip.netPay}`);
+
+      doc.end();
+    });
   }
 
   async getBaseSalaryForEmployee(employeeId: string) {
