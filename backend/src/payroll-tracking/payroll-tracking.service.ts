@@ -330,6 +330,61 @@ export class PayrollTrackingService {
     return claim.toObject();
   }
 
+  /**
+   * Get disputes for a specific employee
+   */
+  async getDisputesForEmployee(employeeId: string) {
+    if (!Types.ObjectId.isValid(employeeId)) {
+      throw new BadRequestException('Invalid employee id');
+    }
+    return this.disputeModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean();
+  }
+
+  /**
+   * Get a single dispute by id for an employee (validates ownership)
+   */
+  async getDisputeByIdForEmployee(employeeId: string, disputeId: string) {
+    if (!Types.ObjectId.isValid(employeeId)) {
+      throw new BadRequestException('Invalid employee id');
+    }
+    if (!Types.ObjectId.isValid(disputeId)) {
+      throw new BadRequestException('Invalid dispute id');
+    }
+
+    const dispute = await this.disputeModel.findById(disputeId).lean();
+    if (!dispute) {
+      throw new NotFoundException('Dispute not found');
+    }
+
+    // Verify the dispute belongs to the employee
+    if (dispute.employeeId.toString() !== employeeId) {
+      throw new ForbiddenException(
+        'You do not have permission to view this dispute',
+      );
+    }
+
+    return dispute;
+  }
+
+  /**
+   * Get a dispute by ID (for admins)
+   */
+  async getDisputeById(disputeId: string) {
+    if (!Types.ObjectId.isValid(disputeId)) {
+      throw new BadRequestException('Invalid dispute id');
+    }
+
+    const dispute = await this.disputeModel.findById(disputeId).lean();
+    if (!dispute) {
+      throw new NotFoundException('Dispute not found');
+    }
+
+    return dispute;
+  }
+
   async listDisputes(filter?: { status?: string }) {
     const query: { status?: DisputeStatus } = {};
     if (filter?.status) {

@@ -313,6 +313,25 @@ export class PayrollTrackingController {
     return this.svc.getClaimByIdForEmployee(userId, id);
   }
 
+  @Get('disputes/mine')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async getMyDisputes(@Req() req: AuthenticatedRequest) {
+    const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getDisputesForEmployee(userId);
+  }
+
+  @Get('disputes/mine/:id')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async getMyDisputeById(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getDisputeByIdForEmployee(userId, id);
+  }
+
   @Get('tax-documents/mine')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
   async getMyTaxDocs(@Req() req: AuthenticatedRequest) {
@@ -335,6 +354,12 @@ export class PayrollTrackingController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
   async listDisputes(@Query('status') status?: string) {
     return this.svc.listDisputes({ status });
+  }
+
+  @Get('disputes/:id')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  async getDisputeById(@Param('id') id: string) {
+    return this.svc.getDisputeById(id);
   }
 
   @Patch('disputes/:id')
