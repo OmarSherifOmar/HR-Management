@@ -186,6 +186,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
             { name: 'History', href: '/dashboard/leaves/history' },
         ...(user?.role === 'department head' || user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
+          { name: 'Team Balances', href: '/dashboard/leaves/team-balances' },
         ] : []),
         ...(user?.role === 'HR Admin' ? [
           { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
