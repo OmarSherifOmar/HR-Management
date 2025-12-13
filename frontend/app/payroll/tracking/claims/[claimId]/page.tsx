@@ -260,7 +260,7 @@ export default function ClaimDetailPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Timeline</h2>
           <div className="space-y-4">
             <div className="flex items-start">
-              <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
+              <div className="shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
                 <FiSend className="text-lg" />
               </div>
               <div className="ml-4 flex-1">
@@ -273,7 +273,7 @@ export default function ClaimDetailPage() {
 
             {claim.status !== "PENDING" && (
               <div className="flex items-start">
-                <div className="flex-shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white">
+                <div className="shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white">
                   <FiEye className="text-lg" />
                 </div>
                 <div className="ml-4 flex-1">
@@ -286,7 +286,7 @@ export default function ClaimDetailPage() {
             {["APPROVED", "REJECTED"].includes(claim.status) && (
               <div className="flex items-start">
                 <div
-                  className={`flex-shrink-0 w-10 h-10 ${
+                  className={`shrink-0 w-10 h-10 ${
                     claim.status === "APPROVED" ? "bg-green-500" : "bg-red-500"
                   } rounded-full flex items-center justify-center text-white`}
                 >

@@ -230,7 +230,7 @@ export default function DisputeDetailPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Timeline</h2>
           <div className="space-y-4">
             <div className="flex items-start">
-              <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              <div className="shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
                 1
               </div>
               <div className="ml-4 flex-1">
@@ -243,7 +243,7 @@ export default function DisputeDetailPage() {
 
             {dispute.payrollSpecialistId && (
               <div className="flex items-start">
-                <div className="flex-shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
+                <div className="shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
                   2
                 </div>
                 <div className="ml-4 flex-1">
@@ -259,7 +259,7 @@ export default function DisputeDetailPage() {
 
             {dispute.payrollManagerId && (
               <div className="flex items-start">
-                <div className="flex-shrink-0 w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                <div className="shrink-0 w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
                   3
                 </div>
                 <div className="ml-4 flex-1">
@@ -276,7 +276,7 @@ export default function DisputeDetailPage() {
             {["APPROVED", "REJECTED"].includes(dispute.status) && (
               <div className="flex items-start">
                 <div
-                  className={`flex-shrink-0 w-10 h-10 ${
+                  className={`shrink-0 w-10 h-10 ${
                     dispute.status === "APPROVED"
                       ? "bg-green-500"
                       : "bg-red-500"

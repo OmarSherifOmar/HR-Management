@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 interface BaseSalaryData {
   baseSalary: number;
@@ -82,9 +81,7 @@ interface UnpaidLeaveDeductions {
 }
 
 export default function CalculationsPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("salary");
 
   // Data states
@@ -105,27 +102,26 @@ export default function CalculationsPage() {
   const [remainingDays, setRemainingDays] = useState<string>("5");
 
   useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          fetchBaseSalary(),
+          fetchCommuteCompensation(),
+          fetchTaxBreakdown(),
+          fetchInsuranceBreakdown(),
+          fetchMisconductDeductions(),
+          fetchUnpaidLeaveDeductions(),
+        ]);
+      } catch (err) {
+        console.error("Failed to fetch calculations:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAllData();
   }, []);
-
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([
-        fetchBaseSalary(),
-        fetchCommuteCompensation(),
-        fetchTaxBreakdown(),
-        fetchInsuranceBreakdown(),
-        fetchMisconductDeductions(),
-        fetchUnpaidLeaveDeductions(),
-      ]);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchBaseSalary = async () => {
     try {
@@ -289,7 +285,7 @@ export default function CalculationsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`shrink-0 px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "bg-indigo-600 text-white"
                     : "text-gray-400 hover:bg-[#2a2a4a]"
