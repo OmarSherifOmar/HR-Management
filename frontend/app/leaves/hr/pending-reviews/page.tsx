@@ -73,6 +73,12 @@ export default function HRPendingReviewsPage() {
   const [allowNegativeBalance, setAllowNegativeBalance] = useState(false);
   const [rejectedRequests, setRejectedRequests] = useState<LeaveRequest[]>([]);
   const [showRejectedTab, setShowRejectedTab] = useState(false);
+  
+  // Bulk action states
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | null>(null);
+  const [bulkComments, setBulkComments] = useState('');
 
   useEffect(() => {
     fetchPendingRequests();
@@ -237,6 +243,110 @@ export default function HRPendingReviewsPage() {
     }
   };
 
+  // Bulk action handlers
+  const handleSelectAll = () => {
+    const currentList = showRejectedTab ? rejectedRequests : leaveRequests;
+    if (selectedRequests.size === currentList.length) {
+      setSelectedRequests(new Set());
+    } else {
+      setSelectedRequests(new Set(currentList.map(req => req._id)));
+    }
+  };
+
+  const handleSelectRequest = (requestId: string) => {
+    const newSelected = new Set(selectedRequests);
+    if (newSelected.has(requestId)) {
+      newSelected.delete(requestId);
+    } else {
+      newSelected.add(requestId);
+    }
+    setSelectedRequests(newSelected);
+  };
+
+  const openBulkModal = (action: 'approve' | 'reject') => {
+    setBulkAction(action);
+    setShowBulkModal(true);
+    setBulkComments('');
+  };
+
+  const handleBulkApprove = async () => {
+    try {
+      setActionLoading(true);
+      const response = await authenticatedFetch(
+        'http://localhost:3000/leave-requests/hr/bulk-finalize',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            requestIds: Array.from(selectedRequests),
+            comments: bulkComments 
+          }),
+        }
+      );
+
+      if (response.ok) {
+        await fetchPendingRequests();
+        setSelectedRequests(new Set());
+        setShowBulkModal(false);
+        setBulkComments('');
+        setBulkAction(null);
+      } else {
+        const result = await response.json();
+        setError(result.message || 'Failed to approve requests');
+      }
+    } catch (err) {
+      setError('An error occurred while approving requests');
+      console.error('Error bulk approving:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    try {
+      setActionLoading(true);
+      const response = await authenticatedFetch(
+        'http://localhost:3000/leave-requests/hr/bulk-reject',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            requestIds: Array.from(selectedRequests),
+            comments: bulkComments 
+          }),
+        }
+      );
+
+      if (response.ok) {
+        await fetchPendingRequests();
+        setSelectedRequests(new Set());
+        setShowBulkModal(false);
+        setBulkComments('');
+        setBulkAction(null);
+      } else {
+        const result = await response.json();
+        setError(result.message || 'Failed to reject requests');
+      }
+    } catch (err) {
+      setError('An error occurred while rejecting requests');
+      console.error('Error bulk rejecting:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const confirmBulkAction = () => {
+    if (bulkAction === 'approve') {
+      handleBulkApprove();
+    } else if (bulkAction === 'reject') {
+      handleBulkReject();
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -318,6 +428,48 @@ export default function HRPendingReviewsPage() {
           </div>
         )}
 
+        {/* Bulk Actions Bar */}
+        {!showRejectedTab && leaveRequests.length > 0 && (
+          <div className="bg-[#2a2a2a] rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedRequests.size === leaveRequests.length && leaveRequests.length > 0}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-gray-600 bg-[#1a1a1a] text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                  />
+                  <span className="text-gray-300 text-sm font-medium">
+                    Select All ({selectedRequests.size} selected)
+                  </span>
+                </label>
+              </div>
+              
+              {selectedRequests.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openBulkModal('approve')}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <CheckCircle size={18} />
+                    <span>Finalize Selected ({selectedRequests.size})</span>
+                  </button>
+                  <button
+                    onClick={() => openBulkModal('reject')}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <XCircle size={18} />
+                    <span>Reject Selected ({selectedRequests.size})</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Leave Requests List */}
         {loading ? (
           <div className="bg-[#2a2a2a] rounded-lg p-12 text-center">
@@ -340,10 +492,23 @@ export default function HRPendingReviewsPage() {
           <div className="grid grid-cols-1 gap-4">
             {(showRejectedTab ? rejectedRequests : leaveRequests).map((request) => {
               const managerApproval = getManagerApprovalStatus(request);
+              const isSelected = selectedRequests.has(request._id);
               
               return (
-                <div key={request._id} className="bg-[#2a2a2a] rounded-lg p-6 hover:bg-[#333333] transition-colors">
-                  <div className="flex items-start justify-between">
+                <div key={request._id} className={`bg-[#2a2a2a] rounded-lg p-6 hover:bg-[#333333] transition-colors ${isSelected && !showRejectedTab ? 'ring-2 ring-blue-500' : ''}`}>
+                  <div className="flex items-start gap-4">
+                    {/* Checkbox for bulk selection - only show for pending reviews */}
+                    {!showRejectedTab && (
+                      <div className="pt-1">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectRequest(request._id)}
+                          className="w-5 h-5 rounded border-gray-600 bg-[#1a1a1a] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    
                     <div className="flex-1">
                       {/* Employee Info */}
                       <div className="flex items-center gap-3 mb-3">
@@ -447,7 +612,7 @@ export default function HRPendingReviewsPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex flex-col gap-2">
                       {showRejectedTab ? (
                         <button
                           onClick={() => openActionModal('override', request)}
@@ -575,6 +740,69 @@ export default function HRPendingReviewsPage() {
                       ? 'Override'
                       : 'Rejection'
                   }`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Action Modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#2a2a2a] rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold text-white mb-4">
+              {bulkAction === 'approve' ? 'Bulk Finalize & Approve' : 'Bulk Reject'} Leave Requests
+            </h3>
+            
+            <div className="mb-4">
+              <p className="text-gray-300 mb-2">
+                {bulkAction === 'approve' 
+                  ? `Are you sure you want to finalize and approve ${selectedRequests.size} leave request(s)? This will deduct days from the employees' balances.`
+                  : `Are you sure you want to reject ${selectedRequests.size} leave request(s)?`
+                }
+              </p>
+              
+              <div className="mt-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                  <MessageSquare size={16} />
+                  Comments {bulkAction === 'reject' && <span className="text-red-500">*</span>}
+                </label>
+                <textarea
+                  value={bulkComments}
+                  onChange={(e) => setBulkComments(e.target.value)}
+                  placeholder={bulkAction === 'reject' ? 'Please provide a reason for rejection' : 'Add optional comments (will be applied to all selected requests)'}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 resize-none"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowBulkModal(false);
+                  setBulkAction(null);
+                  setBulkComments('');
+                }}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBulkAction}
+                disabled={actionLoading || (bulkAction === 'reject' && !bulkComments.trim())}
+                className={`flex-1 px-4 py-2 ${
+                  bulkAction === 'approve' 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-red-600 hover:bg-red-700'
+                } text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {actionLoading ? (
+                  <Loader className="animate-spin mx-auto" size={20} />
+                ) : (
+                  `Confirm ${bulkAction === 'approve' ? 'Approval' : 'Rejection'} (${selectedRequests.size})`
                 )}
               </button>
             </div>

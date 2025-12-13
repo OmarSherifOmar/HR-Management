@@ -181,7 +181,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       icon: <Calendar size={20} />,
       subItems: [
         { name: 'Requests', href: '/leaves' },
-        { name: 'New Request', href: '/leaves/new-request' },
         { name: 'My Balance', href: '/leaves/balance' },
         ...(user?.role === 'department head' || user?.role === 'HR Manager' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },

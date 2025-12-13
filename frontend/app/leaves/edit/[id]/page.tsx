@@ -128,14 +128,20 @@ export default function EditLeaveRequestPage() {
       
       if (response.ok) {
         const result = await response.json();
-        const types = result.data.balances.map((balance: any) => ({
-          id: balance.leaveType.id,
-          name: balance.leaveType.name,
-          code: balance.leaveType.code,
-          remaining: balance.remaining,
-          requiresAttachment: balance.leaveType.requiresAttachment,
-          attachmentType: balance.leaveType.attachmentType
-        }));
+        const types = result.data.balances.map((balance: any) => {
+          // Calculate available balance based on accrued days (not full yearly entitlement)
+          const accruedBalance = balance.accrued + balance.carryForward;
+          const availableBalance = accruedBalance - balance.taken - balance.pending;
+          
+          return {
+            id: balance.leaveTypeId,
+            name: balance.leaveTypeName,
+            code: balance.leaveTypeCode,
+            remaining: Math.max(0, availableBalance),
+            requiresAttachment: balance.requiresAttachment,
+            attachmentType: balance.attachmentType
+          };
+        });
         setLeaveTypes(types);
       }
     } catch (err: any) {
