@@ -40,7 +40,7 @@ interface Notification {
 }
 
 export default function DashboardLayout({ children, title, description }: DashboardLayoutProps) {
-  const { user, isLoggedIn, isLoading, logout } = useAuth();
+  const { user, isLoggedIn, isLoading, logout, permissions, hasPermission } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
@@ -180,25 +180,51 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: 'Leaves',
       icon: <Calendar size={20} />,
       subItems: [
-        { name: 'Requests', href: '/leaves' },
-        { name: 'My Balance', href: '/leaves/balance' },
-        ...(user?.role === 'department head' || user?.role === 'HR Manager' ? [
+        // Basic items - always show for all users (fallback if permissions not loaded)
+        ...(hasPermission('request_own_leave') || permissions.length === 0 ? [
+          { name: 'My Requests', href: '/leaves' },
+        ] : []),
+        ...(hasPermission('view_own_leave') || permissions.length === 0 ? [
+          { name: 'My Balance', href: '/leaves/balance' },
+        ] : []),
+        
+        // Approval permissions - with role fallback
+        ...(hasPermission('approve_team_leave') || hasPermission('approve_department_leave') || user?.role === 'department head' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
         ] : []),
-        ...(user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
+        ...(hasPermission('approve_all_leave') || user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
           { name: 'HR Reviews', href: '/leaves/hr/pending-reviews' },
         ] : []),
-        ...(user?.role === 'HR Admin' ? [
+        
+        // HR Admin section - with role fallback to ensure HR Admin always sees these
+        ...(hasPermission('adjust_balances') || user?.role === 'HR Admin' ? [
+          { name: 'Admin: Balance Adjustments', href: '/dashboard/admin/balance-adjustments' },
+        ] : []),
+        ...(hasPermission('audit_leave_actions') || user?.role === 'HR Admin' ? [
+          { name: 'Admin: Audit Log', href: '/dashboard/admin/audit-log' },
+        ] : []),
+        ...(hasPermission('manage_leave_roles') || user?.role === 'HR Admin' ? [
+          { name: 'Admin: Role Management', href: '/dashboard/admin/role-management' },
+        ] : []),
+        ...(hasPermission('manage_leave_policies') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
+        ] : []),
+        ...(hasPermission('manage_leave_types') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
           { name: 'Admin: Parameters', href: '/dashboard/admin/parameters' },
           { name: 'Admin: Special Absence Types', href: '/dashboard/admin/special-absence' },
           { name: 'Admin: Leave Year Config', href: '/dashboard/admin/leave-year' },
           { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
+        ] : []),
+        ...(hasPermission('manage_entitlements') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Personalized Entitlements', href: '/dashboard/admin/personalized-entitlements' },
-          { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
-          { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
           { name: 'Admin: Entitlements', href: '/dashboard/admin/entitlements' },
+        ] : []),
+        ...(hasPermission('manage_calendar') || user?.role === 'HR Admin' ? [
+          { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
+        ] : []),
+        ...(user?.role === 'HR Admin' ? [
+          { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
         ] : []),
       ],
     },

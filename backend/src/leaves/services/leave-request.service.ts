@@ -17,6 +17,7 @@ import { LeaveStatus } from '../enums/leave-status.enum';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
 import { SystemRole } from '../../employee-profile/enums/employee-profile.enums';
 import { LeavesNotificationService } from './leaves-notification.service';
+import { CalendarService } from './calendar.service';
 
 /**
  * Leave Request Service
@@ -47,6 +48,7 @@ export class LeaveRequestService {
     @InjectModel(Attachment.name) private attachmentModel: Model<AttachmentDocument>,
     private employeeService: EmployeeService,
     private notificationService: LeavesNotificationService,
+    private calendarService: CalendarService,
   ) {}
 
   // ==================== SUBMIT NEW LEAVE REQUEST (REQ-015) ====================
@@ -96,7 +98,18 @@ export class LeaveRequestService {
       throw new BadRequestException('Start date cannot be after end date');
     }
 
-    // 5. Check retroactive submission limit
+    // 5. Check if dates fall within blocked periods
+    const blockedDates = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
+    if (blockedDates.length > 0) {
+      const blockedDatesList = blockedDates.map(bd => 
+        `${bd.date.toLocaleDateString()} (${bd.reason})`
+      ).join(', ');
+      throw new BadRequestException(
+        `Cannot submit leave request for blocked dates: ${blockedDatesList}`,
+      );
+    }
+
+    // 6. Check retroactive submission limit
     const daysDiff = Math.floor((today.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
     if (daysDiff > this.maxRetroactiveDays) {
       throw new BadRequestException(
@@ -104,7 +117,7 @@ export class LeaveRequestService {
       );
     }
 
-    // 6. Check minimum notice days (if policy exists and leave is in future)
+    // 7. Check minimum notice days (if policy exists and leave is in future)
     if (policy?.minNoticeDays && fromDate > today) {
       const noticeDays = Math.floor((fromDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       if (noticeDays < policy.minNoticeDays) {
@@ -114,20 +127,20 @@ export class LeaveRequestService {
       }
     }
 
-    // 7. Calculate duration in business days
+    // 8. Calculate duration in business days
     const durationDays = this.calculateBusinessDays(fromDate, toDate);
     if (durationDays < 0.5) {
       throw new BadRequestException('Leave duration must be at least half a day');
     }
 
-    // 8. Check maximum consecutive days
+    // 9. Check maximum consecutive days
     if (policy?.maxConsecutiveDays && durationDays > policy.maxConsecutiveDays) {
       throw new BadRequestException(
         `Maximum consecutive days for this leave type is ${policy.maxConsecutiveDays}`,
       );
     }
 
-    // 8. Check for overlapping approved leaves
+    // 10. Check for overlapping approved leaves
     const overlapping = await this.checkOverlappingLeaves(employeeId, fromDate, toDate);
     if (overlapping.length > 0) {
       throw new BadRequestException(
@@ -135,7 +148,7 @@ export class LeaveRequestService {
       );
     }
 
-    // 9. Validate entitlement balance (if leave type is deductible)
+    // 11. Validate entitlement balance (if leave type is deductible)
     if (leaveType.deductible) {
       const entitlement = await this.entitlementModel.findOne({
         employeeId: new Types.ObjectId(employeeId),
@@ -160,14 +173,14 @@ export class LeaveRequestService {
       }
     }
 
-    // 10. Validate attachment if required
+    // 12. Validate attachment if required
     if (leaveType.requiresAttachment && !createDto.attachmentId) {
       throw new BadRequestException(
         `This leave type requires an attachment (${leaveType.attachmentType || 'document'})`,
       );
     }
 
-    // 11. Validate attachment exists if provided
+    // 13. Validate attachment exists if provided
     if (createDto.attachmentId) {
       const attachment = await this.attachmentModel.findById(createDto.attachmentId);
       if (!attachment) {
@@ -175,7 +188,7 @@ export class LeaveRequestService {
       }
     }
 
-    // 11.5 Enforce special absence rules (cumulative tracking, occurrence tracking)
+    // 14. Enforce special absence rules (cumulative tracking, occurrence tracking)
     const specialAbsenceRule = policy?.eligibility?.specialAbsenceRule;
     if (specialAbsenceRule) {
       // Check cumulative tracking (e.g., sick leave over 3 years: max 360 days)
@@ -230,10 +243,10 @@ export class LeaveRequestService {
       }
     }
 
-    // 12. Determine initial approval flow based on policy configuration
+    // 15. Determine initial approval flow based on policy configuration
     const approvalFlow = await this.buildApprovalFlow(employeeId, policy);
 
-    // 12.5 Check for auto-approve threshold
+    // 16. Check for auto-approve threshold
     const autoApproveUnderDays = policy?.eligibility?.approvalWorkflow?.autoApproveUnderDays;
     let initialStatus = LeaveStatus.PENDING;
     
@@ -247,10 +260,10 @@ export class LeaveRequestService {
       });
     }
 
-    // 13. Check for irregular pattern (e.g., Friday/Monday pattern)
+    // 17. Check for irregular pattern (e.g., Friday/Monday pattern)
     const irregularPatternFlag = this.checkIrregularPattern(fromDate, toDate);
 
-    // 15. Create the leave request
+    // 18. Create the leave request
     const leaveRequest = new this.leaveRequestModel({
       employeeId: new Types.ObjectId(employeeId),
       leaveTypeId: new Types.ObjectId(createDto.leaveTypeId),
@@ -381,6 +394,17 @@ export class LeaveRequestService {
 
       if (fromDate > toDate) {
         throw new BadRequestException('Start date cannot be after end date');
+      }
+
+      // Check if dates fall within blocked periods
+      const blockedDates = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
+      if (blockedDates.length > 0) {
+        const blockedDatesList = blockedDates.map(bd => 
+          `${bd.date.toLocaleDateString()} (${bd.reason})`
+        ).join(', ');
+        throw new BadRequestException(
+          `Cannot modify leave request to include blocked dates: ${blockedDatesList}`,
+        );
       }
 
       // Check for overlapping leaves (excluding this request)

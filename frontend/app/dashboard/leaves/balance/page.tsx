@@ -44,10 +44,17 @@ export default function MyBalancePage() {
 
       const result = await response.json();
       
+      console.log('=== API Response ===');
+      console.log('Full result:', result);
+      console.log('result.data?.balances:', result.data?.balances);
+      
       // Handle different response structures
       if (result.balances) {
+        console.log('Setting balances from result.balances');
         setBalances(result.balances);
       } else if (result.data?.balances) {
+        console.log('Setting balances from result.data.balances');
+        console.log('First balance:', result.data.balances[0]);
         setBalances(result.data.balances);
       } else {
         console.error('Unexpected response structure:', result);
