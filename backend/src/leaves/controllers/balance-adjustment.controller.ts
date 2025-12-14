@@ -6,11 +6,35 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 import { authorizationGuard } from '../../auth/guards/authorization.guard';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
+
+// Extended Request interface with user property
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    employeeNumber?: string;
+    role?: string;
+    roles?: string[];
+    username?: string;
+  };
+}
+
+/**
+ * Helper to extract and validate HR user ID from request
+ */
+function getHRUserId(req: AuthenticatedRequest): string {
+  const userId = req.user?.sub;
+  if (!userId) {
+    throw new UnauthorizedException('User not authenticated');
+  }
+  return userId;
+}
 import {
   BalanceAdjustmentService,
   BalanceAdjustmentInput,
@@ -42,6 +66,7 @@ export class BalanceAdjustmentController {
   @Post()
   @Roles(Role.HR_ADMIN)
   async adjustBalance(
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: {
       employeeId: string;
@@ -60,8 +85,7 @@ export class BalanceAdjustmentController {
       expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined,
     };
 
-    // TODO: Get actual HR user ID from request
-    const hrUserId = '000000000000000000000001';
+    const hrUserId = getHRUserId(req);
 
     return this.balanceAdjustmentService.adjustBalance(input, hrUserId);
   }
@@ -73,12 +97,12 @@ export class BalanceAdjustmentController {
   @Put('correct/:employeeId/:leaveTypeId')
   @Roles(Role.HR_ADMIN)
   async correctBalance(
+    @Req() req: AuthenticatedRequest,
     @Param('employeeId') employeeId: string,
     @Param('leaveTypeId') leaveTypeId: string,
     @Body() body: { correctBalance: number; description: string },
   ) {
-    // TODO: Get actual HR user ID from request
-    const hrUserId = '000000000000000000000001';
+    const hrUserId = getHRUserId(req);
 
     return this.balanceAdjustmentService.correctBalance(
       employeeId,
@@ -96,6 +120,7 @@ export class BalanceAdjustmentController {
   @Post('carry-over')
   @Roles(Role.HR_ADMIN)
   async processCarryOver(
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: {
       employeeId: string;
@@ -111,8 +136,7 @@ export class BalanceAdjustmentController {
       expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined,
     };
 
-    // TODO: Get actual HR user ID from request
-    const hrUserId = '000000000000000000000001';
+    const hrUserId = getHRUserId(req);
 
     return this.balanceAdjustmentService.processCarryOver(input, hrUserId);
   }
@@ -124,6 +148,7 @@ export class BalanceAdjustmentController {
   @Post('grant')
   @Roles(Role.HR_ADMIN)
   async grantOneTimeLeave(
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: {
       employeeId: string;
@@ -133,8 +158,7 @@ export class BalanceAdjustmentController {
       expiryDate?: string;
     },
   ) {
-    // TODO: Get actual HR user ID from request
-    const hrUserId = '000000000000000000000001';
+    const hrUserId = getHRUserId(req);
 
     return this.balanceAdjustmentService.grantOneTimeLeave(
       body.employeeId,
@@ -153,6 +177,7 @@ export class BalanceAdjustmentController {
   @Post('bulk')
   @Roles(Role.HR_ADMIN)
   async bulkAdjustBalances(
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: {
       employeeIds: string[];
@@ -165,8 +190,7 @@ export class BalanceAdjustmentController {
   ) {
     const input: BulkAdjustmentInput = body;
 
-    // TODO: Get actual HR user ID from request
-    const hrUserId = '000000000000000000000001';
+    const hrUserId = getHRUserId(req);
 
     return this.balanceAdjustmentService.bulkAdjustBalances(input, hrUserId);
   }
@@ -178,11 +202,11 @@ export class BalanceAdjustmentController {
   @Post('reverse/:adjustmentId')
   @Roles(Role.HR_ADMIN)
   async reverseAdjustment(
+    @Req() req: AuthenticatedRequest,
     @Param('adjustmentId') adjustmentId: string,
     @Body() body: { reason: string },
   ) {
-    // TODO: Get actual HR user ID from request
-    const hrUserId = '000000000000000000000001';
+    const hrUserId = getHRUserId(req);
 
     return this.balanceAdjustmentService.reverseAdjustment(
       adjustmentId,
@@ -216,6 +240,18 @@ export class BalanceAdjustmentController {
   @Roles(Role.HR_ADMIN)
   async getAdjustmentSummary(@Param('employeeId') employeeId: string) {
     return this.balanceAdjustmentService.getAdjustmentSummary(employeeId);
+  }
+
+  @Get('all')
+  @Roles(Role.HR_ADMIN)
+  async getAllAdjustments(
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+  ) {
+    return this.balanceAdjustmentService.getAllAdjustments({
+      fromDate: fromDate ? new Date(fromDate) : undefined,
+      toDate: toDate ? new Date(toDate) : undefined,
+    });
   }
 
   @Get('balance/:employeeId/:leaveTypeId')

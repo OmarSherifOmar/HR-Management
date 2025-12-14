@@ -71,7 +71,13 @@ export class LeaveEntitlementController {
   async getMyLeaveBalance(@Req() req: AuthenticatedRequest) {
     const employeeId = getUserId(req);
     
+    console.log('=== GET MY BALANCE ===');
+    console.log('Employee ID from request:', employeeId);
+    console.log('Request user object:', req.user);
+    
     const summary = await this.entitlementService.getEmployeeBalanceSummary(employeeId);
+    
+    console.log('Summary from service:', JSON.stringify(summary, null, 2));
     
     // Format for employee dashboard with rounded values as per requirement
     const balances = summary.balances.map((b) => ({
@@ -90,6 +96,8 @@ export class LeaveEntitlementController {
       carryOver: Math.round(b.carryForward * 100) / 100,    // Carry-over from previous year
       yearlyEntitlement: Math.round(b.yearlyEntitlement * 100) / 100,
     }));
+
+    console.log('Formatted balances for response:', JSON.stringify(balances, null, 2));
 
     return {
       success: true,

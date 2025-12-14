@@ -7,6 +7,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  _id?: string;
   [key: string]: any;
 }
 
@@ -14,9 +15,12 @@ interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   isLoading: boolean;
+  permissions: string[];
+  hasPermission: (permission: string) => boolean;
   login: (userData: User, expiresIn?: string) => void;
   logout: () => void;
   checkTokenValidity: () => Promise<boolean>;
+  refreshPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,14 +38,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const router = useRouter();
+
+  const fetchUserPermissions = useCallback(async () => {
+    try {
+      console.log('Fetching permissions from backend...');
+      const response = await fetch(
+        `http://localhost:3000/leaves/role-management/my-permissions`,
+        { credentials: 'include' }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Received permissions:', data.permissions);
+        setPermissions(data.permissions || []);
+        localStorage.setItem('permissions', JSON.stringify(data.permissions || []));
+      } else {
+        console.error('Failed to fetch permissions:', response.status);
+        setPermissions([]);
+        localStorage.removeItem('permissions');
+      }
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+      setPermissions([]);
+    }
+  }, []);
+
+  const refreshPermissions = useCallback(async () => {
+    await fetchUserPermissions();
+  }, [fetchUserPermissions]);
+
+  const hasPermission = useCallback((permission: string): boolean => {
+    return permissions.includes(permission);
+  }, [permissions]);
 
   const logout = useCallback(() => {
     setUser(null);
     setIsLoggedIn(false);
+    setPermissions([]);
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('permissions');
     
     // Redirect to login page
     if (typeof window !== 'undefined') {
@@ -75,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initAuth = async () => {
       try {
         const storedUser = localStorage.getItem('user');
+        const storedPermissions = localStorage.getItem('permissions');
         const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
         
         if (storedUser && loggedIn && storedUser !== 'undefined') {
@@ -82,13 +122,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const isValid = await checkTokenValidity();
           
           if (isValid) {
-            setUser(JSON.parse(storedUser));
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
             setIsLoggedIn(true);
+            
+            // Load cached permissions
+            if (storedPermissions) {
+              setPermissions(JSON.parse(storedPermissions));
+            }
+            
+            // Fetch fresh permissions in background
+            fetchUserPermissions();
           } else {
             // Token expired, clear data
             localStorage.removeItem('user');
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('tokenExpiry');
+            localStorage.removeItem('permissions');
           }
         }
       } catch (error) {
@@ -97,13 +147,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('tokenExpiry');
+        localStorage.removeItem('permissions');
       } finally {
         setIsLoading(false);
       }
     };
 
     initAuth();
-  }, [checkTokenValidity]);
+  }, [checkTokenValidity, fetchUserPermissions]);
 
   useEffect(() => {
     // Set up periodic token validity check (every minute)
@@ -127,10 +178,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('tokenExpiry', expiryTime.toString());
+    
+    // Fetch permissions after login
+    fetchUserPermissions();
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, isLoading, login, logout, checkTokenValidity }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoggedIn, 
+      isLoading, 
+      permissions, 
+      hasPermission, 
+      login, 
+      logout, 
+      checkTokenValidity,
+      refreshPermissions 
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -159,6 +223,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('permissions');
     
     // Redirect to login
     if (typeof window !== 'undefined') {

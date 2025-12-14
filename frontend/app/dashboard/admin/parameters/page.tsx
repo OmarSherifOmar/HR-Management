@@ -261,7 +261,7 @@ export default function LeaveParametersPage() {
         {/* Info Card */}
         <div className="mb-6 p-4 bg-blue-900/20 border border-blue-600 rounded-lg text-blue-400">
           <p className="text-sm">
-            <strong>User Story REQ-009:</strong> Configure leave parameters including maximum duration, notice periods, 
+          Configure leave parameters including maximum duration, notice periods, 
             and multi-level approval workflows. These settings define how leave requests are processed and approved.
           </p>
         </div>

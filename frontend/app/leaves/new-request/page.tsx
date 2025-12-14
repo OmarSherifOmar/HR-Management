@@ -59,26 +59,71 @@ export default function NewLeaveRequestPage() {
   const fetchLeaveTypes = async () => {
     try {
       setLoading(true);
+      setError(''); // Clear previous errors
       const response = await authenticatedFetch('http://localhost:3000/leaves/entitlements/my-balance');
+      
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
       
       if (response.ok) {
         const result = await response.json();
+        console.log('=== FULL API RESPONSE ===');
+        console.log(JSON.stringify(result, null, 2));
+        
+        // Check if data structure exists
+        if (!result.data || !result.data.balances || !Array.isArray(result.data.balances)) {
+          console.error('Invalid data structure:', result);
+          setError('Invalid response from server');
+          return;
+        }
+        
+        console.log('=== BALANCES ARRAY ===');
+        console.log('Number of balances:', result.data.balances.length);
+        
         // Extract leave types from balance data
-        const types = result.data.balances.map((balance: any) => {
-          // Calculate available balance based on accrued days (not full yearly entitlement)
-          const accruedBalance = balance.accrued + balance.carryForward;
-          const availableBalance = accruedBalance - balance.taken - balance.pending;
+        const types = result.data.balances.map((balance: any, index: number) => {
+          console.log(`\n=== Processing balance ${index + 1} ===`);
+          console.log('Raw balance object:', JSON.stringify(balance, null, 2));
           
-          return {
-            id: balance.leaveTypeId,
-            name: balance.leaveTypeName,
-            code: balance.leaveTypeCode,
-            remaining: Math.max(0, availableBalance), // Ensure non-negative
-            requiresAttachment: balance.requiresAttachment,
-            attachmentType: balance.attachmentType
+          // The API returns leaveType as a nested object
+          const leaveType = balance.leaveType || {};
+          console.log('Extracted leaveType:', leaveType);
+          console.log('Remaining value:', balance.remaining);
+          console.log('Type of remaining:', typeof balance.remaining);
+          
+          // Use remaining field which shows available days (not accrued which might be 0)
+          const availableDays = parseFloat(balance.remaining) || 0;
+          console.log('Parsed availableDays:', availableDays);
+          
+          const processedType = {
+            id: leaveType.id || `leave-type-${index}`,
+            name: leaveType.name || 'Unknown',
+            code: leaveType.code || 'N/A',
+            remaining: availableDays,
+            requiresAttachment: leaveType.requiresAttachment || false,
+            attachmentType: leaveType.attachmentType
           };
+          
+          console.log('Processed type:', processedType);
+          return processedType;
         });
-        setLeaveTypes(types);
+        
+        console.log('\n=== ALL PROCESSED TYPES ===');
+        console.log(JSON.stringify(types, null, 2));
+        
+        // Remove duplicates based on leave type ID, keeping the first occurrence
+        const uniqueTypes = types.filter((type, index, self) => 
+          index === self.findIndex((t) => t.id === type.id)
+        );
+        
+        console.log('\n=== UNIQUE TYPES (after dedup) ===');
+        console.log(JSON.stringify(uniqueTypes, null, 2));
+        
+        setLeaveTypes(uniqueTypes);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', response.status, errorData);
+        setError(errorData.message || `Failed to load leave types (${response.status})`);
       }
     } catch (err: any) {
       setError('Failed to load leave types');
@@ -336,7 +381,7 @@ export default function NewLeaveRequestPage() {
                   <option value="">Select a leave type</option>
                   {leaveTypes.map((type) => (
                     <option key={type.id} value={type.id}>
-                      {type.name} ({type.code}) - {type.remaining} days available
+                      {type.name || 'Unknown'} ({type.code || 'N/A'}) - {isNaN(type.remaining) ? '0' : type.remaining} days available
                     </option>
                   ))}
                 </select>
