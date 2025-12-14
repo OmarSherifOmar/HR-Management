@@ -19,7 +19,7 @@ export class ApplicationStatusHistory {
   @Prop()
   newStatus: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile', required: true })
   changedBy: Types.ObjectId;
 }
 
