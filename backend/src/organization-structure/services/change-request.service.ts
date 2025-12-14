@@ -1,13 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { StructureChangeRequest } from '../models/structure-change-request.schema';
 import { StructureApproval } from '../models/structure-approval.schema';
 import { StructureChangeLog } from '../models/structure-change-log.schema';
+import { PositionAssignment } from '../models/position-assignment.schema';
 import { Department } from '../models/department.schema';
 import { Position } from '../models/position.schema';
 import { NotificationLog } from '../../time-management/./models/notification-log.schema';
+import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
 import { CreateChangeRequestDto } from '../dtos/create-change-request.dto';
+import { PositionService } from './position.service';
 
 @Injectable()
 export class ChangeRequestService {
@@ -15,9 +18,12 @@ export class ChangeRequestService {
     @InjectModel(StructureChangeRequest.name) private requestModel: Model<any>,
     @InjectModel(StructureApproval.name) private approvalModel: Model<any>,
     @InjectModel(StructureChangeLog.name) private changeLogModel: Model<any>,
+    @InjectModel(PositionAssignment.name) private assignmentModel: Model<any>,
     @InjectModel(Department.name) private deptModel: Model<any>,
     @InjectModel(Position.name) private posModel: Model<any>,
-    @InjectModel(NotificationLog.name) private notificationModel: Model<any>, 
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
+    @InjectModel(EmployeeProfile.name) private employeeModel: Model<any>,
+    private readonly positionService: PositionService,
   ) {}
 
   private async findRequest(requestId: string) {
@@ -231,14 +237,8 @@ export class ChangeRequestService {
       } as any);
 
     } else if (isPosCreate) {
-      const posData = { ...payload };
-      if (payload.departmentId) {
-        posData.departmentId = new Types.ObjectId(payload.departmentId);
-      }
-      if (payload.reportsToPositionId) {
-        posData.reportsToPositionId = new Types.ObjectId(payload.reportsToPositionId);
-      }
-      const created = await this.posModel.create(posData);
+      // Use positionService.create() to properly resolve payGrade
+      const created = await this.positionService.create(payload, approverEmployeeId);
       await this.changeLogModel.create({
         _id: new Types.ObjectId(),
         action: 'CREATED',
@@ -247,6 +247,38 @@ export class ChangeRequestService {
         afterSnapshot: typeof created.toObject === 'function' ? created.toObject() : created,
         summary: `Applied change-request ${req.requestNumber} (create position)`,
       } as any);
+
+      // If payload contains employeeId and startDate, create position assignment
+      if (payload.employeeId && payload.startDate) {
+        try {
+          const endDateValue = payload.endDate ? new Date(payload.endDate) : undefined;
+          console.log('Creating assignment with:', {
+            employeeId: payload.employeeId,
+            positionId: created._id,
+            departmentId: payload.departmentId,
+            startDate: new Date(payload.startDate),
+            changeRequestId: req._id,
+            supervisorPositionId: payload.supervisorPositionId,
+            endDate: endDateValue,
+            endDateRaw: payload.endDate,
+          });
+          await this.positionService.assignEmployeeToPosition(
+            payload.employeeId,
+            created._id,
+            payload.departmentId,
+            new Date(payload.startDate),
+            req._id,
+            `Assigned via change request ${req.requestNumber}`,
+            payload.supervisorPositionId,
+            endDateValue,
+            created.payGradeId,
+          );
+        } catch (assignmentError) {
+          console.error('Could not create position assignment:', assignmentError.message);
+          console.error('Full error:', assignmentError);
+          // Continue without failing - position was created successfully
+        }
+      }
 
     } else if (isPosUpdate) {
       const before = (await this.posModel.findById(req.targetPositionId).lean().exec()) as any;
@@ -268,6 +300,38 @@ export class ChangeRequestService {
         afterSnapshot: typeof updated.toObject === 'function' ? updated.toObject() : updated,
         summary: `Applied change-request ${req.requestNumber} (update position)`,
       } as any);
+
+      // If payload contains employeeId and startDate, create position assignment
+      if (payload.employeeId && payload.startDate) {
+        try {
+          const endDateValue = payload.endDate ? new Date(payload.endDate) : undefined;
+          console.log('Creating assignment with (UPDATE):', {
+            employeeId: payload.employeeId,
+            positionId: req.targetPositionId,
+            departmentId: payload.departmentId || before.departmentId,
+            startDate: new Date(payload.startDate),
+            changeRequestId: req._id,
+            supervisorPositionId: payload.supervisorPositionId,
+            endDate: endDateValue,
+            endDateRaw: payload.endDate,
+          });
+          await this.positionService.assignEmployeeToPosition(
+            payload.employeeId,
+            req.targetPositionId,
+            payload.departmentId || before.departmentId,
+            new Date(payload.startDate),
+            req._id,
+            `Assigned via change request ${req.requestNumber}`,
+            payload.supervisorPositionId,
+            endDateValue,
+            updated.payGradeId,
+          );
+        } catch (assignmentError) {
+          console.error('Could not create position assignment:', assignmentError.message);
+          console.error('Full error:', assignmentError);
+          // Continue without failing - position was updated successfully
+        }
+      }
 
     } else if (isPosDeactivate) {
       const before = (await this.posModel.findById(req.targetPositionId).lean().exec()) as any;
@@ -362,23 +426,33 @@ export class ChangeRequestService {
     return this.requestModel.find(filters).lean().exec();
   }
 
-  async delete(requestId: string, deletedByEmployeeId: string) {
+  async getUserRequests(employeeId: string, filters: any = {}) {
+    const employeeObjectId = new Types.ObjectId(employeeId);
+    const query = {
+      $or: [
+        { requestedByEmployeeId: employeeObjectId },
+        { submittedByEmployeeId: employeeObjectId },
+      ],
+      ...filters,
+    };
+    return this.requestModel.find(query).sort({ createdAt: -1 }).lean().exec();
+  }
+
+  async delete(requestId: string, deletedByEmployeeId: string, isAdmin: boolean = false) {
     const req = await this.findRequest(requestId);
     if (!req) throw new NotFoundException('Change request not found');
 
-    if (req.status !== 'DRAFT' && req.status !== 'REJECTED') {
-      throw new BadRequestException('Only DRAFT or REJECTED requests can be deleted');
+    // Only DRAFT and SUBMITTED requests can be deleted
+    if (req.status !== 'DRAFT' && req.status !== 'SUBMITTED') {
+      throw new BadRequestException('Only DRAFT or SUBMITTED requests can be deleted');
     }
 
-    await this.changeLogModel.create({
-      _id: new Types.ObjectId(),
-      action: 'DELETED',
-      entityType: 'StructureChangeRequest',
-      entityId: req._id,
-      performedByEmployeeId: new Types.ObjectId(deletedByEmployeeId),
-      beforeSnapshot: typeof req?.toObject === 'function' ? req.toObject() : req,
-      summary: `Change request ${req.requestNumber} deleted by ${deletedByEmployeeId}`,
-    } as any);
+    const userObjectId = new Types.ObjectId(deletedByEmployeeId);
+    
+    // If not admin, user can only delete their own requests
+    if (!isAdmin && !req.requestedByEmployeeId.equals(userObjectId)) {
+      throw new ForbiddenException('You can only delete your own requests');
+    }
 
     await this.requestModel.deleteOne({ _id: req._id }).exec();
     return { message: 'Change request deleted successfully' };
@@ -388,5 +462,56 @@ export class ChangeRequestService {
     const req = await this.findRequest(requestId);
     if (!req) throw new NotFoundException('Change request not found');
     return req;
+  }
+
+  async getPositionAssignments(limit = 50, skip = 0) {
+    const assignments = await this.assignmentModel
+      .find()
+      .populate('employeeProfileId', 'firstName lastName email')
+      .populate('positionId', 'title code')
+      .populate('departmentId', 'name code')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip)
+      .exec();
+    return assignments;
+  }
+
+  async getStructureApprovals(limit = 50, skip = 0) {
+    const approvals = await this.approvalModel
+      .find()
+      .populate('changeRequestId', 'requestNumber status requestType')
+      .populate('approverEmployeeId', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip)
+      .exec();
+    return approvals;
+  }
+
+  async getStructureChangeLogs(limit = 50, skip = 0) {
+    const logs = await this.changeLogModel
+      .find()
+      .populate('performedByEmployeeId', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip)
+      .exec();
+    return logs;
+  }
+
+  async searchEmployeeByNumber(employeeNumber: string) {
+    const employees = await this.employeeModel
+      .find({
+        $or: [
+          { employeeNumber: { $regex: employeeNumber, $options: 'i' } },
+          { firstName: { $regex: employeeNumber, $options: 'i' } },
+          { lastName: { $regex: employeeNumber, $options: 'i' } },
+        ],
+      })
+      .select('_id employeeNumber firstName lastName workEmail primaryPositionId primaryDepartmentId')
+      .limit(10)
+      .exec();
+    return employees;
   }
 }

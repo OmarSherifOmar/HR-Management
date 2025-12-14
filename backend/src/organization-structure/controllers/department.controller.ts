@@ -20,8 +20,11 @@ export class DepartmentController {
   }
 
   @Get()
-  async list(@Query('active') active = 'true') {
-    const activeOnly = active === 'true';
+  async list(@Query('active') active?: string) {
+    // If active is not provided or is 'undefined', get all departments
+    // If active is 'true', get only active departments
+    // If active is 'false', get only inactive departments
+    const activeOnly = active === 'true' ? true : active === 'false' ? false : undefined;
     return this.svc.findAll(activeOnly);
   }
 
