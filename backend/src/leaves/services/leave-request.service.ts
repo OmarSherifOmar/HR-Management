@@ -1028,12 +1028,11 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step and verify assignment
+    // Find HR step (pool system - any HR can process)
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
       (step) =>
         step.role === 'hr_manager' &&
-        step.status === 'pending' &&
-        step.decidedBy?.toString() === hrManagerId,
+        step.status === 'pending',
     );
 
     if (hrStepIndex === -1) {

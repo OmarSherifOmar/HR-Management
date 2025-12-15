@@ -188,11 +188,18 @@ export default function DashboardLayout({ children, title, description }: Dashbo
           { name: 'My Balance', href: '/leaves/balance' },
         ] : []),
         
-        // Approval permissions - with role fallback
-        ...(hasPermission('approve_team_leave') || hasPermission('approve_department_leave') || user?.role === 'department head' ? [
+        // Manager Reviews - Only for Department Heads who manage teams
+        ...(hasPermission('approve_team_leave') || 
+            hasPermission('approve_department_leave') || 
+            user?.role === 'department head' || 
+            user?.role === 'HR Manager' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
         ] : []),
-        ...(hasPermission('approve_all_leave') || user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
+        
+        // HR Reviews - Only for HR Managers and HR Admins
+        ...(hasPermission('approve_all_leave') || 
+            user?.role === 'HR Manager' || 
+            user?.role === 'HR Admin' ? [
           { name: 'HR Reviews', href: '/leaves/hr/pending-reviews' },
         ] : []),
         
