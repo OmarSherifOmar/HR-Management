@@ -821,6 +821,7 @@ export class LeaveRequestService {
     requestId: string,
     managerId: string,
     comments?: string,
+    irregularPatternFlag?: boolean,
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(requestId);
     if (!leaveRequest) {
@@ -852,6 +853,11 @@ export class LeaveRequestService {
     leaveRequest.approvalFlow[managerStepIndex].status = 'approved';
     leaveRequest.approvalFlow[managerStepIndex].decidedAt = new Date();
 
+    // Set irregular pattern flag if manager flagged it
+    if (irregularPatternFlag !== undefined) {
+      leaveRequest.irregularPatternFlag = irregularPatternFlag;
+    }
+
     // Manager approved - request stays PENDING until HR also approves
     // No status change here, HR will finalize
 
@@ -875,6 +881,7 @@ export class LeaveRequestService {
     requestId: string,
     managerId: string,
     comments?: string,
+    irregularPatternFlag?: boolean,
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(requestId);
     if (!leaveRequest) {
@@ -906,10 +913,15 @@ export class LeaveRequestService {
     leaveRequest.approvalFlow[managerStepIndex].status = 'rejected';
     leaveRequest.approvalFlow[managerStepIndex].decidedAt = new Date();
 
-    // Mark the entire request as rejected
-    leaveRequest.status = LeaveStatus.REJECTED;
+    // Set irregular pattern flag if manager flagged it
+    if (irregularPatternFlag !== undefined) {
+      leaveRequest.irregularPatternFlag = irregularPatternFlag;
+    }
 
-    // Restore pending balance
+    // Manager rejected - request stays PENDING until HR reviews and confirms rejection
+    // HR will finalize the rejection
+    
+    // Restore pending balance when manager rejects
     const leaveType = await this.leaveTypeModel.findById(leaveRequest.leaveTypeId);
     if (leaveType?.deductible) {
       await this.entitlementModel.updateOne(
@@ -925,19 +937,9 @@ export class LeaveRequestService {
 
     const savedRequest = await leaveRequest.save();
 
-    // REQ-019: Notify employee about rejection
-    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
-    if (employee && leaveType) {
-      await this.notificationService.notifyLeaveRequestRejected(
-        leaveRequest.employeeId.toString(),
-        {
-          leaveType: leaveType.name,
-          startDate: leaveRequest.dates.from.toISOString().split('T')[0],
-          endDate: leaveRequest.dates.to.toISOString().split('T')[0],
-          reason: comments,
-        },
-      );
-    }
+    // Note: No notification here - manager rejection is not final
+    // HR will send the final rejection notification when they confirm the rejection
+    // This ensures the employee only gets one rejection notification (the final one from HR)
 
     return savedRequest;
   }
@@ -979,13 +981,15 @@ export class LeaveRequestService {
   async getRejectedRequestsForHR(): Promise<LeaveRequestDocument[]> {
     return this.leaveRequestModel
       .find({
-        status: LeaveStatus.REJECTED,
+        status: LeaveStatus.PENDING,
         'approvalFlow': {
           $elemMatch: {
             role: 'hr_manager',
             status: 'pending',
           },
         },
+        // Manager must have rejected
+        'approvalFlow.0.status': 'rejected',
       })
       .populate('employeeId', 'firstName lastName employeeNumber primaryDepartmentId')
       .populate('leaveTypeId', 'code name')
@@ -1175,7 +1179,6 @@ export class LeaveRequestService {
    * Can be used to:
    * - Approve a request that was rejected by manager
    * - Approve a request bypassing manager approval
-   * - Allow negative balance (with allowNegativeBalance flag)
    */
   async hrOverrideDecision(
     requestId: string,
@@ -1183,7 +1186,6 @@ export class LeaveRequestService {
     action: 'approve' | 'reject',
     options?: {
       comments?: string;
-      allowNegativeBalance?: boolean;
     },
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(requestId);
@@ -1201,8 +1203,8 @@ export class LeaveRequestService {
     const leaveType = await this.leaveTypeModel.findById(leaveRequest.leaveTypeId);
 
     if (action === 'approve') {
-      // Check balance unless HR explicitly allows negative
-      if (leaveType?.deductible && !options?.allowNegativeBalance) {
+      // Always check balance - negative balance not allowed
+      if (leaveType?.deductible) {
         const entitlement = await this.entitlementModel.findOne({
           employeeId: leaveRequest.employeeId,
           leaveTypeId: leaveRequest.leaveTypeId,
@@ -1215,8 +1217,7 @@ export class LeaveRequestService {
           
           if (leaveRequest.durationDays > availableBalance) {
             throw new BadRequestException(
-              `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${leaveRequest.durationDays} days. ` +
-              `Set allowNegativeBalance=true to override.`,
+              `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${leaveRequest.durationDays} days.`,
             );
           }
         }
@@ -1455,6 +1456,53 @@ export class LeaveRequestService {
           requestId,
           success: true,
           message: `Leave request ${action === 'approve' ? 'approved' : 'rejected'} via override`,
+        });
+        successful++;
+      } catch (error) {
+        results.push({
+          requestId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+        failed++;
+      }
+    }
+
+    return {
+      total: requestIds.length,
+      successful,
+      failed,
+      results,
+    };
+  }
+
+  /**
+   * Bulk confirm rejection of manager-rejected requests
+   * 
+   * Processes multiple manager-rejected requests at once.
+   * Finalizes the rejection status for each request.
+   */
+  async bulkConfirmRejectRequests(
+    requestIds: string[],
+    hrManagerId: string,
+    comments?: string,
+  ): Promise<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: { requestId: string; success: boolean; message?: string; error?: string }[];
+  }> {
+    const results: { requestId: string; success: boolean; message?: string; error?: string }[] = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const requestId of requestIds) {
+      try {
+        await this.hrRejectRequest(requestId, hrManagerId, comments);
+        results.push({
+          requestId,
+          success: true,
+          message: 'Rejection confirmed successfully',
         });
         successful++;
       } catch (error) {

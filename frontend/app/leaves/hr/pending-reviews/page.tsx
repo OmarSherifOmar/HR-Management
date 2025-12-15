@@ -59,6 +59,7 @@ interface LeaveRequest {
   attachmentId?: Attachment;
   approvalFlow: ApprovalStep[];
   createdAt: string;
+  irregularPatternFlag?: boolean;
 }
 
 export default function HRPendingReviewsPage() {
@@ -70,14 +71,13 @@ export default function HRPendingReviewsPage() {
   const [comments, setComments] = useState('');
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | 'override' | null>(null);
-  const [allowNegativeBalance, setAllowNegativeBalance] = useState(false);
   const [rejectedRequests, setRejectedRequests] = useState<LeaveRequest[]>([]);
   const [showRejectedTab, setShowRejectedTab] = useState(false);
   
   // Bulk action states
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | null>(null);
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'override' | 'confirm-reject' | null>(null);
   const [bulkComments, setBulkComments] = useState('');
 
   useEffect(() => {
@@ -197,8 +197,7 @@ export default function HRPendingReviewsPage() {
           },
           body: JSON.stringify({ 
             action: 'approve',
-            comments: requestComments || '',
-            allowNegativeBalance: allowNegativeBalance
+            comments: requestComments || ''
           }),
         }
       );
@@ -209,7 +208,6 @@ export default function HRPendingReviewsPage() {
         await fetchRejectedRequests();
         setSelectedRequest(null);
         setComments('');
-        setAllowNegativeBalance(false);
         setShowCommentsModal(false);
         setPendingAction(null);
       } else {
@@ -263,7 +261,7 @@ export default function HRPendingReviewsPage() {
     setSelectedRequests(newSelected);
   };
 
-  const openBulkModal = (action: 'approve' | 'reject') => {
+  const openBulkModal = (action: 'approve' | 'reject' | 'override' | 'confirm-reject') => {
     setBulkAction(action);
     setShowBulkModal(true);
     setBulkComments('');
@@ -339,11 +337,85 @@ export default function HRPendingReviewsPage() {
     }
   };
 
+  const handleBulkOverride = async () => {
+    try {
+      setActionLoading(true);
+      const response = await authenticatedFetch(
+        'http://localhost:3000/leave-requests/hr/bulk-override',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            requestIds: Array.from(selectedRequests),
+            comments: bulkComments 
+          }),
+        }
+      );
+
+      if (response.ok) {
+        await fetchRejectedRequests();
+        setSelectedRequests(new Set());
+        setShowBulkModal(false);
+        setBulkComments('');
+        setBulkAction(null);
+      } else {
+        const result = await response.json();
+        setError(result.message || 'Failed to override requests');
+      }
+    } catch (err) {
+      setError('An error occurred while overriding requests');
+      console.error('Error bulk overriding:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBulkConfirmReject = async () => {
+    try {
+      setActionLoading(true);
+      const response = await authenticatedFetch(
+        'http://localhost:3000/leave-requests/hr/bulk-confirm-reject',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            requestIds: Array.from(selectedRequests),
+            comments: bulkComments 
+          }),
+        }
+      );
+
+      if (response.ok) {
+        await fetchRejectedRequests();
+        setSelectedRequests(new Set());
+        setShowBulkModal(false);
+        setBulkComments('');
+        setBulkAction(null);
+      } else {
+        const result = await response.json();
+        setError(result.message || 'Failed to confirm rejections');
+      }
+    } catch (err) {
+      setError('An error occurred while confirming rejections');
+      console.error('Error bulk confirming rejections:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const confirmBulkAction = () => {
     if (bulkAction === 'approve') {
       handleBulkApprove();
     } else if (bulkAction === 'reject') {
       handleBulkReject();
+    } else if (bulkAction === 'override') {
+      handleBulkOverride();
+    } else if (bulkAction === 'confirm-reject') {
+      handleBulkConfirmReject();
     }
   };
 
@@ -429,14 +501,14 @@ export default function HRPendingReviewsPage() {
         )}
 
         {/* Bulk Actions Bar */}
-        {!showRejectedTab && leaveRequests.length > 0 && (
+        {((showRejectedTab && rejectedRequests.length > 0) || (!showRejectedTab && leaveRequests.length > 0)) && (
           <div className="bg-[#2a2a2a] rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={selectedRequests.size === leaveRequests.length && leaveRequests.length > 0}
+                    checked={selectedRequests.size === (showRejectedTab ? rejectedRequests.length : leaveRequests.length) && (showRejectedTab ? rejectedRequests.length : leaveRequests.length) > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 rounded border-gray-600 bg-[#1a1a1a] text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                   />
@@ -448,22 +520,45 @@ export default function HRPendingReviewsPage() {
               
               {selectedRequests.size > 0 && (
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openBulkModal('approve')}
-                    disabled={actionLoading}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <CheckCircle size={18} />
-                    <span>Finalize Selected ({selectedRequests.size})</span>
-                  </button>
-                  <button
-                    onClick={() => openBulkModal('reject')}
-                    disabled={actionLoading}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <XCircle size={18} />
-                    <span>Reject Selected ({selectedRequests.size})</span>
-                  </button>
+                  {!showRejectedTab ? (
+                    <>
+                      <button
+                        onClick={() => openBulkModal('approve')}
+                        disabled={actionLoading}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+                      >
+                        <CheckCircle size={18} />
+                        <span>Finalize Selected ({selectedRequests.size})</span>
+                      </button>
+                      <button
+                        onClick={() => openBulkModal('reject')}
+                        disabled={actionLoading}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+                      >
+                        <XCircle size={18} />
+                        <span>Reject Selected ({selectedRequests.size})</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => openBulkModal('override')}
+                        disabled={actionLoading}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+                      >
+                        <Shield size={18} />
+                        <span>Override & Approve Selected ({selectedRequests.size})</span>
+                      </button>
+                      <button
+                        onClick={() => openBulkModal('confirm-reject')}
+                        disabled={actionLoading}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+                      >
+                        <XCircle size={18} />
+                        <span>Confirm Rejection Selected ({selectedRequests.size})</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -515,7 +610,7 @@ export default function HRPendingReviewsPage() {
                         <div className="bg-blue-900/30 rounded-full p-2">
                           <User className="text-blue-400" size={20} />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="text-lg font-semibold text-white">
                             {request.employeeId.firstName} {request.employeeId.lastName}
                           </h3>
@@ -523,6 +618,16 @@ export default function HRPendingReviewsPage() {
                             Employee #{request.employeeId.employeeNumber}
                           </p>
                         </div>
+                        {/* Irregular Pattern Flag */}
+                        {request.irregularPatternFlag && (
+                          <div className="bg-orange-900/30 border border-orange-500 rounded-lg px-3 py-2 flex items-center gap-2">
+                            <AlertCircle className="text-orange-400" size={20} />
+                            <div>
+                              <p className="text-orange-400 text-sm font-semibold">Flagged by Manager</p>
+                              <p className="text-orange-300/80 text-xs">Irregular leaving pattern</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Manager Approval Badge */}
@@ -614,14 +719,24 @@ export default function HRPendingReviewsPage() {
                     {/* Action Buttons */}
                     <div className="flex flex-col gap-2">
                       {showRejectedTab ? (
-                        <button
-                          onClick={() => openActionModal('override', request)}
-                          disabled={actionLoading}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Shield size={18} />
-                          Override & Approve
-                        </button>
+                        <>
+                          <button
+                            onClick={() => openActionModal('override', request)}
+                            disabled={actionLoading}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Shield size={18} />
+                            Override & Approve
+                          </button>
+                          <button
+                            onClick={() => openActionModal('reject', request)}
+                            disabled={actionLoading}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <XCircle size={18} />
+                            Confirm Rejection
+                          </button>
+                        </>
                       ) : (
                         <>
                           <button
@@ -673,23 +788,6 @@ export default function HRPendingReviewsPage() {
                 }
               </p>
               
-              {pendingAction === 'override' && (
-                <div className="mt-4 mb-4">
-                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={allowNegativeBalance}
-                      onChange={(e) => setAllowNegativeBalance(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800"
-                    />
-                    <span>Allow negative balance</span>
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1 ml-6">
-                    Check this to approve even if employee doesn't have enough leave balance
-                  </p>
-                </div>
-              )}
-              
               <div className="mt-4">
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                   <MessageSquare size={16} />
@@ -712,7 +810,6 @@ export default function HRPendingReviewsPage() {
                   setPendingAction(null);
                   setSelectedRequest(null);
                   setComments('');
-                  setAllowNegativeBalance(false);
                 }}
                 disabled={actionLoading}
                 className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -752,26 +849,42 @@ export default function HRPendingReviewsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#2a2a2a] rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-semibold text-white mb-4">
-              {bulkAction === 'approve' ? 'Bulk Finalize & Approve' : 'Bulk Reject'} Leave Requests
+              {bulkAction === 'approve' 
+                ? 'Bulk Finalize & Approve' 
+                : bulkAction === 'reject'
+                ? 'Bulk Reject'
+                : bulkAction === 'override'
+                ? 'Bulk Override & Approve'
+                : 'Bulk Confirm Rejection'} Leave Requests
             </h3>
             
             <div className="mb-4">
               <p className="text-gray-300 mb-2">
                 {bulkAction === 'approve' 
                   ? `Are you sure you want to finalize and approve ${selectedRequests.size} leave request(s)? This will deduct days from the employees' balances.`
-                  : `Are you sure you want to reject ${selectedRequests.size} leave request(s)?`
+                  : bulkAction === 'reject'
+                  ? `Are you sure you want to reject ${selectedRequests.size} leave request(s)?`
+                  : bulkAction === 'override'
+                  ? `Are you sure you want to override and approve ${selectedRequests.size} rejected leave request(s)? This will restore the requests and deduct days from the employees' balances.`
+                  : `Are you sure you want to confirm rejection of ${selectedRequests.size} leave request(s)?`
                 }
               </p>
               
               <div className="mt-4">
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                   <MessageSquare size={16} />
-                  Comments {bulkAction === 'reject' && <span className="text-red-500">*</span>}
+                  Comments {(bulkAction === 'reject' || bulkAction === 'confirm-reject') && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   value={bulkComments}
                   onChange={(e) => setBulkComments(e.target.value)}
-                  placeholder={bulkAction === 'reject' ? 'Please provide a reason for rejection' : 'Add optional comments (will be applied to all selected requests)'}
+                  placeholder={
+                    bulkAction === 'reject' 
+                      ? 'Please provide a reason for rejection'
+                      : bulkAction === 'confirm-reject'
+                      ? 'Please provide a reason for confirming rejection'
+                      : 'Add optional comments (will be applied to all selected requests)'
+                  }
                   className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 resize-none"
                   rows={4}
                 />
@@ -792,17 +905,25 @@ export default function HRPendingReviewsPage() {
               </button>
               <button
                 onClick={confirmBulkAction}
-                disabled={actionLoading || (bulkAction === 'reject' && !bulkComments.trim())}
+                disabled={actionLoading || ((bulkAction === 'reject' || bulkAction === 'confirm-reject') && !bulkComments.trim())}
                 className={`flex-1 px-4 py-2 ${
                   bulkAction === 'approve' 
                     ? 'bg-green-600 hover:bg-green-700' 
+                    : bulkAction === 'override'
+                    ? 'bg-blue-600 hover:bg-blue-700'
                     : 'bg-red-600 hover:bg-red-700'
                 } text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {actionLoading ? (
                   <Loader className="animate-spin mx-auto" size={20} />
                 ) : (
-                  `Confirm ${bulkAction === 'approve' ? 'Approval' : 'Rejection'} (${selectedRequests.size})`
+                  `Confirm ${
+                    bulkAction === 'approve' 
+                      ? 'Approval' 
+                      : bulkAction === 'override'
+                      ? 'Override'
+                      : 'Rejection'
+                  } (${selectedRequests.size})`
                 )}
               </button>
             </div>

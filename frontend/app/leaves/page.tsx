@@ -220,7 +220,7 @@ export default function LeaveRequestsPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-white">
-                            {request.leaveTypeId.name}
+                            {request.leaveTypeId?.name || 'Leave Request'}
                           </h3>
                           <span
                             className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusBadge(

@@ -423,6 +423,7 @@ export class LeaveRequestController {
       id,
       managerId,
       decisionDto.comments,
+      decisionDto.irregularPatternFlag,
     );
 
     return {
@@ -456,6 +457,7 @@ export class LeaveRequestController {
       id,
       managerId,
       decisionDto.comments,
+      decisionDto.irregularPatternFlag,
     );
 
     return {
@@ -607,7 +609,6 @@ export class LeaveRequestController {
       overrideDto.action,
       {
         comments: overrideDto.comments,
-        allowNegativeBalance: overrideDto.allowNegativeBalance,
       },
     );
 
@@ -709,13 +710,44 @@ export class LeaveRequestController {
       bulkDto.action,
       {
         comments: bulkDto.comments,
-        allowNegativeBalance: bulkDto.allowNegativeBalance,
       },
     );
 
     return {
       success: result.failed === 0,
       message: `Processed ${result.total} requests: ${result.successful} ${bulkDto.action === 'approve' ? 'approved' : 'rejected'}, ${result.failed} failed`,
+      data: result,
+    };
+  }
+
+  /**
+   * POST /leave-requests/hr/bulk-confirm-reject
+   * 
+   * HR bulk confirms rejection of previously rejected leave requests
+   * Processes multiple manager-rejected requests at once.
+   * 
+   * @param bulkDto - Array of request IDs and optional comments
+   * @param req - Request object containing authenticated HR manager
+   * @returns Summary of successful and failed operations
+   */
+  @Post('hr/bulk-confirm-reject')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
+  async bulkConfirmRejectRequests(
+    @Body() bulkDto: BulkRequestActionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const hrManagerId = getUserId(req);
+
+    const result = await this.leaveRequestService.bulkConfirmRejectRequests(
+      bulkDto.requestIds,
+      hrManagerId,
+      bulkDto.comments,
+    );
+
+    return {
+      success: result.failed === 0,
+      message: `Processed ${result.total} requests: ${result.successful} rejection confirmed, ${result.failed} failed`,
       data: result,
     };
   }

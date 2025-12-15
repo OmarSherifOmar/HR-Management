@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 
 interface LeaveType {
-  id: string;
+  _id: string;
+  id?: string;
   name: string;
   code: string;
   remaining?: number;
@@ -105,7 +106,7 @@ export default function EditLeaveRequestPage() {
         });
 
         setSelectedLeaveType({
-          id: request.leaveTypeId._id,
+          _id: request.leaveTypeId._id,
           name: request.leaveTypeId.name,
           code: request.leaveTypeId.code,
           requiresAttachment: request.leaveTypeId.requiresAttachment,
@@ -134,7 +135,7 @@ export default function EditLeaveRequestPage() {
           const availableBalance = accruedBalance - balance.taken - balance.pending;
           
           return {
-            id: balance.leaveTypeId,
+            _id: balance.leaveTypeId,
             name: balance.leaveTypeName,
             code: balance.leaveTypeCode,
             remaining: Math.max(0, availableBalance),
@@ -328,13 +329,14 @@ export default function EditLeaveRequestPage() {
       [name]: ''
     }));
 
-    if (name === 'leaveTypeId') {
-      const leaveType = leaveTypes.find(lt => lt.id === value);
+    if (name === 'leaveTypeId' && value !== formData.leaveTypeId) {
+      const leaveType = leaveTypes.find(lt => lt._id === value);
       setSelectedLeaveType(leaveType || null);
       
-      if (selectedFile || formData.attachmentId) {
+      // Only clear attachment if changing to a different leave type that doesn't require attachment
+      // Preserve existing attachment if it was already there
+      if (selectedFile) {
         setSelectedFile(null);
-        setFormData(prev => ({ ...prev, attachmentId: '' }));
       }
     }
   };
@@ -416,8 +418,8 @@ export default function EditLeaveRequestPage() {
                 disabled={submitting}
               >
                 <option value="">Select a leave type</option>
-                {leaveTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
+                {leaveTypes.map((type, index) => (
+                  <option key={`${type._id}-${index}`} value={type._id}>
                     {type.name} ({type.code}) - {type.remaining} days available
                   </option>
                 ))}
@@ -493,14 +495,18 @@ export default function EditLeaveRequestPage() {
               </div>
             </div>
 
-            {selectedLeaveType?.requiresAttachment && (
+            {/* Attachment Section - Always show, required flag depends on leave type */}
+            {(selectedLeaveType?.requiresAttachment || formData.attachmentId || selectedFile) && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Attachment <span className="text-red-500">*</span>
+                  Attachment {selectedLeaveType?.requiresAttachment && <span className="text-red-500">*</span>}
                 </label>
                 
                 <p className="text-sm text-gray-400 mb-3">
-                  This leave type requires an attachment. Accepted formats: PDF, JPEG, PNG, GIF, DOC, DOCX (max 5MB)
+                  {selectedLeaveType?.requiresAttachment 
+                    ? 'This leave type requires an attachment.'
+                    : 'You can optionally attach supporting documents.'
+                  } Accepted formats: PDF, JPEG, PNG, GIF, DOC, DOCX (max 5MB)
                 </p>
 
                 {!selectedFile && !formData.attachmentId ? (

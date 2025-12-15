@@ -58,6 +58,7 @@ interface LeaveRequest {
   attachmentId?: Attachment;
   approvalFlow: ApprovalStep[];
   createdAt: string;
+  irregularPatternFlag?: boolean;
 }
 
 export default function ManagerPendingReviewsPage() {
@@ -69,6 +70,7 @@ export default function ManagerPendingReviewsPage() {
   const [comments, setComments] = useState('');
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | null>(null);
+  const [irregularPatternFlag, setIrregularPatternFlag] = useState(false);
 
   useEffect(() => {
     fetchPendingRequests();
@@ -95,7 +97,7 @@ export default function ManagerPendingReviewsPage() {
     }
   };
 
-  const handleApprove = async (requestId: string, requestComments?: string) => {
+  const handleApprove = async (requestId: string, requestComments?: string, flagPattern?: boolean) => {
     try {
       setActionLoading(true);
       const response = await authenticatedFetch(
@@ -105,7 +107,10 @@ export default function ManagerPendingReviewsPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ comments: requestComments || '' }),
+          body: JSON.stringify({ 
+            comments: requestComments || '',
+            irregularPatternFlag: flagPattern || false
+          }),
         }
       );
 
@@ -114,6 +119,7 @@ export default function ManagerPendingReviewsPage() {
         await fetchPendingRequests();
         setSelectedRequest(null);
         setComments('');
+        setIrregularPatternFlag(false);
         setShowCommentsModal(false);
         setPendingAction(null);
       } else {
@@ -128,7 +134,7 @@ export default function ManagerPendingReviewsPage() {
     }
   };
 
-  const handleReject = async (requestId: string, requestComments?: string) => {
+  const handleReject = async (requestId: string, requestComments?: string, flagPattern?: boolean) => {
     try {
       setActionLoading(true);
       const response = await authenticatedFetch(
@@ -138,7 +144,10 @@ export default function ManagerPendingReviewsPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ comments: requestComments || '' }),
+          body: JSON.stringify({ 
+            comments: requestComments || '',
+            irregularPatternFlag: flagPattern || false
+          }),
         }
       );
 
@@ -147,6 +156,7 @@ export default function ManagerPendingReviewsPage() {
         await fetchPendingRequests();
         setSelectedRequest(null);
         setComments('');
+        setIrregularPatternFlag(false);
         setShowCommentsModal(false);
         setPendingAction(null);
       } else {
@@ -166,15 +176,16 @@ export default function ManagerPendingReviewsPage() {
     setSelectedRequest(request);
     setShowCommentsModal(true);
     setComments('');
+    setIrregularPatternFlag(false);
   };
 
   const confirmAction = () => {
     if (!selectedRequest || !pendingAction) return;
 
     if (pendingAction === 'approve') {
-      handleApprove(selectedRequest._id, comments);
+      handleApprove(selectedRequest._id, comments, irregularPatternFlag);
     } else {
-      handleReject(selectedRequest._id, comments);
+      handleReject(selectedRequest._id, comments, irregularPatternFlag);
     }
   };
 
@@ -397,6 +408,24 @@ export default function ManagerPendingReviewsPage() {
                   rows={4}
                 />
               </div>
+
+              <div className="mt-4">
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={irregularPatternFlag}
+                    onChange={(e) => setIrregularPatternFlag(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-600 text-orange-600 focus:ring-orange-500 focus:ring-offset-gray-800"
+                  />
+                  <span className="flex items-center gap-2">
+                    <AlertCircle size={16} className="text-orange-400" />
+                    Flag irregular leaving pattern
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1 ml-6">
+                  Check this if you notice unusual patterns in the employee's leave history. This will alert HR for review.
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -406,6 +435,7 @@ export default function ManagerPendingReviewsPage() {
                   setPendingAction(null);
                   setSelectedRequest(null);
                   setComments('');
+                  setIrregularPatternFlag(false);
                 }}
                 disabled={actionLoading}
                 className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
