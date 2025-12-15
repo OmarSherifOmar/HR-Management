@@ -132,6 +132,9 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       subItems: [
         { name: 'Run Payroll', href: '/dashboard/payroll' },
         { name: 'Configuration', href: '/dashboard/payroll/configuration' },
+        { name: 'Termination Benefits', href: '/payroll/config/TerminationBenefits' },
+        { name: 'Signing Bonuses', href: '/payroll/config/SigningBonuses' },
+        { name: 'Payroll Policies', href: '/payroll/config/PayrollPolicies' },
         { name: 'History', href: '/dashboard/payroll/history' },
         { name: 'Reports', href: '/dashboard/payroll/reports' },
       ],
