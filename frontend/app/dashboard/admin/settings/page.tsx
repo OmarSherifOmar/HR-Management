@@ -140,12 +140,12 @@ export default function AdminSettingsPage() {
       setConfig(data);
       
       // Update form
-      setLeaveYearStartMonth(data.leaveYearStartMonth);
-      setLeaveYearStartDay(data.leaveYearStartDay);
-      setProRateEntitlement(data.proRateEntitlement);
-      setProRateBasedOn(data.proRateBasedOn);
-      setResetBalanceOnYearEnd(data.resetBalanceOnYearEnd);
-      setAllowNegativeBalance(data.allowNegativeBalance);
+      setLeaveYearStartMonth(data.leaveYearStartMonth ?? 1);
+      setLeaveYearStartDay(data.leaveYearStartDay ?? 1);
+      setProRateEntitlement(data.proRateEntitlement ?? true);
+      setProRateBasedOn(data.proRateBasedOn ?? 'JOIN_DATE');
+      setResetBalanceOnYearEnd(data.resetBalanceOnYearEnd ?? true);
+      setAllowNegativeBalance(data.allowNegativeBalance ?? false);
 
       setSuccess('Configuration reset to defaults!');
       setTimeout(() => setSuccess(null), 3000);
@@ -229,7 +229,7 @@ export default function AdminSettingsPage() {
                   type="number"
                   min="1"
                   max="31"
-                  value={leaveYearStartDay}
+                  value={leaveYearStartDay ?? ''}
                   onChange={(e) => setLeaveYearStartDay(Number(e.target.value))}
                   className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
