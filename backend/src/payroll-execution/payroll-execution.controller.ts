@@ -18,10 +18,11 @@ import { AuthGuard } from '../auth/guards/authentication.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/decorators/roles.decorator';
 
+
 @Controller('payroll-execution')
 @UseGuards(AuthGuard)
 export class PayrollExecutionController {
-  constructor(private readonly payrollService: PayrollExecutionService) {}
+  constructor(private readonly payrollService: PayrollExecutionService) { }
 
   @Post('initiate') //done
   @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
@@ -162,13 +163,13 @@ export class PayrollExecutionController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.DEPARTMENT_EMPLOYEE, Role.SYSTEM_ADMIN)
   async generatePayslipPDF(@Param('id') id: string, @Res() res: Response) {
     const pdfBuffer = await this.payrollService.generatePayslipPDF(id);
-    
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="payslip-${id}.pdf"`,
       'Content-Length': pdfBuffer.length,
     });
-    
+
     res.send(pdfBuffer);
   }
 
