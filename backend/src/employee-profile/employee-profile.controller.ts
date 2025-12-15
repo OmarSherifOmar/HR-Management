@@ -28,15 +28,36 @@ import { authorizationGuard } from '../auth/guards/authorization.guard';
 @Controller('employees')
 @UseGuards(AuthGuard)
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(private readonly employeeService: EmployeeService) { }
 
   @Get('searchs')
-  @UseGuards(AuthGuard,authorizationGuard)
+  @UseGuards(AuthGuard, authorizationGuard)
   @Roles(Role.HR_ADMIN)
-  
+
   async searchEmployees(@Query() query: SearchEmployeesDto) {
     return this.employeeService.searchEmployees(query);
   }
+
+  /**
+   * Get list of all employees (for dropdowns, etc.)
+   * Accessible by Payroll staff and HR roles
+   */
+  @Get('list')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  async listAllEmployees() {
+    const employees = await this.employeeService.searchEmployees({});
+    // Return simplified data for dropdown use
+    return {
+      employees: employees.map((emp: any) => ({
+        _id: emp._id,
+        name: emp.name || `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+        email: emp.email || emp.workEmail || emp.personalEmail,
+        employeeNumber: emp.employeeNumber,
+        status: emp.status
+      }))
+    };
+  }
+
 
 
   @Get('change-requests')
@@ -46,13 +67,13 @@ export class EmployeeController {
   }
 
   @Get('my-team')
-  @Roles(Role.HR_MANAGER, Role.DEPARTMENT_HEAD,Role.SYSTEM_ADMIN)
+  @Roles(Role.HR_MANAGER, Role.DEPARTMENT_HEAD, Role.SYSTEM_ADMIN)
   async getMyTeam(@Req() req) {
     return this.employeeService.getManagerTeam(req.user.employeeId);
   }
 
   @Get('my-team/summary')
-  @Roles(Role.HR_MANAGER, Role.DEPARTMENT_HEAD,Role.SYSTEM_ADMIN)
+  @Roles(Role.HR_MANAGER, Role.DEPARTMENT_HEAD, Role.SYSTEM_ADMIN)
   async getMyTeamSummary(@Req() req) {
     return this.employeeService.getTeamSummary(req.user.employeeId);
   }
@@ -160,7 +181,7 @@ export class EmployeeController {
   }
 
   @Patch('change-requests/:id/review')
-  @Roles(Role.HR_ADMIN,Role.SYSTEM_ADMIN, Role.HR_MANAGER)
+  @Roles(Role.HR_ADMIN, Role.SYSTEM_ADMIN, Role.HR_MANAGER)
   reviewChangeRequest(@Req() req, @Param('id') id: string, @Body() dto) {
     return this.employeeService.reviewChangeRequest(req.user._id, id, dto);
   }

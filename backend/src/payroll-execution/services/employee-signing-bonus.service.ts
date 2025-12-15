@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { employeeSigningBonus } from '../models/EmployeeSigningBonus.schema';
 import { EditSigningBonusDto } from '../dto/EmployeeSigningBonusEdit.dto';
 import { ApproveSigningBonusDto } from '../dto/EmployeeSigningBonusApprove.dto';
@@ -11,7 +11,62 @@ export class EmployeeSigningBonusService {
   constructor(
     @InjectModel(employeeSigningBonus.name)
     private readonly signingBonusModel: Model<employeeSigningBonus>,
-  ) {}
+  ) { }
+
+  /**
+   * Create a new signing bonus record
+   * Used by HR/Payroll to manually add signing bonuses
+   */
+  async createSigningBonus(dto: any, creatorId: string) {
+    // Validate employee exists
+    const employeeExists = await this.signingBonusModel.db.collection('employee_profiles').findOne({
+      _id: new Types.ObjectId(dto.employeeId)
+    });
+
+    if (!employeeExists) {
+      throw new NotFoundException(`Employee with ID ${dto.employeeId} not found`);
+    }
+
+    // Find or create a default signing bonus configuration for manual entries
+    let signingBonusConfigId = dto.signingBonusId;
+
+    if (!signingBonusConfigId) {
+      let defaultConfig = await this.signingBonusModel.db.collection('signingbonuses').findOne({
+        positionName: 'Manual Entry'
+      });
+
+      if (!defaultConfig) {
+        const newConfig = await this.signingBonusModel.db.collection('signingbonuses').insertOne({
+          positionName: 'Manual Entry',
+          amount: dto.givenAmount || 0,
+          status: 'approved',
+          createdBy: new Types.ObjectId(creatorId),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        signingBonusConfigId = newConfig.insertedId;
+      } else {
+        signingBonusConfigId = defaultConfig._id;
+      }
+    }
+
+    // Create new signing bonus with type field
+    const newBonus = new this.signingBonusModel({
+      employeeId: new Types.ObjectId(dto.employeeId),
+      signingBonusId: new Types.ObjectId(signingBonusConfigId),
+      givenAmount: dto.givenAmount,
+      paymentDate: dto.paymentDate,
+      status: 'pending',
+      type: dto.type || 'Signing Bonus', // Save the compensation type
+    });
+
+    const savedBonus = await newBonus.save();
+
+    return {
+      message: 'Compensation created successfully',
+      bonus: savedBonus,
+    };
+  }
 
   /**
    * Auto-process signing bonuses for a payroll run
@@ -33,7 +88,7 @@ export class EmployeeSigningBonusService {
     // Mark bonuses as auto-processed
     await this.signingBonusModel.updateMany(
       { status: 'pending', payrollRunId: runId },
-      { 
+      {
         status: 'auto_processed',
         processedAt: new Date(),
       }
@@ -69,8 +124,8 @@ export class EmployeeSigningBonusService {
     };
 
     if (dto.adjustedAmount !== undefined) {
-      updateData.bonusAmount = dto.adjustedAmount;
-      updateData.originalAmount = (bonus as any).bonusAmount; // Store original
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = (bonus as any).givenAmount; // Store original
     }
 
     if (dto.editReason) {
@@ -79,6 +134,14 @@ export class EmployeeSigningBonusService {
 
     if (dto.notes) {
       updateData.notes = dto.notes;
+    }
+
+    if (dto.currency) {
+      updateData.currency = dto.currency;
+    }
+
+    if (dto.paymentDate) {
+      updateData.paymentDate = dto.paymentDate;
     }
 
     const updatedBonus = await this.signingBonusModel.findByIdAndUpdate(
@@ -140,9 +203,9 @@ export class EmployeeSigningBonusService {
     };
 
     // If approver adjusted the amount during approval
-    if (dto.adjustedAmount !== undefined && dto.adjustedAmount !== (bonus as any).bonusAmount) {
-      updateData.bonusAmount = dto.adjustedAmount;
-      updateData.originalAmount = (bonus as any).bonusAmount;
+    if (dto.adjustedAmount !== undefined && dto.adjustedAmount !== (bonus as any).givenAmount) {
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = (bonus as any).givenAmount;
     }
 
     const approvedBonus = await this.signingBonusModel.findByIdAndUpdate(
@@ -166,7 +229,7 @@ export class EmployeeSigningBonusService {
     console.log('Collection name:', this.signingBonusModel.collection.name);
     console.log('Searching for bonus ID:', dto.bonusId);
     console.log('All documents:', await this.signingBonusModel.find().limit(5).lean());
-    
+
     const bonus = await this.signingBonusModel.findById(dto.bonusId);
     console.log('Found bonus:', bonus);
 
@@ -214,17 +277,17 @@ export class EmployeeSigningBonusService {
   }
 
   /**
-   * Get pending signing bonuses requiring approval
+   * Get all signing bonuses (including approved/rejected)
    */
   async getPendingSigningBonuses() {
-    const pendingBonuses = await this.signingBonusModel
-      .find({ status: { $in: ['pending', 'auto_processed'] } })
-      .populate('employeeId', 'name email position')
+    const allBonuses = await this.signingBonusModel
+      .find({}) // Fetch ALL bonuses, not just pending
+      .populate('employeeId', 'name email position firstName lastName')
       .sort({ createdAt: -1 });
 
     return {
-      count: pendingBonuses.length,
-      bonuses: pendingBonuses,
+      count: allBonuses.length,
+      bonuses: allBonuses,
     };
   }
 }
