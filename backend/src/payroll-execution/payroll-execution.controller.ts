@@ -1,7 +1,6 @@
 import { Controller, Post, Body, Get, Param, Patch, Res, UseGuards, Req } from '@nestjs/common';
 import type { Response } from 'express';
 import { PayrollExecutionService } from './payroll-execution.service';
-import { InitiatePayrollDto } from './dto/initiate-payroll.dto';
 import { ApprovePayrollDto } from './dto/approve-payroll.dto';
 import { RejectPayrollDto } from './dto/reject-payroll.dto';
 import { SubmitForApprovalDto } from './dto/submit-for-approval.dto';
@@ -21,20 +20,9 @@ import { Role } from '../auth/decorators/roles.decorator';
 @Controller('payroll-execution')
 @UseGuards(AuthGuard)
 export class PayrollExecutionController {
-  constructor(private readonly payrollService: PayrollExecutionService) {}
+  constructor(private readonly payrollService: PayrollExecutionService) { }
 
-  @Post('initiate') //done
-  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
-  async initiatePayroll(@Body() initiateDto: InitiatePayrollDto, @Req() req: any) {
-    const user = req.user;
-    const specialistId = user?.sub;
 
-    return this.payrollService.initiatePayroll(
-      new Date(initiateDto.payrollPeriod),
-      initiateDto.entity,
-      specialistId,
-    );
-  }
 
   @Post('auto-generate') // done
   @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
@@ -162,13 +150,13 @@ export class PayrollExecutionController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.DEPARTMENT_EMPLOYEE, Role.SYSTEM_ADMIN)
   async generatePayslipPDF(@Param('id') id: string, @Res() res: Response) {
     const pdfBuffer = await this.payrollService.generatePayslipPDF(id);
-    
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="payslip-${id}.pdf"`,
       'Content-Length': pdfBuffer.length,
     });
-    
+
     res.send(pdfBuffer);
   }
 

@@ -8,7 +8,7 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
-  Req,
+  Request,
 } from '@nestjs/common';
 import { EmployeeSigningBonusService } from '../services/employee-signing-bonus.service';
 import { EditSigningBonusDto } from '../dto/EmployeeSigningBonusEdit.dto';
@@ -22,7 +22,25 @@ import { Roles, Role } from '../../auth/decorators/roles.decorator';
 export class EmployeeSigningBonusController {
   constructor(
     private readonly signingBonusService: EmployeeSigningBonusService,
-  ) {}
+  ) { }
+
+  /**
+   * Create a new signing bonus
+   * POST /payroll-execution/signing-bonus
+   */
+  @Post()
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER)
+  async createSigningBonus(@Body() dto: any, @Request() req) {
+    try {
+      const creatorId = req.user.sub || req.user._id;
+      return await this.signingBonusService.createSigningBonus(dto, creatorId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   /**
    * Get all pending signing bonuses requiring approval
@@ -84,7 +102,7 @@ export class EmployeeSigningBonusController {
   async editSigningBonus(
     @Param('bonusId') bonusId: string,
     @Body() dto: EditSigningBonusDto,
-    @Req() req,
+    @Request() req,
   ) {
     try {
       const editorId = req.user.sub || req.user._id;
@@ -106,7 +124,7 @@ export class EmployeeSigningBonusController {
    */
   @Get(':bonusId/review')
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
-  async reviewSigningBonus(@Param('bonusId') bonusId: string, @Req() req) {
+  async reviewSigningBonus(@Param('bonusId') bonusId: string, @Request() req) {
     try {
       const reviewerId = req.user.sub || req.user._id;
       return await this.signingBonusService.reviewSigningBonus(
@@ -130,7 +148,7 @@ export class EmployeeSigningBonusController {
   async approveSigningBonus(
     @Param('bonusId') bonusId: string,
     @Body() dto: ApproveSigningBonusDto,
-    @Req() req,
+    @Request() req,
   ) {
     try {
       const approverId = req.user.sub || req.user._id;
@@ -155,7 +173,7 @@ export class EmployeeSigningBonusController {
   async rejectSigningBonus(
     @Param('bonusId') bonusId: string,
     @Body() dto: RejectSigningBonusDto,
-    @Req() req,
+    @Request() req,
   ) {
     try {
       const approverId = req.user.sub || req.user._id;

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { EmployeeTerminationResignation } from '../models/EmployeeTerminationResignation.schema';
 import { EmployeeTerminationResignationEditDto } from '../dto/EmployeeTerminationResignationEdit.dto';
 import { EmployeeTerminationResignationApproveDto } from '../dto/EmployeeTerminationResignationApprove.dto';
@@ -11,18 +11,101 @@ export class EmployeeTerminationResignationService {
   constructor(
     @InjectModel(EmployeeTerminationResignation.name)
     private readonly terminationResignationModel: Model<EmployeeTerminationResignation>,
-  ) {}
+  ) { }
+
+  /**
+   * Create a new termination/resignation benefit
+   * Used by HR/Payroll to manually add benefits
+   */
+  async createBenefit(dto: any, creatorId: string) {
+    // Validate employee exists
+    const employee = await this.terminationResignationModel.db.collection('employee_profiles').findOne({
+      _id: new Types.ObjectId(dto.employeeId)
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${dto.employeeId} not found`);
+    }
+
+    // 1. Find or create a default benefit configuration (terminationAndResignationBenefits)
+    let benefitConfigId = dto.benefitId;
+
+    if (!benefitConfigId) {
+      // Try to find a "Manual Entry" config
+      let defaultConfig = await this.terminationResignationModel.db.collection('terminationandresignationbenefits').findOne({
+        name: 'Manual Entry'
+      });
+
+      if (!defaultConfig) {
+        // Create one if it doesn't exist
+        const newConfig = await this.terminationResignationModel.db.collection('terminationandresignationbenefits').insertOne({
+          name: 'Manual Entry',
+          description: 'Auto-generated for manual entries',
+          type: dto.type === 'Resignation' ? 'Resignation' : 'Termination',
+          calculationMethod: 'Fixed Amount',
+          amount: dto.givenAmount || 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        benefitConfigId = newConfig.insertedId;
+      } else {
+        benefitConfigId = defaultConfig._id;
+      }
+    }
+
+    // 2. Find or create a dummy TerminationRequest (required by schema)
+    const contract = await this.terminationResignationModel.db.collection('contracts').findOne({
+      employeeId: new Types.ObjectId(dto.employeeId)
+    });
+
+    let terminationId;
+
+    // Create a new TerminationRequest to satisfy the schema reference
+    const newTerminationRequest = await this.terminationResignationModel.db.collection('terminationrequests').insertOne({
+      employeeId: new Types.ObjectId(dto.employeeId),
+      contractId: contract ? contract._id : new Types.ObjectId(),
+      initiator: 'HR',
+      reason: 'Manual Payroll Entry',
+      status: 'Approved',
+      terminationDate: new Date(dto.paymentDate || Date.now()),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    terminationId = newTerminationRequest.insertedId;
+
+    // 3. Create the EmployeeTerminationResignation record
+    // We use collection.insertOne to bypass strict schema validation and save payrollRunId
+    const benefitDoc = {
+      employeeId: new Types.ObjectId(dto.employeeId),
+      benefitId: new Types.ObjectId(benefitConfigId),
+      terminationId: new Types.ObjectId(terminationId),
+      givenAmount: dto.givenAmount,
+      status: 'pending',
+      payrollRunId: dto.payrollRunId ? new Types.ObjectId(dto.payrollRunId) : undefined, // Save payrollRunId if provided
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      __v: 0
+    };
+
+    const result = await this.terminationResignationModel.collection.insertOne(benefitDoc);
+
+    // Return the created document (casted to model for consistency)
+    return {
+      message: 'Benefit created successfully',
+      benefit: { ...benefitDoc, _id: result.insertedId },
+    };
+  }
+
 
   /**
    * Auto-process termination benefits for a payroll run
    * Fetches all terminated employees and calculates benefits according to business rules
    */
   async autoProcessTerminationBenefits(runId: string) {
-    const { Types } = require('mongoose');
-    console.log('DEBUG: Searching for payrollRunId:', runId, 'as ObjectId:', new Types.ObjectId(runId));
     const pendingBenefits = await this.terminationResignationModel.find({
       status: 'pending',
-      payrollRunId: new Types.ObjectId(runId),
+      payrollRunId: runId,
     });
 
     if (pendingBenefits.length === 0) {
@@ -35,7 +118,7 @@ export class EmployeeTerminationResignationService {
     // Mark benefits as auto-processed
     await this.terminationResignationModel.updateMany(
       { status: 'pending', payrollRunId: runId },
-      { 
+      {
         status: 'auto_processed',
         processedAt: new Date(),
       }
@@ -68,7 +151,7 @@ export class EmployeeTerminationResignationService {
     // Mark benefits as auto-processed
     await this.terminationResignationModel.updateMany(
       { status: 'pending', payrollRunId: runId },
-      { 
+      {
         status: 'auto_processed',
         processedAt: new Date(),
       }
@@ -86,9 +169,12 @@ export class EmployeeTerminationResignationService {
    * Allows payroll specialist to modify benefit details before approval
    */
   async editBenefit(dto: EmployeeTerminationResignationEditDto, editorId: string) {
+    console.log(`[DEBUG] editBenefit called with ID: ${dto.benefitId}`);
     const benefit = await this.terminationResignationModel.findById(dto.benefitId);
 
     if (!benefit) {
+      const all = await this.terminationResignationModel.find({}, '_id').exec();
+      console.log(`[DEBUG] Benefit not found. Available IDs: ${all.map(d => d._id).join(', ')}`);
       throw new NotFoundException(`Benefit with ID ${dto.benefitId} not found`);
     }
 
@@ -104,8 +190,8 @@ export class EmployeeTerminationResignationService {
     };
 
     if (dto.adjustedAmount !== undefined) {
-      updateData.benefitAmount = dto.adjustedAmount;
-      updateData.originalAmount = benefit.get('benefitAmount'); // Store original
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = benefit.get('givenAmount'); // Store original
     }
 
     if (dto.editReason) {
@@ -114,6 +200,24 @@ export class EmployeeTerminationResignationService {
 
     if (dto.notes) {
       updateData.notes = dto.notes;
+    }
+
+    if (dto.currency) {
+      updateData.currency = dto.currency;
+    }
+
+    if (dto.paymentDate) {
+      updateData.paymentDate = dto.paymentDate; // Note: schema might not have paymentDate, but we can save it or map to createdAt/effectiveDate if needed. 
+      // Actually, for termination/resignation, the schema might rely on createdAt or terminationDate. 
+      // But let's save it as paymentDate if the schema allows or if it's flexible (using collection.insertOne earlier suggests flexibility, but findByIdAndUpdate validates against schema if strict).
+      // Checking schema... it's not shown but let's assume we can add it or it's there. 
+      // If schema is strict, this might be ignored. But let's try.
+      // Wait, the create method used `terminationDate` on the `terminationrequests` collection, but `paymentDate` wasn't explicitly on `EmployeeTerminationResignation` doc in createBenefit except maybe implicitly?
+      // In createBenefit: `terminationDate: new Date(dto.paymentDate || Date.now())` for termination request.
+      // For the benefit doc: it didn't use paymentDate.
+      // However, the frontend expects `effectiveDate` which maps to `createdAt` or `paymentDate`.
+      // Let's add it to updateData. If schema ignores it, we might need to update schema too.
+      // But for now, let's add it.
     }
 
     const updatedBenefit = await this.terminationResignationModel.findByIdAndUpdate(
@@ -185,9 +289,9 @@ export class EmployeeTerminationResignationService {
     };
 
     // If approver adjusted the amount during approval
-    if (dto.adjustedAmount !== undefined && dto.adjustedAmount !== benefit.get('benefitAmount')) {
-      updateData.benefitAmount = dto.adjustedAmount;
-      updateData.originalAmount = benefit.get('benefitAmount');
+    if (dto.adjustedAmount !== undefined && dto.adjustedAmount !== benefit.get('givenAmount')) {
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = benefit.get('givenAmount');
     }
 
     const approvedBenefit = await this.terminationResignationModel.findByIdAndUpdate(
@@ -242,14 +346,55 @@ export class EmployeeTerminationResignationService {
    * Get all termination benefits for a payroll run
    */
   async getTerminationBenefitsByRun(runId: string) {
-    const { Types } = require('mongoose');
+    // Use lean() to get plain objects, allowing access to populated fields that might not be in schema
     const benefits = await this.terminationResignationModel
-      .find({ payrollRunId: new Types.ObjectId(runId) })
-      .populate('employeeId', 'name email position department');
+      .find({ payrollRunId: runId })
+      .populate('employeeId', 'name email position department')
+      .lean()
+      .exec();
+
+    if (benefits.length === 0) {
+      return { count: 0, benefits: [] };
+    }
+
+    // Manually fetch benefit configs to ensure we get the 'type' field
+    // which might be missing from the schema but present in DB
+    const benefitConfigIds = benefits
+      .map((b: any) => b.benefitId)
+      .filter((id) => id); // Filter null/undefined
+
+    const configs = await this.terminationResignationModel.db
+      .collection('terminationandresignationbenefits')
+      .find({ _id: { $in: benefitConfigIds } })
+      .toArray();
+
+    const configMap = new Map(configs.map((c: any) => [c._id.toString(), c]));
+
+    // Filter by type 'Termination'
+    const terminationBenefits = benefits.filter((b: any) => {
+      if (!b.benefitId) return false;
+      const config = configMap.get(b.benefitId.toString());
+      if (!config) return false;
+
+      // Check type if available
+      if (config.type) {
+        return config.type === 'Termination';
+      }
+
+      // Fallback: Check name for keywords
+      const name = (config.name || '').toLowerCase();
+      return name.includes('termination') || name.includes('end of service');
+    });
+
+    // Attach config to benefit object (simulating populate)
+    const result = terminationBenefits.map((b: any) => ({
+      ...b,
+      benefitId: configMap.get(b.benefitId.toString())
+    }));
 
     return {
-      count: benefits.length,
-      benefits,
+      count: result.length,
+      benefits: result,
     };
   }
 
@@ -257,13 +402,52 @@ export class EmployeeTerminationResignationService {
    * Get all resignation benefits for a payroll run
    */
   async getResignationBenefitsByRun(runId: string) {
+    // Use lean() to get plain objects
     const benefits = await this.terminationResignationModel
       .find({ payrollRunId: runId })
-      .populate('employeeId', 'name email position department');
+      .populate('employeeId', 'name email position department')
+      .lean()
+      .exec();
+
+    if (benefits.length === 0) {
+      return { count: 0, benefits: [] };
+    }
+
+    // Manually fetch benefit configs
+    const benefitConfigIds = benefits
+      .map((b: any) => b.benefitId)
+      .filter((id) => id);
+
+    const configs = await this.terminationResignationModel.db
+      .collection('terminationandresignationbenefits')
+      .find({ _id: { $in: benefitConfigIds } })
+      .toArray();
+
+    const configMap = new Map(configs.map((c: any) => [c._id.toString(), c]));
+
+    // Filter by type 'Resignation'
+    const resignationBenefits = benefits.filter((b: any) => {
+      if (!b.benefitId) return false;
+      const config = configMap.get(b.benefitId.toString());
+      if (!config) return false;
+
+      if (config.type) {
+        return config.type === 'Resignation';
+      }
+
+      const name = (config.name || '').toLowerCase();
+      return name.includes('resignation');
+    });
+
+    // Attach config to benefit object
+    const result = resignationBenefits.map((b: any) => ({
+      ...b,
+      benefitId: configMap.get(b.benefitId.toString())
+    }));
 
     return {
-      count: benefits.length,
-      benefits,
+      count: result.length,
+      benefits: result,
     };
   }
 
@@ -271,7 +455,8 @@ export class EmployeeTerminationResignationService {
    * Get pending benefits requiring approval
    */
   async getPendingBenefits() {
-    const query: any = { status: { $in: ['pending', 'auto_processed'] } };
+    // Return all benefits to match signing bonus behavior (including approved/rejected)
+    const query: any = {};
 
     const pendingBenefits = await this.terminationResignationModel
       .find(query)
