@@ -11,6 +11,7 @@ import { NotificationLog } from '../../time-management/./models/notification-log
 import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
 import { CreateChangeRequestDto } from '../dtos/create-change-request.dto';
 import { PositionService } from './position.service';
+import { payGrade } from '../../payroll-configuration/models/payGrades.schema';
 
 @Injectable()
 export class ChangeRequestService {
@@ -23,6 +24,7 @@ export class ChangeRequestService {
     @InjectModel(Position.name) private posModel: Model<any>,
     @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
     @InjectModel(EmployeeProfile.name) private employeeModel: Model<any>,
+    @InjectModel(payGrade.name) private payGradeModel: Model<any>,
     private readonly positionService: PositionService,
   ) {}
 
@@ -271,7 +273,7 @@ export class ChangeRequestService {
             `Assigned via change request ${req.requestNumber}`,
             payload.supervisorPositionId,
             endDateValue,
-            created.payGradeId,
+            payload.payGradeId || created.payGradeId,
           );
         } catch (assignmentError) {
           console.error('Could not create position assignment:', assignmentError.message);
@@ -301,9 +303,37 @@ export class ChangeRequestService {
         summary: `Applied change-request ${req.requestNumber} (update position)`,
       } as any);
 
-      // If payload contains employeeId and startDate, create position assignment
+      // If payload contains employeeId and startDate, handle employee reassignment
       if (payload.employeeId && payload.startDate) {
         try {
+          // Find and end any active assignment for this position
+          const oldAssignment = (await this.assignmentModel
+            .findOne({
+              positionId: new Types.ObjectId(req.targetPositionId),
+              endDate: { $exists: false },
+            })
+            .exec()) as any;
+
+          if (oldAssignment && oldAssignment.employeeProfileId) {
+            // End the old assignment
+            oldAssignment.endDate = new Date(payload.startDate);
+            await oldAssignment.save();
+
+            // Clear the old employee's position, department, supervisor, and payGrade
+            await this.employeeModel.findByIdAndUpdate(
+              oldAssignment.employeeProfileId,
+              {
+                $unset: {
+                  primaryPositionId: 1,
+                  primaryDepartmentId: 1,
+                  supervisorPositionId: 1,
+                  payGradeId: 1,
+                },
+              }
+            ).exec();
+          }
+
+          // Now assign the new employee
           const endDateValue = payload.endDate ? new Date(payload.endDate) : undefined;
           console.log('Creating assignment with (UPDATE):', {
             employeeId: payload.employeeId,
@@ -324,7 +354,7 @@ export class ChangeRequestService {
             `Assigned via change request ${req.requestNumber}`,
             payload.supervisorPositionId,
             endDateValue,
-            updated.payGradeId,
+            payload.payGradeId || updated.payGradeId,
           );
         } catch (assignmentError) {
           console.error('Could not create position assignment:', assignmentError.message);
@@ -513,5 +543,9 @@ export class ChangeRequestService {
       .limit(10)
       .exec();
     return employees;
+  }
+
+  async getAllPayGrades() {
+    return this.payGradeModel.find().exec();
   }
 }

@@ -55,6 +55,12 @@ export class ChangeRequestController {
     return this.svc.searchEmployeeByNumber(employeeNumber);
   }
 
+  @Get('pay-grades')
+  @UseGuards(AuthGuard)
+  async getPayGrades() {
+    return this.svc.getAllPayGrades();
+  }
+
   @Get()
   @UseGuards(authorizationGuard)
   @Roles(Role.HR_ADMIN, Role.SYSTEM_ADMIN)

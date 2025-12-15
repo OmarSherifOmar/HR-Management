@@ -332,7 +332,7 @@ export async function getPayGrades(token?: string) {
     headers['Authorization'] = `Bearer ${tokenValue}`;
   }
 
-  const response = await fetch(`${API_BASE}/api/payroll-configuration/pay-grades`, {
+  const response = await fetch(`${API_BASE}/api/org/requests/pay-grades`, {
     method: 'GET',
     headers,
     credentials: 'include',

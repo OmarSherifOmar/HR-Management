@@ -8,6 +8,7 @@ import {
   submitChangeRequest,
   getDepartments,
   getPositions,
+  getPayGrades,
   searchEmployeeByNumber,
   Department,
   Position,
@@ -20,6 +21,7 @@ export default function CreateChangeRequestPage() {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [payGrades, setPayGrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,12 +64,14 @@ export default function CreateChangeRequestPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token') || undefined;
-      const [depts, pos] = await Promise.all([
+      const [depts, pos, grades] = await Promise.all([
         getDepartments(token),
         getPositions(token),
+        getPayGrades(token),
       ]);
       setDepartments(Array.isArray(depts) ? depts : []);
       setPositions(Array.isArray(pos) ? pos : []);
+      setPayGrades(Array.isArray(grades) ? grades : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -545,14 +549,20 @@ export default function CreateChangeRequestPage() {
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Pay Grade (Optional)
                       </label>
-                      <input
-                        type="text"
+                      <select
                         name="payGradeId"
                         value={formData.payGradeId}
                         onChange={handleChange}
-                        placeholder="Pay grade ID"
-                        className="w-full bg-[#1a1a1a] border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                      />
+                        disabled={loading}
+                        className="w-full bg-[#1a1a1a] border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors disabled:opacity-50"
+                      >
+                        <option value="">Select a pay grade</option>
+                        {payGrades.map((grade: any) => (
+                          <option key={grade._id} value={grade._id}>
+                            {grade.grade}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
