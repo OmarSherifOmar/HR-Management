@@ -4,6 +4,7 @@ import { PayrollExecutionService } from './payroll-execution.service';
 import { InitiatePayrollDto } from './dto/initiate-payroll.dto';
 import { ApprovePayrollDto } from './dto/approve-payroll.dto';
 import { RejectPayrollDto } from './dto/reject-payroll.dto';
+import { SubmitForApprovalDto } from './dto/submit-for-approval.dto';
 import { ManagerApprovalDto } from './dto/manager-approval.dto';
 import { ManagerRejectDto } from './dto/manager-reject.dto';
 import { FinanceApprovalDto } from './dto/finance-approval.dto';

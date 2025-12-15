@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsString, IsDateString, isNotEmpty } from 'class-validator';
 
 export class InitiatePayrollDto {
   @IsNotEmpty()
@@ -8,5 +8,6 @@ export class InitiatePayrollDto {
   @IsNotEmpty()
   @IsString()
   entity: string;
+
 }
 

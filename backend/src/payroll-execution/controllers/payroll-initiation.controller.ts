@@ -14,11 +14,10 @@ import {
 } from '@nestjs/common';
 import { PayrollInitiationService } from '../services/payroll-initiation.service';
 import { EditPayrollInitiationDto } from '../dto/edit-payroll-initiation.dto';
-import { InitiatePayrollDto } from '../dto/initiate-payroll.dto';
+import { InitiatePayrollDto2 } from '../dto/initiate-payroll2.dto';
 import { ValidatePeriodDto } from '../dto/validate-period.dto';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
-
 @Controller('payroll-execution/initiation')
 @UseGuards(AuthGuard)
 export class PayrollInitiationController {
@@ -43,7 +42,27 @@ export class PayrollInitiationController {
     }
   }
 
- 
+  /**
+   * Initiate new payroll run
+   * POST /payroll-execution/initiation/initiate
+   */
+  @Post('initiate')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async initiateRun(@Body() dto: InitiatePayrollDto2, @Request() req) {
+    try {
+      const initiatorId = req.user.sub || req.user._id;
+      return await this.payrollInitiationService.initiatePayrollRun({
+        ...dto,
+        initiatorId,
+      });
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to initiate payroll run',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   /**
    * Get payroll run status
    * GET /payroll-execution/initiation/run/:runId/status
@@ -74,8 +93,9 @@ export class PayrollInitiationController {
   ) {
     try {
       const editorId = req.user.sub || req.user._id;
+      const editDto = { ...dto, runId };
       return await this.payrollInitiationService.editPayrollInitiation(
-        { ...dto, runId },
+        editDto,
         editorId,
       );
     } catch (error) {
