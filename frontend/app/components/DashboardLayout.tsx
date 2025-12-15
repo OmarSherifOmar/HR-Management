@@ -131,7 +131,9 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       icon: <DollarSign size={20} />,
       subItems: [
         { name: 'Run Payroll', href: '/dashboard/payroll' },
-        { name: 'Configuration', href: '/dashboard/payroll/configuration' },
+        { name: 'Allowances', href: '/payroll/config/allowances' },
+        { name: 'Pay Grades', href: '/payroll/config/pay-grades' },
+        { name: 'Pay Types', href: '/payroll/config/pay-types' },
         { name: 'History', href: '/dashboard/payroll/history' },
         { name: 'Reports', href: '/dashboard/payroll/reports' },
       ],
