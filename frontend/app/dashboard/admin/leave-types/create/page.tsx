@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '../../../../context/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Save, Tag, Folder } from 'lucide-react';
 
@@ -17,9 +17,20 @@ type AttachmentType = 'medical' | 'document' | 'other';
 export default function CreateLeaveTypePage() {
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const formType = searchParams.get('type') || 'type'; // 'type' or 'category'
-  const editId = searchParams.get('id');
+  // Read search params on the client to avoid SSR/suspense issues with `useSearchParams` during build
+  const [formType, setFormType] = useState<'type' | 'category'>('type');
+  const [editId, setEditId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('type') || 'type';
+    const id = params.get('id');
+    setFormType(t === 'category' ? 'category' : 'type');
+    setEditId(id);
+  }, []);
+
+  const isType = formType === 'type';
   
   const [categories, setCategories] = useState<LeaveCategory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,7 +64,7 @@ export default function CreateLeaveTypePage() {
       return;
     }
 
-    if (isLoggedIn && user?.role === 'HR Admin' && formType === 'type') {
+    if (isLoggedIn && user?.role === 'HR Admin' && isType) {
       fetchCategories();
     }
 
@@ -80,7 +91,7 @@ export default function CreateLeaveTypePage() {
   const fetchExistingData = async () => {
     try {
       setLoading(true);
-      const endpoint = formType === 'type' 
+        const endpoint = isType
         ? `http://localhost:3000/leaves/types/${editId}`
         : `http://localhost:3000/leaves/types/categories/${editId}`;
 
@@ -94,7 +105,7 @@ export default function CreateLeaveTypePage() {
 
       const data = await response.json();
 
-      if (formType === 'type') {
+      if (isType) {
         setCode(data.code || '');
         setName(data.name || '');
         setCategoryId(typeof data.categoryId === 'string' ? data.categoryId : data.categoryId?._id || '');
@@ -221,19 +232,16 @@ export default function CreateLeaveTypePage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
-          >
+          <button onClick={() => router.back()} title="Back" aria-label="Back" className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
             <ArrowLeft size={24} />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              {formType === 'type' ? <Tag className="text-green-500" size={28} /> : <Folder className="text-blue-500" size={28} />}
-              {editId ? 'Edit' : 'Create'} {formType === 'type' ? 'Leave Type' : 'Category'}
+              {isType ? <Tag className="text-green-500" size={28} /> : <Folder className="text-blue-500" size={28} />}
+              {editId ? 'Edit' : 'Create'} {isType ? 'Leave Type' : 'Category'}
             </h1>
             <p className="text-gray-400 text-sm mt-1">
-              {formType === 'type' 
+              {isType
                 ? 'Define a new leave type with its properties and requirements'
                 : 'Create a category to group related leave types'
               }
@@ -244,7 +252,7 @@ export default function CreateLeaveTypePage() {
         {/* Success Message */}
         {success && (
           <div className="mb-6 p-4 bg-green-900/20 border border-green-600 rounded-lg text-green-400">
-            {formType === 'type' ? 'Leave type' : 'Category'} saved successfully! Redirecting...
+            {isType ? 'Leave type' : 'Category'} saved successfully! Redirecting...
           </div>
         )}
 
@@ -296,6 +304,8 @@ export default function CreateLeaveTypePage() {
                   Category *
                 </label>
                 <select
+                  title="Category"
+                  aria-label="Category"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
@@ -328,13 +338,14 @@ export default function CreateLeaveTypePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
                   <span className="text-sm text-gray-300">Paid Leave</span>
-                  <button
-                    type="button"
-                    onClick={() => setPaid(!paid)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      paid ? 'bg-green-600' : 'bg-gray-600'
-                    }`}
-                  >
+                    <button
+                      type="button"
+                      onClick={() => setPaid(!paid)}
+                      title={isType ? (code ? `Toggle Paid (${code})` : 'Toggle Paid') : 'Toggle Paid'}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        paid ? 'bg-green-600' : 'bg-gray-600'
+                      }`}
+                    >
                     <span
                       className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                         paid ? 'translate-x-6' : ''
@@ -345,13 +356,14 @@ export default function CreateLeaveTypePage() {
 
                 <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
                   <span className="text-sm text-gray-300">Deductible from Balance</span>
-                  <button
-                    type="button"
-                    onClick={() => setDeductible(!deductible)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      deductible ? 'bg-green-600' : 'bg-gray-600'
-                    }`}
-                  >
+                    <button
+                      type="button"
+                      onClick={() => setDeductible(!deductible)}
+                      title={isType ? (code ? `Toggle Deductible (${code})` : 'Toggle Deductible') : 'Toggle Deductible'}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        deductible ? 'bg-green-600' : 'bg-gray-600'
+                      }`}
+                    >
                     <span
                       className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                         deductible ? 'translate-x-6' : ''
@@ -365,13 +377,14 @@ export default function CreateLeaveTypePage() {
               <div className="border-t border-gray-800 pt-6">
                 <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg mb-4">
                   <span className="text-sm text-gray-300">Requires Attachment</span>
-                  <button
-                    type="button"
-                    onClick={() => setRequiresAttachment(!requiresAttachment)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      requiresAttachment ? 'bg-green-600' : 'bg-gray-600'
-                    }`}
-                  >
+                    <button
+                      type="button"
+                      onClick={() => setRequiresAttachment(!requiresAttachment)}
+                      title={isType ? (code ? `Toggle Requires Attachment (${code})` : 'Toggle Requires Attachment') : 'Toggle Requires Attachment'}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        requiresAttachment ? 'bg-green-600' : 'bg-gray-600'
+                      }`}
+                    >
                     <span
                       className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                         requiresAttachment ? 'translate-x-6' : ''
@@ -386,6 +399,8 @@ export default function CreateLeaveTypePage() {
                       Attachment Type
                     </label>
                     <select
+                      title="Attachment type"
+                      aria-label="Attachment type"
                       value={attachmentType}
                       onChange={(e) => setAttachmentType(e.target.value as AttachmentType)}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
@@ -436,6 +451,7 @@ export default function CreateLeaveTypePage() {
                 <button
                   type="button"
                   onClick={() => router.back()}
+                  title={isType ? (code ? `Cancel (${code})` : 'Cancel') : (categoryName ? `Cancel (${categoryName})` : 'Cancel')}
                   className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
                   Cancel
@@ -443,6 +459,7 @@ export default function CreateLeaveTypePage() {
                 <button
                   type="submit"
                   disabled={loading}
+                  title={isType ? (editId ? `Update Leave Type${code ? `: ${code}` : ''}` : `Create Leave Type${code ? `: ${code}` : ''}`) : (editId ? `Update Category${categoryName ? `: ${categoryName}` : ''}` : `Create Category${categoryName ? `: ${categoryName}` : ''}`)}
                   className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save size={18} />
@@ -486,6 +503,7 @@ export default function CreateLeaveTypePage() {
                 <button
                   type="button"
                   onClick={() => router.back()}
+                  title={isType ? (code ? `Cancel (${code})` : 'Cancel') : (categoryName ? `Cancel (${categoryName})` : 'Cancel')}
                   className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
                   Cancel
@@ -493,6 +511,7 @@ export default function CreateLeaveTypePage() {
                 <button
                   type="submit"
                   disabled={loading}
+                  title={isType ? (editId ? `Update Leave Type${code ? `: ${code}` : ''}` : `Create Leave Type${code ? `: ${code}` : ''}`) : (editId ? `Update Category${categoryName ? `: ${categoryName}` : ''}` : `Create Category${categoryName ? `: ${categoryName}` : ''}`)}
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save size={18} />

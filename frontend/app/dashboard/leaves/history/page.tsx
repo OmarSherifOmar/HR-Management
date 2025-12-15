@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth, authenticatedFetch } from '../../../context/AuthContext';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { CalendarDays, FileText, CheckCircle, XCircle, ChevronDown, Filter } from 'lucide-react';
 
@@ -24,10 +25,20 @@ type Balance = {
 };
 
 export default function LeavesHistoryDashboard() {
+  const { user } = useAuth();
   const [history, setHistory] = useState<LeaveRequest[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Flagging UI (for managers / HR)
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [flagReason, setFlagReason] = useState('Frequent short leaves');
+  const [flagNotes, setFlagNotes] = useState('');
+  const [flagLoading, setFlagLoading] = useState(false);
+  const [flagError, setFlagError] = useState('');
+  const [flagSuccess, setFlagSuccess] = useState(false);
+  const [locallyFlaggedIds, setLocallyFlaggedIds] = useState<string[]>([]);
   // Filters & sort
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -80,6 +91,52 @@ export default function LeavesHistoryDashboard() {
     }
   };
 
+  const canFlag = () => {
+    if (!user || !user.role) return false;
+    return /manager|head|admin/i.test(user.role);
+  };
+
+  const openFlagModal = (r: LeaveRequest) => {
+    setSelectedRequest(r);
+    setFlagReason('Frequent short leaves');
+    setFlagNotes('');
+    setFlagError('');
+    setFlagSuccess(false);
+    setShowFlagModal(true);
+  };
+
+  const submitFlag = async () => {
+    if (!selectedRequest) return;
+    setFlagLoading(true);
+    setFlagError('');
+    setFlagSuccess(false);
+
+    try {
+      const url = `http://localhost:3000/leave-requests/${selectedRequest._id}/flag`;
+      const res = await authenticatedFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: flagReason, notes: flagNotes }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || 'Failed to flag request');
+      }
+
+      setFlagSuccess(true);
+      setLocallyFlaggedIds(prev => [...prev, selectedRequest._id]);
+      // close modal shortly
+      setTimeout(() => {
+        setShowFlagModal(false);
+      }, 900);
+    } catch (err: any) {
+      setFlagError(err?.message || 'Failed to flag request');
+    } finally {
+      setFlagLoading(false);
+    }
+  };
+
   const formatDate = (d?: string) => {
     if (!d) return 'N/A';
     try {
@@ -118,7 +175,7 @@ export default function LeavesHistoryDashboard() {
     if (filterDept.trim()) {
       items = items.filter(i => {
         // best-effort: support request.employee?.department or request.employeeDepartment or employeeId.department
-        const dept = (i as any).employee?.department || (i as any).employeeDepartment || (i.employeeId && (i as any).employeeId.department);
+        const dept = (i as any).employee?.department || (i as any).employeeDepartment || ((i as any).employeeId && (i as any).employeeId.department);
         return typeof dept === 'string' && dept.toLowerCase().includes(filterDept.toLowerCase());
       });
     }
@@ -335,9 +392,23 @@ export default function LeavesHistoryDashboard() {
                             <div className="text-xs text-gray-400">{formatDate(r.dates.from)} — {formatDate(r.dates.to)}</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-white">{r.durationDays} {r.durationDays === 1 ? 'day' : 'days'}</div>
-                          <div className="text-xs text-gray-400 mt-1">{r.status}</div>
+                        <div className="text-right flex items-center gap-4">
+                          <div>
+                            <div className="text-sm font-medium text-white">{r.durationDays} {r.durationDays === 1 ? 'day' : 'days'}</div>
+                            <div className="text-xs text-gray-400 mt-1">{r.status}</div>
+                          </div>
+                          {locallyFlaggedIds.includes(r._id) && (
+                            <div className="text-xs text-yellow-300 bg-yellow-900/20 px-2 py-1 rounded">Flagged</div>
+                          )}
+                          {canFlag() && (
+                            <button
+                              onClick={() => openFlagModal(r)}
+                              title={`Flag irregular pattern for request ${r._id}`}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
+                            >
+                              Flag
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -348,6 +419,63 @@ export default function LeavesHistoryDashboard() {
           )}
         </div>
       </div>
+
+      {showFlagModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-[#1a1a1a] rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-white mb-2">Flag Irregular Pattern</h3>
+            <p className="text-sm text-gray-400 mb-4">Flag leave request for review by HR/management.</p>
+
+            <div className="mb-3">
+              <label className="block text-sm text-gray-300 mb-1">Reason</label>
+              <select
+                aria-label="Flag reason"
+                title="Flag reason"
+                value={flagReason}
+                onChange={(e) => setFlagReason(e.target.value)}
+                className="w-full bg-[#111111] border border-gray-700 rounded p-2 text-sm text-white"
+              >
+                <option value="Frequent short leaves">Frequent short leaves</option>
+                <option value="Patterned absences">Patterned absences</option>
+                <option value="Suspicious dates">Suspicious dates</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-sm text-gray-300 mb-1">Notes (optional)</label>
+              <textarea
+                value={flagNotes}
+                onChange={(e) => setFlagNotes(e.target.value)}
+                className="w-full bg-[#111111] border border-gray-700 rounded p-2 text-sm text-white h-24"
+                placeholder="Add context or examples"
+              />
+            </div>
+
+            {flagError && <div className="text-sm text-red-400 mb-2">{flagError}</div>}
+            {flagSuccess && <div className="text-sm text-green-400 mb-2">Flag submitted</div>}
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => setShowFlagModal(false)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitFlag}
+                disabled={flagLoading}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50"
+              >
+                {flagLoading ? 'Submitting...' : 'Submit Flag'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   );
 }

@@ -20,6 +20,7 @@ type LeaveType = {
   description: string;
   category: LeaveCategory | string;
   paid: boolean;
+  color?: string;
   deductible?: boolean;
   requiresAttachment?: boolean;
   attachmentType?: string;

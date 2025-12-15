@@ -314,6 +314,7 @@ export default function ManagerPendingReviewsPage() {
                           <span>Attachment: {request.attachmentId.filename}</span>
                           <button
                             onClick={() => window.open(`http://localhost:3000/attachments/${request.attachmentId?._id}`, '_blank')}
+                            title="Open attachment"
                             className="text-blue-400 hover:text-blue-300"
                           >
                             <Eye size={16} />
@@ -332,6 +333,7 @@ export default function ManagerPendingReviewsPage() {
                   <div className="flex flex-col gap-2 ml-4">
                     <button
                       onClick={() => openActionModal('approve', request)}
+                      title="Approve"
                       disabled={actionLoading}
                       className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -340,6 +342,7 @@ export default function ManagerPendingReviewsPage() {
                     </button>
                     <button
                       onClick={() => openActionModal('reject', request)}
+                      title="Reject"
                       disabled={actionLoading}
                       className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -394,6 +397,7 @@ export default function ManagerPendingReviewsPage() {
                   setComments('');
                 }}
                 disabled={actionLoading}
+                title="Cancel"
                 className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
@@ -401,6 +405,7 @@ export default function ManagerPendingReviewsPage() {
               <button
                 onClick={confirmAction}
                 disabled={actionLoading || (pendingAction === 'reject' && !comments.trim())}
+                title={actionLoading ? 'Processing...' : pendingAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
                 className={`flex-1 px-4 py-2 ${
                   pendingAction === 'approve' 
                     ? 'bg-green-600 hover:bg-green-700' 

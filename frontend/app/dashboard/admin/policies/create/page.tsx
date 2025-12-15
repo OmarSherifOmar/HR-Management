@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '../../../../context/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Save, Shield } from 'lucide-react';
 
@@ -17,8 +17,13 @@ type RoundingRule = 'none' | 'round' | 'round_up' | 'round_down';
 export default function CreatePolicyPage() {
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const editId = searchParams.get('id');
+  const [editId, setEditId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setEditId(params.get('id'));
+  }, []);
   
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -169,6 +174,7 @@ export default function CreatePolicyPage() {
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => router.back()}
+            title="Go back"
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
           >
             <ArrowLeft size={24} />
@@ -208,6 +214,11 @@ export default function CreatePolicyPage() {
             <select
               value={leaveTypeId}
               onChange={(e) => setLeaveTypeId(e.target.value)}
+              title={
+                leaveTypeId
+                  ? `${leaveTypes.find((t) => t._id === leaveTypeId)?.name || ''} (${leaveTypes.find((t) => t._id === leaveTypeId)?.code || ''})`
+                  : 'Select a leave type'
+              }
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
               required
               disabled={!!editId}
@@ -233,6 +244,7 @@ export default function CreatePolicyPage() {
                 <select
                   value={accrualMethod}
                   onChange={(e) => setAccrualMethod(e.target.value as AccrualMethod)}
+                  title={accrualMethod === 'monthly' ? 'Monthly' : accrualMethod === 'yearly' ? 'Yearly' : 'Per Term'}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="monthly">Monthly</option>
@@ -248,6 +260,15 @@ export default function CreatePolicyPage() {
                 <select
                   value={roundingRule}
                   onChange={(e) => setRoundingRule(e.target.value as RoundingRule)}
+                  title={
+                    roundingRule === 'none'
+                      ? 'None'
+                      : roundingRule === 'round'
+                      ? 'Round'
+                      : roundingRule === 'round_up'
+                      ? 'Round Up'
+                      : 'Round Down'
+                  }
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="none">None</option>
@@ -334,6 +355,7 @@ export default function CreatePolicyPage() {
               <button
                 type="button"
                 onClick={() => setCarryForwardAllowed(!carryForwardAllowed)}
+                title={carryForwardAllowed ? 'Disable Carry Forward' : 'Enable Carry Forward'}
                 className={`relative w-12 h-6 rounded-full transition-colors ${
                   carryForwardAllowed ? 'bg-blue-600' : 'bg-gray-600'
                 }`}
@@ -421,6 +443,7 @@ export default function CreatePolicyPage() {
             <button
               type="button"
               onClick={() => router.back()}
+              title="Cancel"
               className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
             >
               Cancel
@@ -428,6 +451,7 @@ export default function CreatePolicyPage() {
             <button
               type="submit"
               disabled={loading}
+              title={loading ? 'Saving...' : editId ? 'Update Policy' : 'Create Policy'}
               className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={18} />
