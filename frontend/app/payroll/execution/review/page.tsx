@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
+import { getAPIUrl } from '../../../utils/apiClient';
 import { 
   Eye, 
   CheckCircle, 
@@ -16,6 +17,8 @@ import {
   Plus,
   X,
   FileText,
+  Download,
+  Edit,
   Lock
 } from 'lucide-react';
 interface PayrollRun {
@@ -49,10 +52,15 @@ export default function PayrollReviewPage() {
     userRoles.some((r) => allowed.map((a) => a.toLowerCase()).includes(String(r || '').toLowerCase()));
 
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
+  const [approvedRuns, setApprovedRuns] = useState<PayrollRun[]>([]);
   const [financeRuns, setFinanceRuns] = useState<PayrollRun[]>([]);
+  const [compensationsCount, setCompensationsCount] = useState<number>(0);
+  const [compensationsHavePending, setCompensationsHavePending] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [approvedLoading, setApprovedLoading] = useState(false);
   const [financeLoading, setFinanceLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [approvedError, setApprovedError] = useState<string | null>(null);
   const [financeError, setFinanceError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
@@ -67,6 +75,16 @@ export default function PayrollReviewPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [payslipLoading, setPayslipLoading] = useState(false);
+  const [payslipResult, setPayslipResult] = useState<{ generated: number; errors: number } | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    periodStart?: string;
+    periodEnd?: string;
+    editReason?: string;
+    notes?: string;
+  }>({});
   const [rejectionReason, setRejectionReason] = useState('');
   // Filters / search
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,11 +106,69 @@ export default function PayrollReviewPage() {
       }
 
       const data = await response.json();
-      setPayrollRuns(data);
+      setPayrollRuns(data || []);
     } catch (err: any) {
       setError(err.message || 'An error occurred while fetching payroll runs');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchApprovedRuns = async () => {
+    try {
+      setApprovedLoading(true);
+      setApprovedError(null);
+      const resp = await authenticatedFetch('http://localhost:3000/payroll-execution/approved-locked', { method: 'GET' });
+      if (!resp.ok) throw new Error('Failed to fetch approved runs');
+      const data = await resp.json();
+      // Only include runs that are explicitly 'approved' or 'locked'
+      const filtered = (data || []).filter((r: any) => {
+        const s = String(r.status || '').toLowerCase();
+        return s === 'approved' || s === 'locked';
+      });
+      setApprovedRuns(filtered);
+    } catch (err: any) {
+      setApprovedError(err.message || 'An error occurred while fetching approved runs');
+    } finally {
+      setApprovedLoading(false);
+    }
+  };
+
+  const fetchCompensations = async () => {
+    try {
+      // fetch signing bonuses and termination/resignation pending compensations
+      const [signingResp, termResp] = await Promise.all([
+        authenticatedFetch('http://localhost:3000/payroll-execution/signing-bonus/pending', { method: 'GET' }),
+        authenticatedFetch('http://localhost:3000/payroll-execution/termination-resignation/pending', { method: 'GET' }),
+      ]);
+
+      let signing = [] as any[];
+      let term = [] as any[];
+
+      if (signingResp.ok) {
+        const d = await signingResp.json();
+        signing = d.bonuses || d.data || (Array.isArray(d) ? d : []);
+      }
+
+      if (termResp.ok) {
+        const d = await termResp.json();
+        term = d.benefits || d.data || (Array.isArray(d) ? d : []);
+      }
+
+      const combined = [...signing, ...term];
+      setCompensationsCount(combined.length);
+
+      const pendingStatuses = ['pending', 'pending approval', 'pending manager approval', 'pending finance approval', 'in review', 'draft'];
+      const hasPending = combined.some((item: any) => {
+        const s = String(item.status || '').toLowerCase();
+        return pendingStatuses.includes(s) || s === 'pending';
+      });
+
+      setCompensationsHavePending(hasPending);
+    } catch (e) {
+      console.error('Failed to fetch compensations for create-run condition', e);
+      setCompensationsCount(0);
+      setCompensationsHavePending(false);
     }
   };
 
@@ -121,6 +197,10 @@ export default function PayrollReviewPage() {
     fetchPayrollRuns();
     if (hasRole('finance staff', 'system admin')) {
       fetchFinanceRuns();
+    }
+    if (hasRole('payroll specialist')) {
+      fetchApprovedRuns();
+      fetchCompensations();
     }
   }, []);
 
@@ -194,6 +274,52 @@ export default function PayrollReviewPage() {
     } catch (err: any) {
       console.error('Approve payroll error:', err);
       setActionError(err.message || 'An error occurred while approving the payroll run');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openEditModal = (run: any) => {
+    setSelectedRun(run);
+    setEditForm({
+      periodStart: run.periodStart ? new Date(run.periodStart).toISOString().split('T')[0] : '',
+      periodEnd: run.periodEnd ? new Date(run.periodEnd).toISOString().split('T')[0] : '',
+      editReason: '',
+      notes: run.notes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedRun) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const payload: any = {};
+      if (editForm.periodStart) payload.periodStart = editForm.periodStart;
+      if (editForm.periodEnd) payload.periodEnd = editForm.periodEnd;
+      // payPeriodType removed per request
+      if (editForm.editReason) payload.editReason = editForm.editReason;
+      if (editForm.notes) payload.notes = editForm.notes;
+
+      const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/initiation/run/${selectedRun._id}/edit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        setActionError(errText || 'Failed to save edit');
+      } else {
+        setShowEditModal(false);
+        setSelectedRun(null);
+        fetchPayrollRuns();
+        fetchApprovedRuns();
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to save edit');
     } finally {
       setActionLoading(false);
     }
@@ -274,6 +400,31 @@ export default function PayrollReviewPage() {
     } catch (err: any) {
       console.error('Finance approve payroll error:', err);
       setActionError(err.message || 'An error occurred while approving the payroll run');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const downloadPayslipPDF = async (runId: string) => {
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/${runId}/pdf`, { method: 'GET' });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip-${runId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to download payslip PDF');
     } finally {
       setActionLoading(false);
     }
@@ -501,7 +652,7 @@ export default function PayrollReviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-              {hasRole('payroll specialist', 'system admin') && (
+              {hasRole('payroll specialist', 'system admin') && compensationsCount > 0 && !compensationsHavePending && (
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
@@ -629,7 +780,7 @@ export default function PayrollReviewPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2 text-sm text-gray-300">
-                          <Calendar size={16} />
+                          <Calendar size={16} className="text-gray-300" />
                           {formatDate(run.payrollPeriod)}
                         </div>
                       </td>
@@ -696,6 +847,13 @@ export default function PayrollReviewPage() {
                           </button>
                           {run.status.toLowerCase() === 'draft' && hasRole('payroll specialist', 'system admin') && (
                             <>
+                              <button
+                                onClick={() => openEditModal(run)}
+                                className="p-2 text-gray-400 hover:text-indigo-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Edit size={18} />
+                              </button>
                               <button
                                 onClick={() => {
                                   setSelectedRun(run);
@@ -906,13 +1064,31 @@ export default function PayrollReviewPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right">
                               <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handlePreview(run._id)}
-                                  className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
-                                  title="Preview"
-                                >
-                                  <Eye size={18} />
-                                </button>
+                                {['approved', 'locked'].includes(String(run.status || '').toLowerCase()) && (
+                                  <>
+                                    <button
+                                      onClick={() => { setSelectedRun(run); setPayslipResult(null); setShowGenerateModal(true); }}
+                                      className="p-2 text-gray-400 hover:text-yellow-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                      title="Generate Payslips"
+                                    >
+                                      <DollarSign size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => downloadPayslipPDF(run._id)}
+                                      className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                      title="Download Payslip PDF"
+                                    >
+                                      <Download size={18} />
+                                    </button>
+                                  </>
+                                )}
+                                  <button
+                                    onClick={() => handlePreview(run._id)}
+                                    className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                    title="Preview"
+                                  >
+                                    <Eye size={18} />
+                                  </button>
                                 <button
                                   onClick={() => handleViewDetails(run._id)}
                                   className="p-2 text-gray-400 hover:text-indigo-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
@@ -920,6 +1096,15 @@ export default function PayrollReviewPage() {
                                 >
                                   <FileText size={18} />
                                 </button>
+                                {hasRole('payroll specialist', 'system admin') && (
+                                  <button
+                                    onClick={() => openEditModal(run)}
+                                    className="p-2 text-gray-400 hover:text-indigo-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Edit size={18} />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => {
                                     setSelectedRun(run);
@@ -988,7 +1173,192 @@ export default function PayrollReviewPage() {
           </>
         )}
 
+        {/* Approved & Locked Runs - visible to Payroll Specialists */}
+        {hasRole('payroll specialist') && (
+          <>
+            <div className="mt-12 pt-8 border-t border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Approved & Locked Runs</h2>
+                  <p className="text-sm text-gray-400 mt-1">Payroll runs that have been approved or locked</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { fetchApprovedRuns(); }}
+                    disabled={approvedLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#2a2a2a] hover:bg-[#333333] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw size={18} className={approvedLoading ? 'animate-spin' : ''} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {approvedError && (
+                <div className="bg-red-600/20 border border-red-600 text-red-400 px-4 py-3 rounded-lg mb-6">
+                  {approvedError}
+                </div>
+              )}
+
+              {approvedLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw size={32} className="text-gray-400 animate-spin" />
+                </div>
+              )}
+
+              {!approvedLoading && !approvedError && approvedRuns.length === 0 && (
+                <div className="bg-[#2a2a2a] rounded-lg p-12 text-center">
+                  <Lock size={48} className="text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-white mb-2">No Approved or Locked Runs</h3>
+                  <p className="text-gray-400">There are no approved or locked payroll runs to display.</p>
+                </div>
+              )}
+
+              {!approvedLoading && !approvedError && approvedRuns.length > 0 && (
+                <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-[#1a1a1a] border-b border-gray-700">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Run ID</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Period</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Entity</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Employees</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Net Pay</th>
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700">
+                        {approvedRuns.map((run) => (
+                          <tr key={run._id} className="hover:bg-[#333333] transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap"><span className="text-sm font-medium text-white">{run.runId}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className="text-sm text-gray-300">{formatDate(run.payrollPeriod)}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className="text-sm text-gray-300">{run.entity}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusColor(run.status)}`}>{run.status}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className="text-sm text-gray-300">{run.employees}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className="text-sm font-medium text-green-400">{formatCurrency(run.totalnetpay)}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => handlePreview(run._id)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors" title="Preview"><Eye size={18} /></button>
+                                <button onClick={() => handleViewDetails(run._id)} className="p-2 text-gray-400 hover:text-indigo-400 hover:bg-[#1a1a1a] rounded-lg transition-colors" title="Details"><FileText size={18} /></button>
+                                {['approved', 'locked'].includes(String(run.status || '').toLowerCase()) && (
+                                  <>
+                                    <button
+                                      onClick={() => { setSelectedRun(run); setPayslipResult(null); setShowGenerateModal(true); }}
+                                      className="p-2 text-gray-400 hover:text-yellow-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                      title="Generate Payslips"
+                                    >
+                                      <DollarSign size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => downloadPayslipPDF(run._id)}
+                                      className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                                      title="Download Payslip PDF"
+                                    >
+                                      <Download size={18} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         {/* Create Run Modal */}
+        {/* Edit Initiation Modal */}
+        {showEditModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-lg mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Edit Payroll Initiation</h3>
+                <button onClick={() => { setShowEditModal(false); setSelectedRun(null); setActionError(null); }} className="text-gray-400 hover:text-white">
+                  <X />
+                </button>
+              </div>
+              {actionError && (
+                <div className="bg-red-600/20 border border-red-600 text-red-400 px-4 py-3 rounded-lg mb-4">{actionError}</div>
+              )}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-gray-300">Period Start</label>
+                  <input type="date" value={editForm.periodStart || ''} onChange={(e) => setEditForm(prev => ({ ...prev, periodStart: e.target.value }))} className="w-full mt-1 px-3 py-2 bg-[#0f0f0f] border border-gray-700 rounded text-sm text-white" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-300">Period End</label>
+                  <input type="date" value={editForm.periodEnd || ''} onChange={(e) => setEditForm(prev => ({ ...prev, periodEnd: e.target.value }))} className="w-full mt-1 px-3 py-2 bg-[#0f0f0f] border border-gray-700 rounded text-sm text-white" />
+                </div>
+                {/* Pay Period Type removed per request */}
+                <div>
+                  <label className="text-sm text-gray-300">Edit Reason</label>
+                  <input type="text" value={editForm.editReason || ''} onChange={(e) => setEditForm(prev => ({ ...prev, editReason: e.target.value }))} placeholder="Reason for edit" className="w-full mt-1 px-3 py-2 bg-[#0f0f0f] border border-gray-700 rounded text-sm text-white" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-300">Notes</label>
+                  <textarea value={editForm.notes || ''} onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))} className="w-full mt-1 px-3 py-2 bg-[#0f0f0f] border border-gray-700 rounded text-sm text-white" rows={3} />
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <button onClick={() => { setShowEditModal(false); setSelectedRun(null); setActionError(null); }} className="flex-1 px-4 py-2 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-lg">Cancel</button>
+                  <button onClick={handleSaveEdit} disabled={actionLoading} className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50">{actionLoading ? 'Saving...' : 'Save Changes'}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showGenerateModal && selectedRun && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Generate Payslips</h3>
+                <button onClick={() => { setShowGenerateModal(false); setSelectedRun(null); setActionError(null); }} className="text-gray-400 hover:text-white">
+                  <X />
+                </button>
+              </div>
+              <p className="text-sm text-gray-300 mb-4">Generate payslips for run <span className="font-medium text-white">{selectedRun.runId}</span> ({formatDate(selectedRun.payrollPeriod)}). This will create payslip records for each employee in the run.</p>
+              {payslipResult && (
+                <div className="bg-green-600/10 border border-green-600 text-green-300 px-4 py-3 rounded-lg mb-4">
+                  Generated: {payslipResult.generated} — Errors: {payslipResult.errors}
+                </div>
+              )}
+              {actionError && (
+                <div className="bg-red-600/20 border border-red-600 text-red-400 px-4 py-3 rounded-lg mb-4">{actionError}</div>
+              )}
+              <div className="flex items-center gap-3 mt-2">
+                <button onClick={() => { setShowGenerateModal(false); setSelectedRun(null); }} className="flex-1 px-4 py-2 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-lg">Cancel</button>
+                <button onClick={async () => {
+                  if (!selectedRun) return;
+                  setPayslipLoading(true);
+                  setActionError(null);
+                  try {
+                    const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/generate/${selectedRun._id}`, { method: 'POST' });
+                    if (!res.ok) {
+                      const txt = await res.text();
+                      throw new Error(txt || `Error ${res.status}`);
+                    }
+                    const data = await res.json();
+                    setPayslipResult(data);
+                    await fetchPayrollRuns();
+                    await fetchApprovedRuns();
+                  } catch (err: any) {
+                    setActionError(err.message || 'Failed to generate payslips');
+                  } finally {
+                    setPayslipLoading(false);
+                  }
+                }} disabled={payslipLoading} className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg disabled:opacity-50">{payslipLoading ? 'Generating...' : 'Generate'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-md mx-4">

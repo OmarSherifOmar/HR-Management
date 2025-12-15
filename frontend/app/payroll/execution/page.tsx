@@ -577,29 +577,26 @@ export default function PayrollExecutionPage() {
 
   return (
     <DashboardLayout title="Payroll Execution">
-      <div className="p-8">
-        <div className="mb-6 flex justify-between items-center">
+      <div className="space-y-6 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-[#2a2a2a] rounded-lg p-6 overflow-hidden">
+        <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-white">Payroll Runs</h2>
-            <p className="text-gray-400 mt-1">Manage and review payroll execution</p>
+            <h2 className="text-2xl font-bold text-white">Payroll Runs</h2>
+            <p className="text-sm text-gray-400 mt-1">Manage and review payroll execution</p>
           </div>
           <div className="flex gap-3">
-            {/* Only show Add Compensation button for authorized roles */}
+            {/* Only show Add Compensation and View Runs buttons for authorized roles */}
             {user && (user.role === 'Payroll Specialist' || user.role === 'HR Manager' || user.role === 'Payroll Manager') && (
               <>
-                {/* Payroll Initiation Button - Only visible if all requests are resolved (not pending) */}
-                {compensations.length > 0 && !compensations.some(c =>
-                  ['Pending Approval', 'Pending Manager Approval', 'Pending Finance Approval', 'Draft', 'In Review', 'Pending'].includes(c.status)
-                ) && (
-                    <button
-                      onClick={() => router.push('/payroll/execution/review')}
-                      disabled={loading}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
-                    >
-                      <Play size={18} />
-                      Payroll Initiation
-                    </button>
-                  )}
+                <button
+                  onClick={() => router.push('/payroll/execution/review')}
+                  disabled={loading}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                >
+                  <Eye size={18} />
+                  View Runs
+                </button>
 
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -804,49 +801,49 @@ export default function PayrollExecutionPage() {
         )}
 
         {!loading && !error && (
-          <div className="bg-white rounded-lg shadow-sm">
+          <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-[#1a1a1a] border-b border-gray-700">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Employee
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Processed Date
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Effective Date
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-transparent divide-y divide-gray-700">
                   {compensations.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                         No compensation records found
                       </td>
                     </tr>
                   ) : (
                     compensations.map((comp) => (
-                      <tr key={comp._id} className="hover:bg-gray-50">
+                      <tr key={comp._id} className="hover:bg-[#333333] transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-100">
                             {comp.employeeName}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-400">
                             {comp.employeeId}
                           </div>
                         </td>
@@ -873,24 +870,24 @@ export default function PayrollExecutionPage() {
                             {comp.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
                           {comp.currency} {comp.amount.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
                           {new Date(comp.processedDate).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric'
                           })}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
                           {new Date(comp.effectiveDate).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric'
                           })}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                           <div className="flex items-center gap-3">
                             {/* View button - always visible */}
                             <button
@@ -946,6 +943,9 @@ export default function PayrollExecutionPage() {
           </div>
         )}
       </div>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }
+

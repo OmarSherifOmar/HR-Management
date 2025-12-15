@@ -2,6 +2,8 @@ import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PayrollExecutionController } from './payroll-execution.controller';
 import { PayrollExecutionService } from './payroll-execution.service';
+import { PayrollInitiationController } from './controllers/payroll-initiation.controller';
+import { PayrollInitiationService } from './services/payroll-initiation.service';
 import { EmployeeSigningBonusController } from './controllers/employee-signing-bonus.controller';
 import { EmployeeSigningBonusService } from './services/employee-signing-bonus.service';
 import { EmployeeTerminationResignationController } from './controllers/employee-termination-resignation.controller';
@@ -46,18 +48,21 @@ import { payrollPolicies, payrollPoliciesSchema } from '../payroll-configuration
   ])],
   controllers: [
     PayrollExecutionController,
+    PayrollInitiationController,
     EmployeeSigningBonusController,
     EmployeeTerminationResignationController,
 
   ],
   providers: [
     PayrollExecutionService,
+    PayrollInitiationService,
     EmployeeSigningBonusService,
     EmployeeTerminationResignationService,
 
   ],
   exports: [
     PayrollExecutionService,
+    PayrollInitiationService,
     EmployeeSigningBonusService,
     EmployeeTerminationResignationService,
 

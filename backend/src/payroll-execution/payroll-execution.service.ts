@@ -1002,13 +1002,20 @@ export class PayrollExecutionService {
       throw new NotFoundException('Payroll run not found');
     }
 
-    if (payrollRun.status !== PayRollStatus.APPROVED) {
+    // Allow generation for APPROVED or LOCKED runs. Previously only APPROVED
+    // runs were allowed which prevented specialists from generating payslips
+    // for runs that had been locked after approvals.
+    if (
+      payrollRun.status !== PayRollStatus.APPROVED &&
+      payrollRun.status !== PayRollStatus.LOCKED
+    ) {
       throw new BadRequestException(
-        `Cannot generate payslips for payroll run with status: ${payrollRun.status}. Only APPROVED payroll runs can generate payslips.`,
+        `Payslips can only be generated for APPROVED or LOCKED payroll runs. Current status: ${payrollRun.status}`,
       );
     }
 
-    this.validatePayrollNotLocked(payrollRun, 'generate payslips');
+    // If payroll is explicitly marked as locked we still allow generation; keep
+    // validation to prevent accidental generation for other statuses.
 
     // Get all employee payroll details for this run
     const employeeDetails = await this.employeePayrollDetailsModel
@@ -1018,6 +1025,7 @@ export class PayrollExecutionService {
 
     let generated = 0;
     let errors = 0;
+    const errorsDetails: string[] = [];
 
     // Get approved allowances and tax rules for payslip details
     const approvedAllowances = await this.allowanceModel
@@ -1116,25 +1124,37 @@ export class PayrollExecutionService {
           delete payslipPayload.earningsDetails;
         }
 
+        // Ensure numeric totals are normalized to avoid schema validation failures
+        payslipPayload.totalGrossSalary = Number(payslipPayload.totalGrossSalary) || 0;
+        payslipPayload.totaDeductions = Number(payslipPayload.totaDeductions) || 0;
+        payslipPayload.netPay = Number(payslipPayload.netPay) || 0;
+
         const payslip = new this.paySlipModel(payslipPayload);
 
         try {
           await payslip.save();
+          generated++;
         } catch (saveError: any) {
-          // Re-throw after logging to preserve behavior but capture full context
+          errors++;
+          const message = (saveError && saveError.message) ? saveError.message : String(saveError);
           console.error('Payslip save payload:', JSON.stringify(payslipPayload));
-          console.error('Payslip save error stack:', saveError.stack || saveError);
-          throw saveError;
+          console.error('Payslip save error:', message);
+          if (saveError && saveError.stack) console.error(saveError.stack);
+          errorsDetails.push(message);
+          // continue with next employee
+          continue;
         }
-        generated++;
       } catch (error: any) {
         errors++;
-        console.error(`Error generating payslip for employee ${JSON.stringify(detail.employeeId)}:`);
-        console.error(error && error.stack ? error.stack : error);
+        const message = (error && error.message) ? error.message : String(error);
+        console.error(`Error generating payslip for employee ${JSON.stringify(detail.employeeId)}:`, message);
+        if (error && error.stack) console.error(error.stack);
+        errorsDetails.push(message);
       }
     }
 
-    return { generated, errors };
+    // Return basic stats and a short sample of error messages to aid debugging
+    return { generated, errors, errorsDetails: errorsDetails.slice(0, 20) } as any;
   }
 
   async generatePayslipPDF(payslipId: string): Promise<Buffer> {
@@ -1271,6 +1291,31 @@ export class PayrollExecutionService {
       // Finalize PDF
       doc.end();
     });
+  }
+
+  /**
+   * Return payslips for a given payroll run. Accepts either a Mongo ObjectId
+   * or a human-friendly runId (e.g., PR-2025-12-0001).
+   */
+  async getPayslipsForRun(payrollRunId: string): Promise<any[]> {
+    let payrollRunObjectId: Types.ObjectId | null = null;
+
+    if (Types.ObjectId.isValid(payrollRunId)) {
+      payrollRunObjectId = new Types.ObjectId(payrollRunId);
+    } else {
+      const run = await this.payrollRunsModel.findOne({ runId: payrollRunId }).exec();
+      if (!run) {
+        throw new BadRequestException('Invalid payroll run ID');
+      }
+      payrollRunObjectId = run._id as Types.ObjectId;
+    }
+
+    return this.paySlipModel
+      .find({ payrollRunId: payrollRunObjectId })
+      .populate('employeeId')
+      .populate('payrollRunId')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
   /**

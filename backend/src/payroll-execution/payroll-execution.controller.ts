@@ -76,7 +76,7 @@ export class PayrollExecutionController {
   }
 
   @Get('approved-locked') // done
-  @Roles(Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
   async getApprovedAndLockedRuns() {
     return this.payrollService.getApprovedAndLockedRuns();
   }
@@ -178,6 +178,12 @@ export class PayrollExecutionController {
   @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
   async generatePayslips(@Param('id') id: string) {
     return this.payrollService.generatePayslips(id);
+  }
+
+  @Get('payslips/run/:runId')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
+  async getPayslipsForRun(@Param('runId') runId: string) {
+    return this.payrollService.getPayslipsForRun(runId);
   }
 
   @Get('payslips/:id/pdf')
