@@ -18,9 +18,11 @@ export class EmployeeTerminationResignationService {
    * Fetches all terminated employees and calculates benefits according to business rules
    */
   async autoProcessTerminationBenefits(runId: string) {
+    const { Types } = require('mongoose');
+    console.log('DEBUG: Searching for payrollRunId:', runId, 'as ObjectId:', new Types.ObjectId(runId));
     const pendingBenefits = await this.terminationResignationModel.find({
       status: 'pending',
-      payrollRunId: runId,
+      payrollRunId: new Types.ObjectId(runId),
     });
 
     if (pendingBenefits.length === 0) {
@@ -240,8 +242,9 @@ export class EmployeeTerminationResignationService {
    * Get all termination benefits for a payroll run
    */
   async getTerminationBenefitsByRun(runId: string) {
+    const { Types } = require('mongoose');
     const benefits = await this.terminationResignationModel
-      .find({ payrollRunId: runId })
+      .find({ payrollRunId: new Types.ObjectId(runId) })
       .populate('employeeId', 'name email position department');
 
     return {

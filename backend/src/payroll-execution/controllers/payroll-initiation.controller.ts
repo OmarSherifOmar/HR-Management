@@ -95,7 +95,8 @@ export class PayrollInitiationController {
     try {
       const editorId = req.user.sub || req.user._id;
       return await this.payrollInitiationService.editPayrollInitiation(
-        { ...dto, runId },
+        runId,
+        dto,
         editorId,
       );
     } catch (error) {

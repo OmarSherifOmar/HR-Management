@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { payrollRuns } from '../models/payrollRuns.schema';
 import { EditPayrollInitiationDto } from '../dto/edit-payroll-initiation.dto';
 import { InitiatePayrollDto } from '../dto/initiate-payroll.dto';
@@ -87,7 +88,8 @@ export class PayrollInitiationService {
 
     // Create new payroll run
     const runIdNumber = await this.payrollRunsModel.countDocuments() + 1;
-    const runIdFormatted = `PR-${new Date().getFullYear()}-${runIdNumber.toString().padStart(4, '0')}`;
+    const periodYear = new Date(dto.periodEnd).getFullYear();
+    const runIdFormatted = `PR-${periodYear}-${runIdNumber.toString().padStart(4, '0')}`;
     
     const newPayrollRun = new this.payrollRunsModel({
       runId: runIdFormatted,
@@ -98,6 +100,7 @@ export class PayrollInitiationService {
       exceptions: 0,
       totalnetpay: 0,
       payrollSpecialistId: dto.initiatorId,
+      payrollManagerId: dto.payrollManagerId,
       paymentStatus: 'pending',
     });
 
@@ -115,6 +118,10 @@ export class PayrollInitiationService {
    * Retrieves current status and details of a payroll run
    */
   async getPayrollRunStatus(runId: string) {
+    if (!mongoose.Types.ObjectId.isValid(runId)) {
+      throw new BadRequestException(`Invalid payroll run ID format: ${runId}`);
+    }
+
     const run = await this.payrollRunsModel.findById(runId);
 
     if (!run) {
@@ -140,17 +147,41 @@ export class PayrollInitiationService {
    * Edit payroll initiation details
    * Allows modification of payroll period before processing begins
    */
-  async editPayrollInitiation(dto: EditPayrollInitiationDto, editorId: string) {
-    const run = await this.payrollRunsModel.findById(dto.runId);
-
-    if (!run) {
-      throw new NotFoundException(`Payroll run with ID ${dto.runId} not found`);
+  async editPayrollInitiation(runId: string, dto: EditPayrollInitiationDto, editorId: string) {
+    if (!runId) {
+      throw new BadRequestException('Payroll run ID is required');
     }
 
-    // Can only edit if status is 'draft'
-    if (run.status !== 'draft') {
+    console.log('Searching for payroll run with ID:', runId);
+    console.log('Is valid ObjectId:', mongoose.Types.ObjectId.isValid(runId));
+
+    // Try to find by ObjectId first, then by runId field
+    let run;
+    if (mongoose.Types.ObjectId.isValid(runId)) {
+      run = await this.payrollRunsModel.findById(runId);
+      console.log('Search by ObjectId result:', run ? 'Found' : 'Not found');
+    }
+    
+    // If not found by ObjectId, search by runId field
+    if (!run) {
+      run = await this.payrollRunsModel.findOne({ runId: runId });
+      console.log('Search by runId field result:', run ? 'Found' : 'Not found');
+    }
+
+    // List all payroll runs to debug
+    if (!run) {
+      const allRuns = await this.payrollRunsModel.find().select('_id runId status').limit(10);
+      console.log('Available payroll runs:', JSON.stringify(allRuns, null, 2));
+    }
+
+    if (!run) {
+      throw new NotFoundException(`Payroll run with ID ${runId} not found`);
+    }
+
+    // Can only edit if status is 'draft' or 'completed'
+    if (run.status !== 'draft' && run.status !== 'completed') {
       throw new BadRequestException(
-        `Cannot edit payroll run with status: ${run.status}. Only draft runs can be edited.`
+        `Cannot edit payroll run with status: ${run.status}. Only draft or completed runs can be edited.`
       );
     }
 
@@ -171,8 +202,16 @@ export class PayrollInitiationService {
       updateData.payrollPeriod = newEnd;
     }
 
+    if (dto.editReason) {
+      updateData.editReason = dto.editReason;
+    }
+
+    if (dto.notes) {
+      updateData.notes = dto.notes;
+    }
+
     const updatedRun = await this.payrollRunsModel.findByIdAndUpdate(
-      dto.runId,
+      run._id,
       updateData,
       { new: true }
     );
@@ -188,6 +227,10 @@ export class PayrollInitiationService {
    * Triggers Phase 0 (bonus/benefit approvals) and prepares for Phase 1
    */
   async startAutomaticProcessing(runId: string, initiatorId: string) {
+    if (!mongoose.Types.ObjectId.isValid(runId)) {
+      throw new BadRequestException(`Invalid payroll run ID format: ${runId}`);
+    }
+
     const run = await this.payrollRunsModel.findById(runId);
 
     if (!run) {
@@ -244,6 +287,10 @@ export class PayrollInitiationService {
    * Can only delete runs that haven't been locked or published
    */
   async deletePayrollRun(runId: string, deleterId: string) {
+    if (!mongoose.Types.ObjectId.isValid(runId)) {
+      throw new BadRequestException(`Invalid payroll run ID format: ${runId}`);
+    }
+
     const run = await this.payrollRunsModel.findById(runId);
 
     if (!run) {

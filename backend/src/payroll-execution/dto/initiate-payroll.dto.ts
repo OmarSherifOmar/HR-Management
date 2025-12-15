@@ -14,4 +14,7 @@ export class InitiatePayrollDto {
 
   @IsString()
   initiatorId: string;
+
+  @IsString()
+  payrollManagerId: string;
 }
