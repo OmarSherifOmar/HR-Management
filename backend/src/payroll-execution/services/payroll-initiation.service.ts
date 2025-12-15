@@ -73,42 +73,7 @@ export class PayrollInitiationService {
     };
   }
 
-  /**
-   * Initiate new payroll run
-   * Creates a new payroll cycle with initial status
-   */
-  async initiatePayrollRun(dto: InitiatePayrollDto) {
-    // First validate the period
-    await this.validatePayrollPeriod({
-      startDate: new Date(dto.periodStart),
-      endDate: new Date(dto.periodEnd),
-      payPeriodType: dto.payPeriodType,
-    });
 
-    // Create new payroll run
-    const runIdNumber = await this.payrollRunsModel.countDocuments() + 1;
-    const runIdFormatted = `PR-${new Date().getFullYear()}-${runIdNumber.toString().padStart(4, '0')}`;
-    
-    const newPayrollRun = new this.payrollRunsModel({
-      runId: runIdFormatted,
-      payrollPeriod: new Date(dto.periodEnd),
-      status: 'draft',
-      entity: 'Company Name', // TODO: Get from configuration
-      employees: 0,
-      exceptions: 0,
-      totalnetpay: 0,
-      payrollSpecialistId: dto.initiatorId,
-      paymentStatus: 'pending',
-    });
-
-    const savedRun = await newPayrollRun.save();
-
-    return {
-      message: 'Payroll run initiated successfully',
-      runId: savedRun._id,
-      run: savedRun,
-    };
-  }
 
   /**
    * Get payroll run status
@@ -156,20 +121,9 @@ export class PayrollInitiationService {
 
     const updateData: any = {};
 
-    // Validate and update period date if provided
-    if (dto.periodEnd) {
-      const newEnd = new Date(dto.periodEnd);
-      const newStart = dto.periodStart ? new Date(dto.periodStart) : new Date(newEnd.getFullYear(), newEnd.getMonth(), 1);
-
+    
       // Validate new period
-      await this.validatePayrollPeriod({
-        startDate: newStart,
-        endDate: newEnd,
-        payPeriodType: dto.payPeriodType || 'Monthly',
-      });
-
-      updateData.payrollPeriod = newEnd;
-    }
+     
 
     const updatedRun = await this.payrollRunsModel.findByIdAndUpdate(
       dto.runId,

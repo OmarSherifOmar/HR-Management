@@ -43,27 +43,7 @@ export class PayrollInitiationController {
     }
   }
 
-  /**
-   * Initiate new payroll run
-   * POST /payroll-execution/initiation/initiate
-   */
-  @Post('initiate')
-  @Roles(Role.PAYROLL_SPECIALIST)
-  async initiateRun(@Body() dto: InitiatePayrollDto, @Request() req) {
-    try {
-      const initiatorId = req.user.sub || req.user._id;
-      return await this.payrollInitiationService.initiatePayrollRun({
-        ...dto,
-        initiatorId,
-      });
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to initiate payroll run',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
+ 
   /**
    * Get payroll run status
    * GET /payroll-execution/initiation/run/:runId/status
