@@ -479,7 +479,7 @@ export class LeaveRequestController {
    */
   @Get('hr/pending-reviews')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
+  @Roles(Role.HR_EMPLOYEE, Role.HR_MANAGER, Role.HR_ADMIN)
   async getRequestsForHRReview(@Req() req: AuthenticatedRequest) {
     const hrManagerId = getUserId(req);
 
@@ -503,7 +503,7 @@ export class LeaveRequestController {
    */
   @Get('hr/rejected-requests')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
+  @Roles(Role.HR_EMPLOYEE, Role.HR_MANAGER, Role.HR_ADMIN)
   async getRejectedRequestsForHR(@Req() req: AuthenticatedRequest) {
     const leaveRequests = await this.leaveRequestService.getRejectedRequestsForHR();
 

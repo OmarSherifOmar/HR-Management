@@ -1,7 +1,7 @@
 'use client';
 
 import DashboardLayout from '../../../components/DashboardLayout';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import {
   Calendar,
@@ -63,6 +63,7 @@ interface LeaveRequest {
 }
 
 export default function HRPendingReviewsPage() {
+  const { user } = useAuth();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,6 +74,9 @@ export default function HRPendingReviewsPage() {
   const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | 'override' | null>(null);
   const [rejectedRequests, setRejectedRequests] = useState<LeaveRequest[]>([]);
   const [showRejectedTab, setShowRejectedTab] = useState(false);
+  
+  // Check if user can perform actions (only HR Manager and HR Admin)
+  const canPerformActions = user?.role === 'HR Manager' || user?.role === 'HR Admin';
   
   // Bulk action states
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
@@ -500,8 +504,8 @@ export default function HRPendingReviewsPage() {
           </div>
         )}
 
-        {/* Bulk Actions Bar */}
-        {((showRejectedTab && rejectedRequests.length > 0) || (!showRejectedTab && leaveRequests.length > 0)) && (
+        {/* Bulk Actions Bar - Only show if user can perform actions */}
+        {canPerformActions && ((showRejectedTab && rejectedRequests.length > 0) || (!showRejectedTab && leaveRequests.length > 0)) && (
           <div className="bg-[#2a2a2a] rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -518,7 +522,7 @@ export default function HRPendingReviewsPage() {
                 </label>
               </div>
               
-              {selectedRequests.size > 0 && (
+              {canPerformActions && selectedRequests.size > 0 && (
                 <div className="flex items-center gap-2">
                   {!showRejectedTab ? (
                     <>
@@ -592,8 +596,8 @@ export default function HRPendingReviewsPage() {
               return (
                 <div key={request._id} className={`bg-[#2a2a2a] rounded-lg p-6 hover:bg-[#333333] transition-colors ${isSelected && !showRejectedTab ? 'ring-2 ring-blue-500' : ''}`}>
                   <div className="flex items-start gap-4">
-                    {/* Checkbox for bulk selection - only show for pending reviews */}
-                    {!showRejectedTab && (
+                    {/* Checkbox for bulk selection - only show for pending reviews and if user can perform actions */}
+                    {!showRejectedTab && canPerformActions && (
                       <div className="pt-1">
                         <input
                           type="checkbox"
@@ -716,48 +720,50 @@ export default function HRPendingReviewsPage() {
                       </p>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2">
-                      {showRejectedTab ? (
-                        <>
-                          <button
-                            onClick={() => openActionModal('override', request)}
-                            disabled={actionLoading}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Shield size={18} />
-                            Override & Approve
-                          </button>
-                          <button
-                            onClick={() => openActionModal('reject', request)}
-                            disabled={actionLoading}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <XCircle size={18} />
-                            Confirm Rejection
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => openActionModal('approve', request)}
-                            disabled={actionLoading}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <CheckCircle size={18} />
-                            Finalize & Approve
-                          </button>
-                          <button
-                            onClick={() => openActionModal('reject', request)}
-                            disabled={actionLoading}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <XCircle size={18} />
-                            Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    {/* Action Buttons - Only show if user can perform actions */}
+                    {canPerformActions && (
+                      <div className="flex flex-col gap-2">
+                        {showRejectedTab ? (
+                          <>
+                            <button
+                              onClick={() => openActionModal('override', request)}
+                              disabled={actionLoading}
+                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Shield size={18} />
+                              Override & Approve
+                            </button>
+                            <button
+                              onClick={() => openActionModal('reject', request)}
+                              disabled={actionLoading}
+                              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <XCircle size={18} />
+                              Confirm Rejection
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => openActionModal('approve', request)}
+                              disabled={actionLoading}
+                              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <CheckCircle size={18} />
+                              Finalize & Approve
+                            </button>
+                            <button
+                              onClick={() => openActionModal('reject', request)}
+                              disabled={actionLoading}
+                              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <XCircle size={18} />
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

@@ -196,8 +196,9 @@ export default function DashboardLayout({ children, title, description }: Dashbo
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
         ] : []),
         
-        // HR Reviews - Only for HR Managers and HR Admins
+        // HR Reviews - For HR Employees, HR Managers and HR Admins
         ...(hasPermission('approve_all_leave') || 
+            user?.role === 'HR Employee' ||
             user?.role === 'HR Manager' || 
             user?.role === 'HR Admin' ? [
           { name: 'HR Reviews', href: '/leaves/hr/pending-reviews' },
@@ -209,9 +210,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         ] : []),
         ...(hasPermission('audit_leave_actions') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Audit Log', href: '/leaves/admin/audit-log' },
-        ] : []),
-        ...(hasPermission('manage_leave_roles') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Role Management', href: '/leaves/admin/role-management' },
         ] : []),
         ...(hasPermission('manage_leave_policies') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Policies', href: '/leaves/admin/policies' },
