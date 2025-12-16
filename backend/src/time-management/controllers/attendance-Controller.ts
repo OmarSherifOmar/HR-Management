@@ -2,6 +2,9 @@
 import { Controller, Post, Body, Get, Param, NotFoundException, Query } from '@nestjs/common';
 import { AttendanceService } from '../services/attendance.service';
 import { PolicyService } from '../services/policy.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { LatenessRule, LatenessRuleDocument } from '../models/lateness-rule.schema';
 
 type ClockRequest = { employeeId: string; time?: string };
 
@@ -9,7 +12,8 @@ type ClockRequest = { employeeId: string; time?: string };
 export class AttendanceController {
 	constructor(
 		private readonly attendanceService: AttendanceService,
-		private readonly policyService: PolicyService
+		private readonly policyService: PolicyService,
+		@InjectModel(LatenessRule.name) private latenessRuleModel: Model<LatenessRuleDocument>,
 	) {}
 
 	@Post('clock-in')
@@ -41,6 +45,17 @@ export class AttendanceController {
 		return record;
 	}
 
+	@Get(':employeeId/:date/lateness')
+	async getLatenessByDate(@Param('employeeId') employeeId: string, @Param('date') dateParam: string) {
+		// dateParam expected as YYYY-MM-DD
+		const dt = new Date(dateParam + 'T00:00:00Z');
+		const record = await this.attendanceService.getRecordForEmployeeByDate(employeeId, dt);
+		if (!record) return { employeeId, date: dateParam, latenessMinutes: 0 };
+		const punches = (record.punches || []).map((p: any) => ({ type: p.type, time: new Date(p.time) }));
+		const minutesLate = await this.policyService.calcuateLateness(employeeId, dt, punches);
+		return { employeeId, date: dateParam, latenessMinutes: minutesLate };
+	}
+
 	@Get(':employeeId/lateness')
 	async getRepeatedLateness(@Param('employeeId') employeeId: string, @Query('days') days = '7') {
 		return this.policyService.checkRepeatedLateness(employeeId, parseInt(days, 10));
@@ -51,6 +66,11 @@ export class AttendanceController {
 		const startDate = new Date(start);
 		const endDate = new Date(end);
 		return this.policyService.getOvertimeReport(startDate, endDate);
+	}
+
+	@Get('lateness-rules')
+	async getLatenessRules() {
+		return this.latenessRuleModel.find({}).lean();
 	}
 
 	@Get('exceptions')

@@ -162,6 +162,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: 'Attendance', href: '/dashboard/time-management' },
         { name: 'Schedules', href: '/dashboard/time-management/schedules' },
         { name: 'Overtime', href: '/dashboard/time-management/overtime' },
+        { name: 'Policy', href: '/time-managment/policy' },
         { name: 'Shift Management', href: '/time-management/shift-management' },
         
       ],
