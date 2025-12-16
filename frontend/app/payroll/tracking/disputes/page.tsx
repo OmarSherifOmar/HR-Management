@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext";
 
 interface Dispute {
   _id: string;
@@ -19,6 +20,7 @@ interface Dispute {
 
 export default function DisputesPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [allDisputes, setAllDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,24 +29,26 @@ export default function DisputesPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole") || "";
-    const isAdminRole = [
-      "admin",
-      "payroll_manager",
-      "payroll_specialist",
-    ].includes(role.toLowerCase());
+    if (!user) return;
+
+    const role = user.role || "";
+    const normalizedRole = String(role).toLowerCase();
+    const adminRoles = [
+      "payroll manager",
+      "payroll specialist",
+      "system admin",
+      "finance staff",
+    ];
+
+    const isAdminRole = adminRoles.includes(normalizedRole);
     setIsAdmin(isAdminRole);
 
-    if (
-      isAdminRole ||
-      role.toLowerCase().includes("admin") ||
-      role.toLowerCase().includes("manager")
-    ) {
+    if (isAdminRole) {
       fetchAllDisputes();
     } else {
       fetchEmployeeDisputes();
     }
-  }, []);
+  }, [user]);
 
   const fetchEmployeeDisputes = async () => {
     try {

@@ -438,13 +438,23 @@ export class PayrollTrackingController {
   }
 
   @Get('disputes')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.FINANCE_STAFF,
+  )
   async listDisputes(@Query('status') status?: string) {
     return this.svc.listDisputes({ status });
   }
 
   @Get('disputes/:id')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.FINANCE_STAFF,
+  )
   async getDisputeById(@Param('id') id: string) {
     return this.svc.getDisputeById(id);
   }
@@ -514,6 +524,17 @@ export class PayrollTrackingController {
     return this.svc.processRefund({ userId, role }, dto);
   }
 
+  @Post('refunds/:id/mark-paid')
+  @Roles(Role.FINANCE_STAFF)
+  async markRefundPaid(
+    @Param('id') id: string,
+    @Body('payrollRunId') payrollRunId: string,
+  ) {
+    if (!payrollRunId)
+      throw new BadRequestException('payrollRunId is required');
+    return this.svc.markRefundPaid(id, payrollRunId);
+  }
+
   @Post('disputes/:id/notes')
   @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async addDisputeNote(
@@ -529,6 +550,12 @@ export class PayrollTrackingController {
   // PAYSLIP + COMPENSATION (EMPLOYEE)
   // ---------------------------------------------------------------------------
 
+  @Get('me/refunds')
+  async getMyRefunds(@Req() req: AuthenticatedRequest) {
+    const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getRefundsForEmployee(userId);
+  }
   @Get('me/payslips')
   getMyPayslips(@Req() req: Request & { user?: { sub?: string } }) {
     const employeeId = req.user?.sub;

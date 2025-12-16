@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext";
 
 interface Claim {
   _id: string;
@@ -20,20 +21,58 @@ interface Claim {
 
 export default function ClaimsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    fetchClaims();
-  }, []);
+    if (!user) return;
 
-  const fetchClaims = async () => {
+    const role = user.role || "";
+    const normalizedRole = String(role).toLowerCase();
+    const adminRoles = [
+      "payroll manager",
+      "payroll specialist",
+      "system admin",
+      "finance staff",
+    ];
+
+    const isAdminRole = adminRoles.includes(normalizedRole);
+    setIsAdmin(isAdminRole);
+
+    if (isAdminRole) {
+      fetchAllClaims();
+    } else {
+      fetchMyClaims();
+    }
+  }, [user]);
+
+  const fetchMyClaims = async () => {
     try {
       setLoading(true);
       const response = await fetch(
         `http://localhost:3000/payroll-tracking/claims/mine`,
+        { credentials: "include" }
+      );
+      if (!response.ok) throw new Error("Failed to fetch claims");
+      const data = await response.json();
+      setClaims(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllClaims = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `http://localhost:3000/payroll-tracking/claims`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch claims");
@@ -129,9 +168,13 @@ export default function ClaimsPage() {
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">My Claims</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              {isAdmin ? "All Claims" : "My Claims"}
+            </h1>
             <p className="text-gray-400">
-              Submit and track your reimbursement claims
+              {isAdmin
+                ? "Review and manage employee reimbursement claims"
+                : "Submit and track your reimbursement claims"}
             </p>
           </div>
           <div className="flex gap-3">

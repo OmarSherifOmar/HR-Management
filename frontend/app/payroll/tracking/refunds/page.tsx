@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext";
 
 interface Refund {
   _id: string;
@@ -23,6 +24,7 @@ interface Refund {
 export default function RefundsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const prefilledDisputeId = searchParams.get("disputeId");
   const prefilledClaimId = searchParams.get("claimId");
 
@@ -42,23 +44,27 @@ export default function RefundsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole") || "";
-    setIsAdmin(
-      [
-        "admin",
-        "payroll_manager",
-        "finance_staff",
-        "payroll_specialist",
-      ].includes(role.toLowerCase())
-    );
-    fetchRefunds();
-  }, []);
+    const role = user?.role || "";
+    const normalizedRole = String(role).toLowerCase();
+    const isAdminRole = normalizedRole === "finance staff";
+    setIsAdmin(isAdminRole);
+    fetchRefunds(isAdminRole);
+  }, [user]);
 
-  const fetchRefunds = async () => {
+  const fetchRefunds = async (adminOverride?: boolean) => {
     try {
       setLoading(true);
+      const role = user?.role || "";
+      const normalizedRole = String(role).toLowerCase();
+      const isAdminRole =
+        adminOverride !== undefined ? adminOverride : normalizedRole === "finance staff";
+
+      const url = isAdminRole
+        ? "http://localhost:3000/payroll-tracking/refunds/pending"
+        : "http://localhost:3000/payroll-tracking/me/refunds";
+
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/refunds/pending",
+        url,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch refunds");
@@ -89,11 +95,9 @@ export default function RefundsPage() {
 
     try {
       setSubmitting(true);
-      const userId = localStorage.getItem("userId");
-      const role = localStorage.getItem("userRole");
 
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/refunds/process",
+        "http://localhost:3000/payroll-tracking/refunds",
         {
           method: "POST",
           headers: {
@@ -116,7 +120,7 @@ export default function RefundsPage() {
       alert("Refund processed successfully!");
       setShowProcessForm(false);
       setProcessForm({ linkedId: "", amount: "", reason: "" });
-      fetchRefunds();
+      fetchRefunds(isAdmin);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -143,7 +147,7 @@ export default function RefundsPage() {
 
       if (!response.ok) throw new Error("Failed to mark as paid");
       alert("Refund marked as paid!");
-      fetchRefunds();
+      fetchRefunds(isAdmin);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error marking as paid");
     }

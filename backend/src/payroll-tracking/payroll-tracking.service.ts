@@ -834,13 +834,23 @@ export class PayrollTrackingService {
     actor: { userId: string | null; role: string | undefined },
     dto: ProcessRefundDto,
   ) {
-    if (!Types.ObjectId.isValid(dto.linkedId))
-      throw new BadRequestException('Invalid linked ID');
+    let dispute: disputesDocument | null = null;
+    let claim: claimsDocument | null = null;
 
-    const linkedIdObj = new Types.ObjectId(dto.linkedId);
+    // First, try treating linkedId as a MongoDB ObjectId
+    if (Types.ObjectId.isValid(dto.linkedId)) {
+      const linkedIdObj = new Types.ObjectId(dto.linkedId);
+      dispute = await this.disputeModel.findById(linkedIdObj);
+      claim = dispute ? null : await this.claimModel.findById(linkedIdObj);
+    }
 
-    const dispute = await this.disputeModel.findById(linkedIdObj);
-    const claim = dispute ? null : await this.claimModel.findById(linkedIdObj);
+    // If nothing found, try matching against business IDs (disputeId / claimId)
+    if (!dispute && !claim) {
+      dispute = await this.disputeModel.findOne({ disputeId: dto.linkedId });
+      if (!dispute) {
+        claim = await this.claimModel.findOne({ claimId: dto.linkedId });
+      }
+    }
 
     if (!dispute && !claim)
       throw new NotFoundException('No linked dispute/claim found');
@@ -2046,14 +2056,6 @@ export class PayrollTrackingService {
       unpaidDays += lookFor(latestSlip.deductionsDetails?.taxes as any[]);
     }
 
-    const salaryInfo = await this.getBaseSalaryForEmployee(employeeId);
-    const baseSalary =
-      typeof salaryInfo.baseSalary === 'number' ? salaryInfo.baseSalary : 0;
-    const workingDaysPerMonth = 22;
-    const dailyRate =
-      Math.round((baseSalary / workingDaysPerMonth) * 100) / 100;
-    const deduction = Math.round(dailyRate * unpaidDays * 100) / 100;
-
     const related: Array<{
       name: string;
       days?: number | null;
@@ -2105,6 +2107,39 @@ export class PayrollTrackingService {
             ? String(nmVal)
             : 'penalty';
       related.push({ name: String(nm), days, amount: amt, raw: p });
+    }
+
+    // Base salary and default daily rate (for fallback calculations)
+    const salaryInfo = await this.getBaseSalaryForEmployee(employeeId);
+    const baseSalary =
+      typeof salaryInfo.baseSalary === 'number' ? salaryInfo.baseSalary : 0;
+    const workingDaysPerMonth = 22;
+    const baseDailyRate =
+      Math.round((baseSalary / workingDaysPerMonth) * 100) / 100;
+
+    // Prefer explicit unpaid-leave amounts from the payslip penalties
+    const explicitUnpaidAmount = related
+      .filter((r) => {
+        const nm = (r.name || '').toLowerCase();
+        return (
+          nm.includes('unpaid') ||
+          nm.includes('unpaid leave') ||
+          nm.includes('unpaid_leave')
+        );
+      })
+      .reduce((sum, r) => sum + (r.amount ?? 0), 0);
+
+    let dailyRate = baseDailyRate;
+    let deduction: number;
+
+    if (explicitUnpaidAmount > 0) {
+      deduction = Math.round(explicitUnpaidAmount * 100) / 100;
+      if (unpaidDays > 0) {
+        dailyRate = Math.round((deduction / unpaidDays) * 100) / 100;
+      }
+    } else {
+      // Fallback: compute theoretical deduction from base salary and unpaid days
+      deduction = Math.round(baseDailyRate * unpaidDays * 100) / 100;
     }
 
     return {
@@ -2419,6 +2454,17 @@ export class PayrollTrackingService {
     return this.refundModel
       .find({ status: RefundStatus.PENDING })
       .populate('employeeId claimId disputeId')
+      .exec();
+  }
+
+   // GET REFUNDS FOR A SPECIFIC EMPLOYEE (SELF-SERVICE VIEW)
+  async getRefundsForEmployee(employeeId: string | null) {
+    if (!employeeId || !Types.ObjectId.isValid(employeeId)) return [];
+
+    return this.refundModel
+      .find({ employeeId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .populate('claimId disputeId')
       .exec();
   }
 

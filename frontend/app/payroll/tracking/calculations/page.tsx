@@ -74,9 +74,13 @@ interface MisconductDeductions {
 }
 
 interface UnpaidLeaveDeductions {
-  unpaidLeaveDays: number;
+  payslipId?: string | null;
+  month?: string | null;
+  unpaidDays: number;
+  baseSalary?: number;
+  workingDaysPerMonth?: number;
   dailyRate: number;
-  totalDeduction: number;
+  deduction: number;
   note: string;
 }
 
@@ -745,7 +749,7 @@ export default function CalculationsPage() {
                       Total Deduction
                     </p>
                     <p className="text-2xl font-bold text-purple-300">
-                      {formatCurrency(unpaidLeaveDeductions.totalDeduction)}
+                      {formatCurrency(unpaidLeaveDeductions.deduction)}
                     </p>
                   </div>
                   <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
@@ -753,7 +757,7 @@ export default function CalculationsPage() {
                       Unpaid Leave Days
                     </p>
                     <p className="text-2xl font-bold text-white">
-                      {unpaidLeaveDeductions.unpaidLeaveDays}
+                      {unpaidLeaveDeductions.unpaidDays}
                     </p>
                   </div>
                   <div className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-700/50">
