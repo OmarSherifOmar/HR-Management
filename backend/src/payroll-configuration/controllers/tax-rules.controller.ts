@@ -13,7 +13,7 @@ export class TaxRulesController {
   constructor(private readonly taxRulesService: TaxRulesService) {}
 
   @Post()
-  @Roles(Role.LEGAL_POLICY_ADMIN)
+  @Roles(Role.LEGAL_POLICY_ADMIN,)
   async create(@Body() dto: CreateTaxRuleDto, @Req() req: any) {
     const createdBy = req.user?._id;
     return this.taxRulesService.create(dto, createdBy);
@@ -32,14 +32,13 @@ export class TaxRulesController {
   }
 
   @Put(':id')
-  @Roles(Role.LEGAL_POLICY_ADMIN)
+  @Roles(Role.LEGAL_POLICY_ADMIN, Role.Payroll_MANAGER)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateTaxRuleDto,
     @Req() req: any,
   ) {
-    const updatedBy = req.user?._id;
-    return this.taxRulesService.update(id, dto, updatedBy);
+    return this.taxRulesService.update(id, dto);
   }
 
   @Post(':id/approve')

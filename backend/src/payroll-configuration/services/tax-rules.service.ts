@@ -30,16 +30,20 @@ export class TaxRulesService {
       .populate('approvedBy', 'fullName email')
       .exec();
   }
-  async update(id: string, updateDto: UpdateTaxRuleDto, updatedBy: string) {
+  async update(id: string, updateDto: UpdateTaxRuleDto) {
     const rule = await this.taxRulesModel.findById(id);
     if (!rule) throw new NotFoundException('Tax rule not found');
 
-    // apply update
-    Object.assign(rule, updateDto);
+    // Only apply provided fields, preserve existing values
+    const updateData: Partial<UpdateTaxRuleDto> = {};
+    if (updateDto.name !== undefined) updateData.name = updateDto.name;
+    if (updateDto.description !== undefined) updateData.description = updateDto.description;
+    if (updateDto.rate !== undefined) updateData.rate = updateDto.rate;
+
+    Object.assign(rule, updateData);
 
     // keep it in draft if edited (legal flow logic)
     rule.status = rule.status === ConfigStatus.APPROVED ? ConfigStatus.DRAFT : rule.status;
-    rule.updatedBy = new mongoose.Types.ObjectId(updatedBy);
 
     return rule.save();
   }
