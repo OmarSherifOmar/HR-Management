@@ -126,6 +126,9 @@ export class LeaveAccrualService {
     leaveTypeId: string,
     serviceDays?: number,
   ): Promise<AccrualResult> {
+    // Check if automatic entitlement creation is disabled
+    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
+    
     // Get or create entitlement
     let entitlement = await this.entitlementModel.findOne({
       employeeId: new Types.ObjectId(employeeId),
@@ -133,6 +136,12 @@ export class LeaveAccrualService {
     });
 
     if (!entitlement) {
+      if (!automaticEntitlementEnabled) {
+        throw new BadRequestException(
+          'Automatic entitlement creation is disabled. Entitlement must be created manually through Personalized Entitlements.'
+        );
+      }
+      
       entitlement = new this.entitlementModel({
         employeeId: new Types.ObjectId(employeeId),
         leaveTypeId: new Types.ObjectId(leaveTypeId),

@@ -222,7 +222,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
           { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
         ] : []),
         ...(hasPermission('manage_entitlements') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Personalized Entitlements', href: '/dashboard/admin/personalized-entitlements' },
+          { name: 'Admin: Adding normal and Personalized Entitlements', href: '/dashboard/admin/personalized-entitlements' },
         ] : []),
         ...(hasPermission('manage_calendar') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
