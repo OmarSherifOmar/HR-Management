@@ -13,6 +13,16 @@ import { ShiftTypeModule } from './modules/shift-type.module';
 import { ShiftModule } from './modules/shift.module';
 import { ShiftAssignmentModule } from './modules/shift-assignment.module';
 import { ScheduleRuleModule } from './modules/schedule-rule.module';
+import { AttendanceController } from './controllers/attendance-Controller';
+import { CorrectnessController } from './controllers/correctness-Controller';
+import { AttendanceService } from './services/attendance.service';
+import { CorrectionService } from './services/correction.service';
+import { PolicyService } from './services/policy.service';
+import { HolidayService } from './services/holiday.service';
+import { NotificationService } from './services/notification.service';
+import { ShiftAssignmentService } from './services/ShiftAssignmentService';
+import { Shift, ShiftSchema } from './models/shift.schema';
+import { ShiftAssignment, ShiftAssignmentSchema } from './models/shift-assignment.schema';
 
 
 @Module({
@@ -25,14 +35,24 @@ import { ScheduleRuleModule } from './modules/schedule-rule.module';
       { name: OvertimeRule.name, schema: OvertimeRuleSchema },
       { name: LatenessRule.name, schema: latenessRuleSchema },
       { name: Holiday.name, schema: HolidaySchema },
+      { name: Shift.name, schema: ShiftSchema },
+      { name: ShiftAssignment.name, schema: ShiftAssignmentSchema },
     ]),
     ShiftTypeModule,
     ShiftModule,
     ShiftAssignmentModule,
     ScheduleRuleModule,
   ],
-  controllers: [TimeManagementController],
-  providers: [TimeManagementService],
+  controllers: [TimeManagementController, AttendanceController, CorrectnessController],
+  providers: [
+    TimeManagementService,
+    AttendanceService,
+    CorrectionService,
+    PolicyService,
+    HolidayService,
+    NotificationService,
+    ShiftAssignmentService,
+  ],
   exports: [ShiftTypeModule, ShiftModule, ShiftAssignmentModule, ScheduleRuleModule],
 })
 export class TimeManagementModule {}
