@@ -206,23 +206,85 @@ export class PayrollTrackingService {
 
     const history = slips.map((slip) => {
       const insurances = slip.deductionsDetails?.insurances ?? [];
-      const contributions = insurances.map((ins: Record<string, unknown>) => {
-        const amount = (ins.amount as number) ?? 0;
-        const employerRate = (ins.employerRate as number) ?? 0;
-        const employeeRate = (ins.employeeRate as number) ?? 0;
-        const totalRate = employerRate + employeeRate;
-        // Calculate employer's share based on rates
-        const employerShare =
-          totalRate > 0 ? (amount * employerRate) / employeeRate : 0;
+      const contributions = (Array.isArray(insurances) ? insurances : []).map(
+        (raw: unknown) => {
+          const isRecord = (v: unknown): v is Record<string, unknown> =>
+            typeof v === 'object' && v !== null;
+          const obj: Record<string, unknown> = isRecord(raw) ? raw : {};
+          const get = (k: string) =>
+            Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : undefined;
 
-        return {
-          name: (ins.name as string) ?? 'Insurance',
-          employeeShare: Math.round(amount * 100) / 100,
-          employerShare: Math.round(employerShare * 100) / 100,
-          employerRate,
-          employeeRate,
-        };
-      });
+          const tryNumber = (v: unknown): number | null => {
+            if (v == null) return null;
+            if (typeof v === 'number') return v;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+          };
+
+          const nameRaw =
+            get('name') ?? get('label') ?? get('type') ?? 'Insurance';
+
+          const employeeShareRaw =
+            tryNumber(get('employee')) ??
+            tryNumber(get('employeeShare')) ??
+            tryNumber(get('employee_amount')) ??
+            tryNumber(get('employeeAmount')) ??
+            null;
+
+          const employerShareExplicit =
+            tryNumber(get('employer')) ??
+            tryNumber(get('employerShare')) ??
+            tryNumber(get('employer_amount')) ??
+            tryNumber(get('employerAmount')) ??
+            null;
+
+          const amount =
+            tryNumber(get('amount')) ??
+            tryNumber(get('total')) ??
+            (employeeShareRaw ?? 0) + (employerShareExplicit ?? 0);
+
+          const employerRate =
+            tryNumber(get('employerRate')) ??
+            tryNumber(get('employer_rate')) ??
+            tryNumber(get('employerPct')) ??
+            0;
+          const employeeRate =
+            tryNumber(get('employeeRate')) ??
+            tryNumber(get('employee_rate')) ??
+            tryNumber(get('employeePct')) ??
+            0;
+
+          let employerShare = employerShareExplicit;
+          if (employerShare == null && amount != null) {
+            const totalRate = employerRate + employeeRate;
+            if (totalRate > 0) {
+              employerShare = (amount * employerRate) / totalRate;
+            }
+          }
+
+          const safeName = (() => {
+            if (typeof nameRaw === 'string') return nameRaw;
+            if (typeof nameRaw === 'number' || typeof nameRaw === 'boolean')
+              return String(nameRaw);
+            if (isRecord(nameRaw)) {
+              if (typeof nameRaw.label === 'string') return nameRaw.label;
+              if (typeof nameRaw.name === 'string') return nameRaw.name;
+              if (typeof nameRaw.type === 'string') return nameRaw.type;
+            }
+            return 'Insurance';
+          })();
+
+          return {
+            name: safeName,
+            employeeShare:
+              Math.round(((employeeShareRaw ?? 0) as number) * 100) / 100,
+            employerShare:
+              Math.round(((employerShare ?? 0) as number) * 100) / 100,
+            employerRate,
+            employeeRate,
+          };
+        },
+      );
 
       const totalEmployer = contributions.reduce(
         (sum, c) => sum + c.employerShare,
