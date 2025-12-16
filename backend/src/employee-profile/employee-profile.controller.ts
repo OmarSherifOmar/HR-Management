@@ -330,7 +330,6 @@ export class EmployeeController {
     return this.employeeService.getEmployeeById(id);
   }
 
-  // ============= CANDIDATE ENDPOINTS =============
 
   @Get('candidates/list/all')
   @UseGuards(AuthGuard, authorizationGuard)

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertCircle, Search, Edit, Trash2, Eye, CheckCircle, X, Shield, RotateCcw, Plus } from 'lucide-react';
+import { AlertCircle, Search, Edit, Eye, CheckCircle, X, Shield, Plus } from 'lucide-react';
 import CreateEmployeeModal from './CreateEmployeeModal';
 
 // Roles matching backend SystemRole enum values
@@ -341,6 +341,8 @@ export default function HREmployeeManagement() {
   const [assigningRolesEmployee, setAssigningRolesEmployee] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [statusChangeEmployee, setStatusChangeEmployee] = useState<Employee | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   useEffect(() => {
     fetchEmployees();
@@ -445,61 +447,34 @@ export default function HREmployeeManagement() {
     }
   };
 
-  const handleDeactivateEmployee = async (id: string, reason: string) => {
-    if (!confirm('Are you sure you want to deactivate this employee?')) return;
+  const handleChangeEmployeeStatus = async (id: string, newStatus: string) => {
+    if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/employees/${id}/deactivate`, {
-        method: 'PATCH',
+      const response = await fetch(`http://localhost:3000/employees/${id}`, {
+        method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ status: newStatus }),
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to deactivate employees');
+        setError('You do not have permission to change employee status');
         return;
       }
 
       if (response.ok) {
-        setSuccess('Employee deactivated successfully');
+        setSuccess(`Employee status changed to ${newStatus} successfully`);
         setTimeout(() => setSuccess(''), 3000);
+        setStatusChangeEmployee(null);
+        setSelectedStatus('');
         fetchEmployees(searchTerm);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setError(errorData.message || 'Failed to deactivate employee');
+        setError(errorData.message || 'Failed to change employee status');
       }
     } catch (err) {
-      setError(`Error deactivating employee: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error(err);
-    }
-  };
-
-  const handleActivateEmployee = async (id: string) => {
-    if (!confirm('Are you sure you want to reactivate this employee?')) return;
-
-    try {
-      const response = await fetch(`http://localhost:3000/employees/${id}/activate`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.status === 403) {
-        setError('You do not have permission to reactivate employees');
-        return;
-      }
-
-      if (response.ok) {
-        setSuccess('Employee reactivated successfully');
-        setTimeout(() => setSuccess(''), 3000);
-        fetchEmployees(searchTerm);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.message || 'Failed to reactivate employee');
-      }
-    } catch (err) {
-      setError(`Error reactivating employee: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Error changing employee status: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error(err);
     }
   };
@@ -617,13 +592,21 @@ export default function HREmployeeManagement() {
                     <td className="px-6 py-4 text-sm text-white">
                       {emp.firstName} {emp.lastName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">{emp.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-400">
+                      {emp.workEmail || emp.personalEmail || emp.email || 'N/A'}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-400">{emp.mobilePhone}</td>
                     <td className="px-6 py-4 text-sm">
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${
                           emp.status === 'ACTIVE'
                             ? 'bg-green-900/20 text-green-200'
+                            : emp.status === 'ON_LEAVE'
+                            ? 'bg-yellow-900/20 text-yellow-200'
+                            : emp.status === 'SUSPENDED'
+                            ? 'bg-orange-900/20 text-orange-200'
+                            : emp.status === 'RETIRED'
+                            ? 'bg-gray-900/20 text-gray-200'
                             : 'bg-gray-900/20 text-gray-200'
                         }`}
                       >
@@ -653,29 +636,24 @@ export default function HREmployeeManagement() {
                         >
                           <Shield size={16} />
                         </button>
-                        {emp.status === 'ACTIVE' && (
-                          <button
-                            onClick={() => {
-                              const reason = prompt('Enter deactivation reason:');
-                              if (reason) {
-                                handleDeactivateEmployee(emp._id, reason);
-                              }
-                            }}
-                            className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                            title="Deactivate"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                        {emp.status === 'INACTIVE' && (
-                          <button
-                            onClick={() => handleActivateEmployee(emp._id)}
-                            className="p-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-                            title="Reactivate"
-                          >
-                            <RotateCcw size={16} />
-                          </button>
-                        )}
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setStatusChangeEmployee(emp);
+                              setSelectedStatus(e.target.value);
+                              handleChangeEmployeeStatus(emp._id, e.target.value);
+                            }
+                          }}
+                          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors cursor-pointer"
+                          title="Change Status"
+                        >
+                          <option value="">Change Status</option>
+                          <option value="ACTIVE">Active</option>
+                          <option value="ON_LEAVE">On Leave</option>
+                          <option value="SUSPENDED">Suspended</option>
+                          <option value="RETIRED">Retired</option>
+                        </select>
                       </div>
                     </td>
                   </tr>
