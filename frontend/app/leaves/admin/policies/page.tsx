@@ -128,7 +128,7 @@ export default function AdminPoliciesPage() {
             </h1>
           </div>
           <button
-            onClick={() => router.push('/dashboard/admin/policies/create')}
+            onClick={() => router.push('/leaves/admin/policies/create')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
             <Plus size={20} />
@@ -170,7 +170,7 @@ export default function AdminPoliciesPage() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => router.push(`/dashboard/admin/policies/create?id=${policy._id}`)}
+                      onClick={() => router.push(`/leaves/admin/policies/create?id=${policy._id}`)}
                       className="p-2 text-gray-400 hover:text-blue-400 transition-colors"
                       title="Edit Policy"
                     >
@@ -228,7 +228,7 @@ export default function AdminPoliciesPage() {
 
                 <div className="mt-4 pt-4 border-t border-gray-700">
                   <button
-                    onClick={() => router.push(`/dashboard/admin/policies/create?id=${policy._id}`)}
+                    onClick={() => router.push(`/leaves/admin/policies/create?id=${policy._id}`)}
                     className="w-full py-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     View Details →
