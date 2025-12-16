@@ -139,21 +139,32 @@ export class PayrollTrackingController {
     },
   ) {
     const { userId } = this.extractUser(req);
+    if (!userId) {
+      throw new ForbiddenException('User ID missing in token');
+    }
+
     const roles = Array.isArray(req.user?.roles)
       ? req.user.roles
       : req.user?.role
         ? [req.user.role]
         : [];
 
-    const allowed =
+    const isHrOrAdmin =
       roles.includes(Role.HR_EMPLOYEE) ||
       roles.includes(Role.HR_MANAGER) ||
       roles.includes(Role.SYSTEM_ADMIN);
 
-    if (dto.employeeId !== userId && !allowed) {
-      throw new BadRequestException(
-        'employeeId must match authenticated user unless HR/System Admin',
-      );
+    // For regular employees, always bind the dispute to their own employeeId.
+    if (!isHrOrAdmin) {
+      if (dto.employeeId && dto.employeeId !== userId) {
+        throw new BadRequestException(
+          'employeeId must match authenticated user unless HR/System Admin',
+        );
+      }
+      dto.employeeId = userId;
+    } else if (!dto.employeeId) {
+      // For HR/System Admin, require an explicit employeeId or default to self.
+      dto.employeeId = userId;
     }
 
     return this.svc.createDispute(dto);

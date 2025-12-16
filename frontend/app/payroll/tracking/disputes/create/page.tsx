@@ -80,7 +80,7 @@ export default function CreateDisputePage() {
           credentials: "include",
           body: JSON.stringify({
             payslipId: formData.payslipId,
-            description: formData.reason,
+            reason: formData.reason,
             amount: formData.amount ? parseFloat(formData.amount) : undefined,
           }),
         }

@@ -2104,8 +2104,8 @@ export class PayrollTrackingService {
     if (createDto.amount != null && Number(createDto.amount) <= 0)
       throw new BadRequestException('amount must be positive if provided');
 
-    if (!createDto.refundId)
-      throw new BadRequestException('refundId (payslipId) is required');
+    if (!createDto.payslipId)
+      throw new BadRequestException('payslipId is required');
 
     const disputeId = this.generateDisputeId();
 
@@ -2113,7 +2113,7 @@ export class PayrollTrackingService {
       disputeId,
       description: String(createDto.reason ?? ''),
       employeeId: new Types.ObjectId(createDto.employeeId),
-      payslipId: new Types.ObjectId(createDto.refundId),
+      payslipId: new Types.ObjectId(createDto.payslipId),
       status: DisputeStatus.UNDER_REVIEW,
     });
 
