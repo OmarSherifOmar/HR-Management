@@ -47,15 +47,6 @@ export class LeaveEntitlementService {
   async createEntitlement(
     createEntitlementDto: CreateLeaveEntitlementDto,
   ): Promise<LeaveEntitlementDocument> {
-    // Check if automatic entitlement creation is disabled
-    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
-    
-    if (!automaticEntitlementEnabled) {
-      throw new BadRequestException(
-        'Automatic entitlement creation is disabled. Please use manual entitlement management through Personalized Entitlements.'
-      );
-    }
-    
     // Validate employee exists
     const employee = await this.employeeService.findById(createEntitlementDto.employeeId);
     if (!employee) {
@@ -83,13 +74,40 @@ export class LeaveEntitlementService {
       );
     }
 
-    // Get policy for initial calculation
+    // Get policy - REQUIRED for creating entitlements
     const policy = await this.leavePolicyModel.findOne({
       leaveTypeId: new Types.ObjectId(createEntitlementDto.leaveTypeId),
     });
 
-    // Calculate initial values based on policy
-    const fullYearly = createEntitlementDto.yearlyEntitlement ?? policy?.yearlyRate ?? 0;
+    if (!policy) {
+      throw new NotFoundException(
+        `No policy found for leave type ${createEntitlementDto.leaveTypeId}. Cannot create entitlement without a policy.`,
+      );
+    }
+
+    // Validate minimum tenure requirement
+    if (policy.eligibility?.minTenureMonths && policy.eligibility.minTenureMonths > 0) {
+      const hireDate = employee.dateOfHire ? new Date(employee.dateOfHire) : null;
+      
+      if (!hireDate) {
+        throw new BadRequestException(
+          `Employee does not have a hire date set. Cannot validate tenure requirement.`,
+        );
+      }
+
+      const now = new Date();
+      const tenureMonths = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
+
+      if (tenureMonths < policy.eligibility.minTenureMonths) {
+        throw new BadRequestException(
+          `Employee does not meet minimum tenure requirement of ${policy.eligibility.minTenureMonths} months. Current tenure: ${tenureMonths} months.`,
+        );
+      }
+    }
+
+    // Calculate initial values based on policy (always use policy values, never DTO override)
+    const monthlyRate = policy.monthlyRate || 0;
+    const fullYearly = policy.accrualMethod === AccrualMethod.MONTHLY ? monthlyRate * 12 : (policy.yearlyRate || 0);
     let yearlyEntitlement = fullYearly;
     
     // Calculate next reset date using LeaveYearConfigService
@@ -99,17 +117,24 @@ export class LeaveEntitlementService {
     );
     const nextResetDate = leaveYearDates.nextResetDate;
     
-    // Determine initial accrued/remaining. Keep `yearlyEntitlement` as the full policy amount
-    // and only pro-rate the accrued amount for employees in their first leave year.
-    const leaveYearConfig = await this.leaveYearConfigService.getConfig();
-    // For monthly-accrual policies, initialize accrued to the monthly rate (first month's accrual).
-    // Do not pro-rate the full-year amount into a small value — users expect the monthly accrual (e.g. 1.75).
-    let initialAccrued = fullYearly;
-    if (policy?.accrualMethod === AccrualMethod.MONTHLY) {
-      initialAccrued = policy.monthlyRate ?? fullYearly / 12;
+    // Determine initial accrued based on accrual method
+    let initialAccrued: number;
+    
+    if (policy.accrualMethod === AccrualMethod.MONTHLY) {
+      // Monthly accrual: grant first month's worth immediately
+      initialAccrued = monthlyRate;
+    } else if (policy.accrualMethod === AccrualMethod.YEARLY) {
+      // Yearly accrual: grant full entitlement upfront
+      initialAccrued = fullYearly;
+    } else {
+      // Default to yearly
+      initialAccrued = fullYearly;
     }
 
-    const remaining = (createEntitlementDto.remaining ?? initialAccrued) - (createEntitlementDto.taken ?? 0);
+    // Apply rounding rule
+    const roundedAccrual = this.applyRoundingRule(initialAccrued, policy.roundingRule);
+
+    const remaining = roundedAccrual - (createEntitlementDto.taken ?? 0);
 
     const entitlement = new this.entitlementModel({
       ...createEntitlementDto,
@@ -117,10 +142,10 @@ export class LeaveEntitlementService {
       leaveTypeId: new Types.ObjectId(createEntitlementDto.leaveTypeId),
       yearlyEntitlement: yearlyEntitlement,
       accruedActual: initialAccrued,
-      accruedRounded: initialAccrued,
-      remaining: createEntitlementDto.remaining ?? remaining,
+      accruedRounded: roundedAccrual,
+      remaining: remaining,
       lastAccrualDate: createEntitlementDto.lastAccrualDate ?? new Date(),
-      nextResetDate, // (REQ-012) Leave year config integration
+      nextResetDate,
     });
 
     return entitlement.save();
@@ -233,15 +258,6 @@ export class LeaveEntitlementService {
     employeeId: string,
     leaveTypeId: string,
   ): Promise<LeaveEntitlementDocument> {
-    // Check if automatic entitlement calculation is disabled
-    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
-    
-    if (!automaticEntitlementEnabled) {
-      throw new BadRequestException(
-        'Automatic entitlement calculation is disabled. Please use manual entitlement management through Personalized Entitlements.'
-      );
-    }
-    
     // Get or create entitlement
     let entitlement = await this.entitlementModel.findOne({
       employeeId: new Types.ObjectId(employeeId),
@@ -513,18 +529,8 @@ export class LeaveEntitlementService {
       throw new NotFoundException(`Employee with ID ${employeeId} not found`);
     }
 
-    // Find existing entitlements
-    let entitlements = await this.entitlementModel
-      .find({ employeeId: new Types.ObjectId(employeeId) })
-      .populate('leaveTypeId', 'code name requiresAttachment attachmentType')
-      .exec();
-
-    // Auto-create missing entitlements based on policies
-    // This ensures new leave types get entitlements even if employee already has some
-    await this.autoCreateMissingEntitlements(employeeId, employee, entitlements);
-    
-    // Re-fetch entitlements to include any newly created ones
-    entitlements = await this.entitlementModel
+    // Fetch existing entitlements
+    const entitlements = await this.entitlementModel
       .find({ employeeId: new Types.ObjectId(employeeId) })
       .populate('leaveTypeId', 'code name requiresAttachment attachmentType')
       .exec();
@@ -580,189 +586,6 @@ export class LeaveEntitlementService {
       employeeId,
       balances: eligibleBalances,
     };
-  }
-
-  /**
-   * Auto-create missing entitlements for an employee based on applicable policies
-   * This checks which leave types have policies but no entitlements, and creates them
-   */
-  private async autoCreateMissingEntitlements(
-    employeeId: string, 
-    employee: any, 
-    existingEntitlements: any[]
-  ): Promise<void> {
-    // Respect environment flag to prevent implicit entitlement creation
-    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
-    if (!automaticEntitlementEnabled) {
-      console.log('Automatic entitlement creation is disabled. Skipping autoCreateMissingEntitlements.');
-      return;
-    }
-    try {
-      // Get all leave policies
-      const policies = await this.leavePolicyModel
-        .find()
-        .populate('leaveTypeId')
-        .exec();
-
-      if (!policies || policies.length === 0) {
-        return;
-      }
-
-      // Get the leave type IDs that already have entitlements
-      const existingLeaveTypeIds = existingEntitlements
-        .map(e => e.leaveTypeId?._id?.toString() || e.leaveTypeId?.toString())
-        .filter(id => id);
-
-      // Process each policy to create missing entitlements
-      for (const policy of policies) {
-        try {
-          const leaveType = policy.leaveTypeId as any;
-          
-          if (!leaveType) {
-            continue;
-          }
-
-          const leaveTypeId = leaveType._id.toString();
-
-          // Skip if entitlement already exists
-          if (existingLeaveTypeIds.includes(leaveTypeId)) {
-            continue;
-          }
-
-          // Check if policy is eligible for this employee
-          const isEligible = await this.checkPolicyEligibility(policy, employee);
-          
-          if (isEligible) {
-            // Calculate entitlement based on policy
-            // `fullYearly` is the full-year entitlement derived from policy
-            const fullYearly = this.calculatePolicyEntitlement(policy, employee);
-            let entitlement = fullYearly;
-            
-            // Calculate next reset date
-            const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
-              new Date(),
-              employee.dateOfHire ? new Date(employee.dateOfHire) : undefined,
-            );
-            const nextResetDate = leaveYearDates.nextResetDate;
-            
-            // Apply pro-rating for first year if enabled (only for monthly accrual)
-            // Yearly accrual grants full entitlement upfront
-            const leaveYearConfig = await this.leaveYearConfigService.getConfig();
-            // Initialize accrued to monthlyRate for monthly accrual policies (first month's accrual)
-            let initialAccrued = fullYearly;
-            if (policy.accrualMethod === AccrualMethod.MONTHLY) {
-              initialAccrued = policy.monthlyRate ?? fullYearly / 12;
-            }
-
-            // Create the missing entitlement. `yearlyEntitlement` remains the full policy amount;
-            // `accruedActual`/`accruedRounded` reflect any pro-rating so far.
-            await this.entitlementModel.create({
-              employeeId: new Types.ObjectId(employeeId),
-              leaveTypeId: policy.leaveTypeId,
-              yearlyEntitlement: fullYearly,
-              accruedActual: initialAccrued,
-              accruedRounded: initialAccrued,
-              carryForward: 0,
-              taken: 0,
-              pending: 0,
-              remaining: initialAccrued,
-              lastAccrualDate: new Date(),
-              nextResetDate,
-            });
-
-            console.log(`[Auto-Create] Created entitlement for ${leaveType.code} - ${leaveType.name}: ${entitlement} days`);
-          }
-        } catch (policyError) {
-          console.error(`Error processing policy ${policy._id}:`, policyError);
-        }
-      }
-    } catch (error) {
-      console.error(`Error in autoCreateMissingEntitlements:`, error);
-    }
-  }
-
-  /**
-   * Auto-create entitlements for an employee based on applicable policies
-   */
-  private async autoCreateEntitlementsForEmployee(employeeId: string, employee: any): Promise<void> {
-    // Check if automatic entitlement creation is disabled
-    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
-    
-    if (!automaticEntitlementEnabled) {
-      console.log('Automatic entitlement creation is disabled. Use manual entitlement management instead.');
-      return;
-    }
-    
-    try {
-      // Get all leave policies
-      const policies = await this.leavePolicyModel
-        .find()
-        .populate('leaveTypeId')
-        .exec();
-
-      if (!policies || policies.length === 0) {
-        console.log(`No leave policies found for employee ${employeeId}`);
-        return;
-      }
-
-      for (const policy of policies) {
-        try {
-          // Check if policy is eligible for this employee
-          const isEligible = await this.checkPolicyEligibility(policy, employee);
-          
-          if (isEligible) {
-            const leaveType = policy.leaveTypeId as any;
-            
-            if (!leaveType) {
-              console.error(`Policy ${policy._id} has no leaveTypeId`);
-              continue;
-            }
-            
-            // Calculate entitlement based on policy
-            const fullYearly = this.calculatePolicyEntitlement(policy, employee);
-            let entitlement = fullYearly;
-            
-            // Calculate next reset date using LeaveYearConfigService
-            const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
-              new Date(),
-              employee.dateOfHire ? new Date(employee.dateOfHire) : undefined,
-            );
-            const nextResetDate = leaveYearDates.nextResetDate;
-            
-            // Apply pro-rating for first year if enabled in config (only for monthly accrual)
-            // Yearly accrual grants full entitlement upfront
-            const leaveYearConfig = await this.leaveYearConfigService.getConfig();
-            // Initialize accrued to monthlyRate for monthly accrual policies (first month's accrual)
-            let initialAccrued = fullYearly;
-            if (policy.accrualMethod === AccrualMethod.MONTHLY) {
-              initialAccrued = policy.monthlyRate ?? fullYearly / 12;
-            }
-
-            // Create the entitlement. Keep `yearlyEntitlement` as full policy amount;
-            // set `accruedActual`/`accruedRounded` to the pro-rated initial accrual.
-            await this.entitlementModel.create({
-              employeeId: new Types.ObjectId(employeeId),
-              leaveTypeId: policy.leaveTypeId,
-              yearlyEntitlement: fullYearly,
-              accruedActual: initialAccrued,
-              accruedRounded: initialAccrued,
-              carryForward: 0,
-              taken: 0,
-              pending: 0,
-              remaining: initialAccrued,
-              lastAccrualDate: new Date(),
-              nextResetDate, // (REQ-012) Leave year config integration
-            });
-          }
-        } catch (policyError) {
-          console.error(`Error processing policy ${policy._id}:`, policyError);
-          // Continue with other policies
-        }
-      }
-    } catch (error) {
-      console.error(`Error in autoCreateEntitlementsForEmployee:`, error);
-      throw error;
-    }
   }
 
   /**

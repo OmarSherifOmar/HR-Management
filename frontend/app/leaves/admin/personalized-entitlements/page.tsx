@@ -332,19 +332,8 @@ export default function PersonalizedEntitlementsPage() {
         return;
       }
 
-      // Validate at least one eligibility criterion is defined
-      const rules = addEntitlementForm.eligibilityRules;
-      const hasAnyCriteria =
-        rules.minTenureMonths > 0 ||
-        rules.positionsAllowed.length > 0 ||
-        rules.contractTypesAllowed.length > 0 ||
-        rules.allPositionsAllowed ||
-        rules.allContractTypesAllowed;
-
-      if (!hasAnyCriteria) {
-        alert('Please define at least one eligibility criterion (minimum tenure, positions, contract types, or select "All" options)');
-        return;
-      }
+      // Note: If no eligibility criteria are defined, entitlements will be assigned to ALL employees
+      // This is intentional - "no restrictions" = "all employees"
 
       const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/add-with-eligibility', {
         method: 'POST',

@@ -400,7 +400,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                         </button>
                       </div>
 
-                      <div className="overflow-y-auto flex-1">
+                      <div className="overflow-y-auto flex-1 custom-scrollbar">
                         {loadingNotifications ? (
                           <div className="p-8 text-center text-gray-400">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
