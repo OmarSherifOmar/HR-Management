@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { PayrollConfigurationService } from './payroll-configuration.service';
 import { ConfigurationApprovalService } from './services/configuration-approval.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/decorators/roles.decorator';
@@ -9,6 +10,7 @@ import { AuthGuard } from '../auth/guards/authentication.guard';
 @UseGuards(AuthGuard, authorizationGuard)
 export class PayrollConfigurationController {
   constructor(
+    private readonly configService: PayrollConfigurationService,
     private readonly approvalService: ConfigurationApprovalService,
   ) {}
 

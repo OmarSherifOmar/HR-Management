@@ -28,6 +28,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var attrs=['data-new-gr-c-s-check-loaded','data-gr-ext-installed','data-gramm','data-gramm_id'];attrs.forEach(function(a){try{document.documentElement.removeAttribute(a)}catch(e){};try{if(document.body)document.body.removeAttribute(a)}catch(e){};var els=document.querySelectorAll('['+a+']');for(var i=0;i<els.length;i++){els[i].removeAttribute(a)}})}catch(e){} })()`
+          }}
+        />
         <AuthProvider>
           {children}
         </AuthProvider>

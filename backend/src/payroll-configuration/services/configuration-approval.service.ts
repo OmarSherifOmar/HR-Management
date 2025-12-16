@@ -5,7 +5,7 @@ import { ConfigStatus } from '../enums/payroll-configuration-enums';
 
 @Injectable()
 export class ConfigurationApprovalService {
-  // allowed resource types for approval flows (insurance & company-wide settings are excluded)
+  // allowed resource types for approval flows (exclude insuranceBrackets and CompanyWideSettings)
   private allowedTypes = [
     'allowance',
     'taxRules',
@@ -14,6 +14,7 @@ export class ConfigurationApprovalService {
     'signingBonus',
     'terminationAndResignationBenefits',
     'payGrade',
+    'insuranceBrackets',
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
