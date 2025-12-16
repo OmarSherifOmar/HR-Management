@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "../../../../../context/AuthContext";
 
 export default function ReviewDisputePage() {
   const router = useRouter();
   const params = useParams();
   const disputeId = params?.disputeId as string;
+
+  const { user } = useAuth();
 
   const [dispute, setDispute] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +29,8 @@ export default function ReviewDisputePage() {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/disputes/${dId}`
+        `http://localhost:3000/payroll-tracking/disputes/${dId}`,
+        { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch dispute");
       const data = await response.json();
@@ -42,27 +46,27 @@ export default function ReviewDisputePage() {
     e.preventDefault();
     setError(null);
 
-    const userId = localStorage.getItem("userId");
-    const role = localStorage.getItem("userRole");
-
     try {
       setSubmitting(true);
 
       // Determine the endpoint based on role
-      const endpoint = role?.toLowerCase().includes("manager")
-        ? `http://localhost:3000/payroll-tracking/disputes/${dispute.disputeId}/manager-decision`
-        : `http://localhost:3000/payroll-tracking/disputes/${dispute.disputeId}/specialist-decision`;
+      const role = user?.role || "";
+      const normalizedRole = String(role).toLowerCase();
+      const isManager = normalizedRole.includes("manager");
+
+      const endpoint = isManager
+        ? `http://localhost:3000/payroll-tracking/disputes/${disputeId}/manager-decision`
+        : `http://localhost:3000/payroll-tracking/disputes/${disputeId}/specialist-decision`;
 
       const response = await fetch(endpoint, {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           action,
           comment,
-          payrollSpecialistId: userId,
-          payrollManagerId: userId,
         }),
       });
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "../../../../context/AuthContext";
 
 interface Dispute {
   _id: string;
@@ -24,37 +25,39 @@ export default function DisputeDetailPage() {
   const params = useParams();
   const disputeId = params?.disputeId as string;
 
+  const { user } = useAuth();
+
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole") || "";
-    setIsAdmin(
-      ["admin", "payroll_manager", "payroll_specialist"].includes(
-        role.toLowerCase()
-      )
-    );
-
-    if (disputeId) {
-      fetchDisputeDetail(disputeId);
-    } else {
+    if (!disputeId) {
       setLoading(false);
       setError("Dispute ID not found");
+      return;
     }
-  }, [disputeId]);
 
-  const fetchDisputeDetail = async (dId: string) => {
+    if (!user) return;
+
+    const role = user.role || "";
+    const normalizedRole = String(role).toLowerCase();
+    const adminRoles = [
+      "payroll manager",
+      "payroll specialist",
+      "system admin",
+      "finance staff",
+    ];
+    const isAdminRole = adminRoles.includes(normalizedRole);
+    setIsAdmin(isAdminRole);
+
+    fetchDisputeDetail(disputeId, isAdminRole);
+  }, [disputeId, user]);
+
+  const fetchDisputeDetail = async (dId: string, isAdminRole: boolean) => {
     try {
       setLoading(true);
-      const role = localStorage.getItem("userRole") || "";
-      const isAdminRole = [
-        "admin",
-        "payroll_manager",
-        "payroll_specialist",
-      ].includes(role.toLowerCase());
-      // Employees use disputes/mine/:id, admins use disputes/:id
       const url = isAdminRole
         ? `http://localhost:3000/payroll-tracking/disputes/${dId}`
         : `http://localhost:3000/payroll-tracking/disputes/mine/${dId}`;

@@ -476,6 +476,22 @@ export class PayrollTrackingService {
     return claim.toObject();
   }
 
+  /**
+   * Get a single claim by id (for payroll/admin roles)
+   */
+  async getClaimById(claimId: string) {
+    if (!Types.ObjectId.isValid(claimId)) {
+      throw new BadRequestException('Invalid claim id');
+    }
+
+    const claim = await this.claimModel.findById(claimId).lean();
+    if (!claim) {
+      throw new NotFoundException('Claim not found');
+    }
+
+    return claim;
+  }
+
   async listClaims(filter?: { status?: string }) {
     const query: { status?: ClaimStatus } = {};
     if (filter?.status) {

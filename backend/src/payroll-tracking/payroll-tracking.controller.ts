@@ -333,14 +333,42 @@ export class PayrollTrackingController {
   }
 
   @Get('claims/:id')
-  @Roles(Role.DEPARTMENT_EMPLOYEE)
-  async getMyClaimById(
+  @Roles(
+    Role.DEPARTMENT_EMPLOYEE,
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+  )
+  async getClaimById(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
     const { userId } = this.extractUser(req);
-    if (!userId) throw new ForbiddenException('User ID missing in token');
-    return this.svc.getClaimByIdForEmployee(userId, id);
+
+    const roles = Array.isArray(req.user?.roles)
+      ? req.user.roles
+      : req.user?.role
+        ? [req.user.role]
+        : [];
+
+    const hasPayrollOrAdminRole = roles.some((r) =>
+      [
+        Role.PAYROLL_SPECIALIST,
+        Role.Payroll_MANAGER,
+        Role.FINANCE_STAFF,
+        Role.SYSTEM_ADMIN,
+      ].includes(r as Role),
+    );
+
+    // If user only has employee role (no payroll/admin), enforce ownership
+    if (!hasPayrollOrAdminRole) {
+      if (!userId) throw new ForbiddenException('User ID missing in token');
+      return this.svc.getClaimByIdForEmployee(userId, id);
+    }
+
+    // Payroll/admin roles can view any claim
+    return this.svc.getClaimById(id);
   }
 
   @Get('disputes/mine/:id')
