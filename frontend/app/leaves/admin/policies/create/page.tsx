@@ -141,7 +141,7 @@ export default function CreatePolicyPage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/dashboard/admin/policies');
+        router.push('/leaves/admin/policies');
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save policy');

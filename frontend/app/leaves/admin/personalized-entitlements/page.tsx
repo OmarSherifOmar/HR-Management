@@ -45,6 +45,14 @@ export default function PersonalizedEntitlementsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
+  // Eligibility options from database
+  const [eligibilityOptions, setEligibilityOptions] = useState<{
+    departments: Array<{ code: string; name: string }>;
+    positions: Array<{ code: string; title: string }>;
+    contractTypes: string[];
+    employeeStatuses: string[];
+  }>({ departments: [], positions: [], contractTypes: [], employeeStatuses: [] });
+  
   // Assignment form
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({
@@ -73,9 +81,25 @@ export default function PersonalizedEntitlementsPage() {
     reason: '',
   });
 
+  // Add Entitlement with Eligibility form
+  const [showAddEntitlementModal, setShowAddEntitlementModal] = useState(false);
+  const [addEntitlementForm, setAddEntitlementForm] = useState({
+    leaveTypeId: '',
+    yearlyEntitlement: 0,
+    reason: '',
+    eligibilityRules: {
+      minTenureMonths: 0,
+      positionsAllowed: [] as string[],
+      contractTypesAllowed: [] as string[],
+      allPositionsAllowed: false,
+      allContractTypesAllowed: false,
+    },
+  });
+
   useEffect(() => {
     fetchLeaveTypes();
     fetchEmployees();
+    fetchEligibilityOptions();
   }, []);
 
   const fetchLeaveTypes = async () => {
@@ -103,6 +127,20 @@ export default function PersonalizedEntitlementsPage() {
       }
     } catch (err) {
       console.error('Error fetching employees:', err);
+    }
+  };
+
+  const fetchEligibilityOptions = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/eligibility-options', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEligibilityOptions(data);
+      }
+    } catch (err) {
+      console.error('Error fetching eligibility options:', err);
     }
   };
 
@@ -281,6 +319,81 @@ export default function PersonalizedEntitlementsPage() {
     }
   };
 
+  const addEntitlementWithEligibility = async () => {
+    try {
+      // Validate required fields
+      if (!addEntitlementForm.leaveTypeId) {
+        alert('Please select a leave type');
+        return;
+      }
+
+      if (addEntitlementForm.yearlyEntitlement <= 0) {
+        alert('Yearly entitlement must be greater than 0');
+        return;
+      }
+
+      // Validate at least one eligibility criterion is defined
+      const rules = addEntitlementForm.eligibilityRules;
+      const hasAnyCriteria =
+        rules.minTenureMonths > 0 ||
+        rules.positionsAllowed.length > 0 ||
+        rules.contractTypesAllowed.length > 0 ||
+        rules.allPositionsAllowed ||
+        rules.allContractTypesAllowed;
+
+      if (!hasAnyCriteria) {
+        alert('Please define at least one eligibility criterion (minimum tenure, positions, contract types, or select "All" options)');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/add-with-eligibility', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addEntitlementForm),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to add entitlement');
+      }
+
+      const result = await response.json();
+      alert(`Successfully added entitlement to ${result.assignedCount || 0} eligible employees`);
+      setShowAddEntitlementModal(false);
+      setAddEntitlementForm({
+        leaveTypeId: '',
+        yearlyEntitlement: 0,
+        reason: '',
+        eligibilityRules: {
+          minTenureMonths: 0,
+          positionsAllowed: [],
+          contractTypesAllowed: [],
+          allPositionsAllowed: false,
+          allContractTypesAllowed: false,
+        },
+      });
+      if (selectedEmployee) fetchEntitlements(selectedEmployee);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const toggleEligibilityArray = (field: keyof typeof addEntitlementForm.eligibilityRules, value: string) => {
+    const currentArray = addEntitlementForm.eligibilityRules[field] as string[];
+    const newArray = currentArray.includes(value)
+      ? currentArray.filter(item => item !== value)
+      : [...currentArray, value];
+    
+    setAddEntitlementForm({
+      ...addEntitlementForm,
+      eligibilityRules: {
+        ...addEntitlementForm.eligibilityRules,
+        [field]: newArray,
+      },
+    });
+  };
+
   return (
     <DashboardLayout 
       title="Personalized Entitlements" 
@@ -290,6 +403,13 @@ export default function PersonalizedEntitlementsPage() {
 
       {/* Action Buttons */}
       <div className="flex gap-3 mb-6">
+        <button
+          onClick={() => setShowAddEntitlementModal(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-semibold"
+        >
+          <Plus size={20} />
+          Add Entitlement (with Eligibility)
+        </button>
         <button
           onClick={() => setShowAssignModal(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
@@ -619,6 +739,177 @@ export default function PersonalizedEntitlementsPage() {
               </button>
               <button
                 onClick={() => setShowAdjustmentModal(false)}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Entitlement with Eligibility Modal */}
+      {showAddEntitlementModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold text-white mb-6">Add Entitlement with Eligibility Rules</h2>
+            
+            <div className="space-y-6">
+              {/* Leave Type and Entitlement */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Leave Type *</label>
+                  <select
+                    value={addEntitlementForm.leaveTypeId}
+                    onChange={(e) => setAddEntitlementForm({ ...addEntitlementForm, leaveTypeId: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                  >
+                    <option value="">Select leave type</option>
+                    {leaveTypes.map((type) => (
+                      <option key={type._id} value={type._id}>
+                        {type.name} ({type.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Yearly Entitlement (days) *</label>
+                  <input
+                    type="number"
+                    value={addEntitlementForm.yearlyEntitlement}
+                    onChange={(e) => setAddEntitlementForm({ ...addEntitlementForm, yearlyEntitlement: Number(e.target.value) })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Reason</label>
+                <textarea
+                  value={addEntitlementForm.reason}
+                  onChange={(e) => setAddEntitlementForm({ ...addEntitlementForm, reason: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                  rows={2}
+                  placeholder="Optional reason for this entitlement"
+                />
+              </div>
+
+              {/* Eligibility Rules Section */}
+              <div className="border-t border-gray-700 pt-4">
+                <h3 className="text-lg font-semibold text-white mb-4">Eligibility Rules (At least one required)</h3>
+                
+                {/* Minimum Tenure */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Minimum Tenure (months)</label>
+                  <input
+                    type="number"
+                    value={addEntitlementForm.eligibilityRules.minTenureMonths}
+                    onChange={(e) => setAddEntitlementForm({
+                      ...addEntitlementForm,
+                      eligibilityRules: { ...addEntitlementForm.eligibilityRules, minTenureMonths: Number(e.target.value) }
+                    })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                    min="0"
+                    placeholder="Enter minimum months of service required (e.g., 6)"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Employees must have worked this many months to be eligible</p>
+                </div>
+
+                {/* Positions Allowed */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Positions Allowed</label>
+                  <div className="mb-2">
+                    <label className="flex items-center space-x-2 text-green-400 font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={addEntitlementForm.eligibilityRules.allPositionsAllowed}
+                        onChange={(e) => setAddEntitlementForm({
+                          ...addEntitlementForm,
+                          eligibilityRules: {
+                            ...addEntitlementForm.eligibilityRules,
+                            allPositionsAllowed: e.target.checked,
+                            positionsAllowed: e.target.checked ? [] : addEntitlementForm.eligibilityRules.positionsAllowed
+                          }
+                        })}
+                        className="rounded"
+                      />
+                      <span>✓ All Positions Allowed (No Restriction)</span>
+                    </label>
+                  </div>
+                  {!addEntitlementForm.eligibilityRules.allPositionsAllowed && eligibilityOptions.positions.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto bg-gray-700/50 p-3 rounded-lg">
+                      {eligibilityOptions.positions.map(pos => (
+                        <label key={pos.code} className="flex items-center space-x-2 text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={addEntitlementForm.eligibilityRules.positionsAllowed.includes(pos.title)}
+                            onChange={() => toggleEligibilityArray('positionsAllowed', pos.title)}
+                            className="rounded"
+                          />
+                          <span className="text-sm">{pos.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {!addEntitlementForm.eligibilityRules.allPositionsAllowed && eligibilityOptions.positions.length === 0 && (
+                    <p className="text-sm text-gray-400">Loading positions...</p>
+                  )}
+                </div>
+
+                {/* Contract Types Allowed */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Contract Types Allowed</label>
+                  <div className="mb-2">
+                    <label className="flex items-center space-x-2 text-green-400 font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={addEntitlementForm.eligibilityRules.allContractTypesAllowed}
+                        onChange={(e) => setAddEntitlementForm({
+                          ...addEntitlementForm,
+                          eligibilityRules: {
+                            ...addEntitlementForm.eligibilityRules,
+                            allContractTypesAllowed: e.target.checked,
+                            contractTypesAllowed: e.target.checked ? [] : addEntitlementForm.eligibilityRules.contractTypesAllowed
+                          }
+                        })}
+                        className="rounded"
+                      />
+                      <span>✓ All Contract Types Allowed (No Restriction)</span>
+                    </label>
+                  </div>
+                  {!addEntitlementForm.eligibilityRules.allContractTypesAllowed && eligibilityOptions.contractTypes.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {eligibilityOptions.contractTypes.map(type => (
+                        <label key={type} className="flex items-center space-x-2 text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={addEntitlementForm.eligibilityRules.contractTypesAllowed.includes(type)}
+                            onChange={() => toggleEligibilityArray('contractTypesAllowed', type)}
+                            className="rounded"
+                          />
+                          <span>{type.replace(/_/g, ' ')}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {!addEntitlementForm.eligibilityRules.allContractTypesAllowed && eligibilityOptions.contractTypes.length === 0 && (
+                    <p className="text-sm text-gray-400">Loading contract types...</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={addEntitlementWithEligibility}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold"
+              >
+                Add Entitlement to Eligible Employees
+              </button>
+              <button
+                onClick={() => setShowAddEntitlementModal(false)}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
               >
                 Cancel

@@ -47,6 +47,15 @@ export class LeaveEntitlementService {
   async createEntitlement(
     createEntitlementDto: CreateLeaveEntitlementDto,
   ): Promise<LeaveEntitlementDocument> {
+    // Check if automatic entitlement creation is disabled
+    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
+    
+    if (!automaticEntitlementEnabled) {
+      throw new BadRequestException(
+        'Automatic entitlement creation is disabled. Please use manual entitlement management through Personalized Entitlements.'
+      );
+    }
+    
     // Validate employee exists
     const employee = await this.employeeService.findById(createEntitlementDto.employeeId);
     if (!employee) {
@@ -224,6 +233,15 @@ export class LeaveEntitlementService {
     employeeId: string,
     leaveTypeId: string,
   ): Promise<LeaveEntitlementDocument> {
+    // Check if automatic entitlement calculation is disabled
+    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
+    
+    if (!automaticEntitlementEnabled) {
+      throw new BadRequestException(
+        'Automatic entitlement calculation is disabled. Please use manual entitlement management through Personalized Entitlements.'
+      );
+    }
+    
     // Get or create entitlement
     let entitlement = await this.entitlementModel.findOne({
       employeeId: new Types.ObjectId(employeeId),
@@ -573,6 +591,12 @@ export class LeaveEntitlementService {
     employee: any, 
     existingEntitlements: any[]
   ): Promise<void> {
+    // Respect environment flag to prevent implicit entitlement creation
+    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
+    if (!automaticEntitlementEnabled) {
+      console.log('Automatic entitlement creation is disabled. Skipping autoCreateMissingEntitlements.');
+      return;
+    }
     try {
       // Get all leave policies
       const policies = await this.leavePolicyModel
@@ -661,6 +685,14 @@ export class LeaveEntitlementService {
    * Auto-create entitlements for an employee based on applicable policies
    */
   private async autoCreateEntitlementsForEmployee(employeeId: string, employee: any): Promise<void> {
+    // Check if automatic entitlement creation is disabled
+    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
+    
+    if (!automaticEntitlementEnabled) {
+      console.log('Automatic entitlement creation is disabled. Use manual entitlement management instead.');
+      return;
+    }
+    
     try {
       // Get all leave policies
       const policies = await this.leavePolicyModel

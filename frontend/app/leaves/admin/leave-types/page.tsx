@@ -162,7 +162,7 @@ export default function AdminLeaveTypesPage() {
             </h1>
           </div>
           <button
-            onClick={() => router.push(`/dashboard/admin/leave-types/create?type=${activeTab === 'types' ? 'type' : 'category'}`)}
+            onClick={() => router.push(`/leaves/admin/leave-types/create?type=${activeTab === 'types' ? 'type' : 'category'}`)}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
           >
             <Plus size={20} />
@@ -236,7 +236,7 @@ export default function AdminLeaveTypesPage() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => router.push(`/dashboard/admin/leave-types/create?type=type&id=${type._id}`)}
+                        onClick={() => router.push(`/leaves/admin/leave-types/create?type=type&id=${type._id}`)}
                         className="p-2 text-gray-400 hover:text-green-400 transition-colors"
                         title="Edit Leave Type"
                       >
@@ -319,7 +319,7 @@ export default function AdminLeaveTypesPage() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => router.push(`/dashboard/admin/leave-types/create?type=category&id=${category._id}`)}
+                        onClick={() => router.push(`/leaves/admin/leave-types/create?type=category&id=${category._id}`)}
                         className="p-2 text-gray-400 hover:text-green-400 transition-colors"
                         title="Edit Category"
                       >

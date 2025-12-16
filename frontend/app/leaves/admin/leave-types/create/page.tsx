@@ -155,7 +155,7 @@ export default function CreateLeaveTypePage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/dashboard/admin/leave-types');
+        router.push('/leaves/admin/leave-types');
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save leave type');
@@ -195,7 +195,7 @@ export default function CreateLeaveTypePage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/dashboard/admin/leave-types');
+        router.push('/leaves/admin/leave-types');
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save category');

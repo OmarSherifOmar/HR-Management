@@ -205,30 +205,29 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         
         // HR Admin section - with role fallback to ensure HR Admin always sees these
         ...(hasPermission('adjust_balances') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Balance Adjustments', href: '/dashboard/admin/balance-adjustments' },
+          { name: 'Admin: Balance Adjustments', href: '/leaves/admin/balance-adjustments' },
         ] : []),
         ...(hasPermission('audit_leave_actions') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Audit Log', href: '/dashboard/admin/audit-log' },
+          { name: 'Admin: Audit Log', href: '/leaves/admin/audit-log' },
         ] : []),
         ...(hasPermission('manage_leave_roles') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Role Management', href: '/dashboard/admin/role-management' },
+          { name: 'Admin: Role Management', href: '/leaves/admin/role-management' },
         ] : []),
         ...(hasPermission('manage_leave_policies') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
+          { name: 'Admin: Policies', href: '/leaves/admin/policies' },
         ] : []),
         ...(hasPermission('manage_leave_types') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
-          { name: 'Admin: Leave Year Config', href: '/dashboard/admin/leave-year' },
-          { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
+          { name: 'Admin: Leave Types', href: '/leaves/admin/leave-types' },
+          { name: 'Admin: Leave Year Config', href: '/leaves/admin/leave-year' },
         ] : []),
         ...(hasPermission('manage_entitlements') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Personalized Entitlements', href: '/dashboard/admin/personalized-entitlements' },
+          { name: 'Admin: Adding normal and Personalized Entitlements', href: '/leaves/admin/personalized-entitlements' },
         ] : []),
         ...(hasPermission('manage_calendar') || user?.role === 'HR Admin' ? [
-          { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
+          { name: 'Admin: Calendar & Blocked Days', href: '/leaves/admin/calendar' },
         ] : []),
         ...(user?.role === 'HR Admin' ? [
-          { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
+          { name: 'Admin: Settings', href: '/leaves/admin/settings' },
         ] : []),
       ],
     },
