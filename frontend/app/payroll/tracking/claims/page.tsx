@@ -116,21 +116,30 @@ export default function ClaimsPage() {
       day: "numeric",
     });
   };
+  ///
+  const normalizeStatus = (status: string) =>
+    status?.toString().trim().toUpperCase().replace(/\s+/g, "_");
 
   const filteredClaims =
     filterStatus === "all"
       ? claims
-      : claims.filter((c) => c.status === filterStatus);
+      : claims.filter(
+          (c) => normalizeStatus(c.status) === normalizeStatus(filterStatus)
+        );
 
   const claimStats = {
     total: claims.length,
-    pending: claims.filter((c) => c.status === "UNDER_REVIEW").length,
-    approved: claims.filter((c) => c.status === "APPROVED").length,
-    rejected: claims.filter((c) => c.status === "REJECTED").length,
+    pending: claims.filter((c) => normalizeStatus(c.status) === "UNDER_REVIEW")
+      .length,
+    approved: claims.filter((c) => normalizeStatus(c.status) === "APPROVED")
+      .length,
+    rejected: claims.filter((c) => normalizeStatus(c.status) === "REJECTED")
+      .length,
     approvedAmount: claims
-      .filter((c) => c.status === "APPROVED")
+      .filter((c) => normalizeStatus(c.status) === "APPROVED")
       .reduce((sum, c) => sum + (c.approvedAmount || c.amount), 0),
   };
+  ////
 
   if (loading) {
     return (
