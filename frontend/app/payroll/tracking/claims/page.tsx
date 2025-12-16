@@ -264,9 +264,6 @@ export default function ClaimsPage() {
                 <thead className="bg-[#1a1a2e]">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Claim ID
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Type
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -292,11 +289,6 @@ export default function ClaimsPage() {
                       key={claim._id}
                       className="hover:bg-[#2a2a4a] transition-colors"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-white">
-                          {claim.claimId || claim._id.slice(-8)}
-                        </div>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-300 capitalize">
                           {claim.claimType}

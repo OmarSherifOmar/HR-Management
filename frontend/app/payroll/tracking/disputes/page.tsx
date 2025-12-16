@@ -262,12 +262,6 @@ export default function DisputesPage() {
                 <thead className="bg-[#1a1a2e]">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Dispute ID
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Payslip
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Description
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -287,18 +281,6 @@ export default function DisputesPage() {
                       key={dispute._id}
                       className="hover:bg-[#2a2a4a] transition-colors"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-white">
-                          {dispute.disputeId || dispute._id.slice(-8)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-400">
-                          {typeof dispute.payslipId === "string"
-                            ? dispute.payslipId.slice(-8)
-                            : "N/A"}
-                        </div>
-                      </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-400 max-w-xs truncate">
                           {dispute.description}
