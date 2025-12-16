@@ -22,15 +22,16 @@ export default function TransparencyPage() {
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
-    const role = userStr ? JSON.parse(userStr).role || "" : "";
+    const role: string = userStr ? JSON.parse(userStr).role || "" : "";
+
+    // Match backend roles from Role enum (case-insensitive)
     const authorizedRoles = [
-      "admin",
-      "system_admin",
-      "payroll_manager",
-      "finance_staff",
+      "System Admin",
+      "Payroll Manager",
+      "Finance Staff",
     ];
-    const hasAccess = authorizedRoles.some((r) =>
-      role.toLowerCase().includes(r.toLowerCase())
+    const hasAccess = authorizedRoles.some(
+      (r) => r.toLowerCase() === role.toLowerCase()
     );
     setIsAuthorized(hasAccess);
 

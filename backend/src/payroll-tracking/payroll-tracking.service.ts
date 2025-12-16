@@ -295,6 +295,98 @@ export class PayrollTrackingService {
     return Buffer.from(rows.join('\n'), 'utf-8');
   }
 
+  /**
+   * Generate a PDF summary for tax documents for a specific year
+   */
+  async generateTaxDocumentPdf(
+    employeeId: string,
+    year: number,
+  ): Promise<Buffer> {
+    const slips = await this.payslipModel
+      .find({
+        employeeId: new Types.ObjectId(employeeId),
+      })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    const yearSlips = slips.filter(
+      (slip) => slip.createdAt?.getFullYear() === year,
+    );
+
+    if (yearSlips.length === 0) {
+      throw new NotFoundException(`No tax records found for year ${year}`);
+    }
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(value ?? 0);
+
+      // Header
+      doc
+        .fontSize(20)
+        .text(`TAX SUMMARY - ${year}`, { align: 'center' })
+        .moveDown();
+
+      // Table header
+      doc.fontSize(12).text('Pay Period            Tax Type                 Amount        Generated Date');
+      doc.moveDown(0.5);
+
+      let totalWithheld = 0;
+      for (const slip of yearSlips) {
+        const payPeriod = slip.createdAt?.toISOString().slice(0, 7) ?? 'N/A';
+        const generatedDate =
+          slip.createdAt?.toISOString().slice(0, 10) ?? 'N/A';
+        const taxes = slip.deductionsDetails?.taxes ?? [];
+
+        for (const tax of taxes) {
+          const taxRecord = tax as Record<string, unknown>;
+          const rawName = taxRecord.name;
+          const taxName = typeof rawName === 'string' ? rawName : 'Tax';
+          const taxAmount = Number(taxRecord.amount ?? 0);
+          totalWithheld += taxAmount;
+
+          const amountStr = formatCurrency(taxAmount);
+
+          doc
+            .fontSize(11)
+            .text(
+              `${payPeriod.padEnd(20)}${taxName.padEnd(24)}${amountStr.padEnd(
+                14,
+              )}${generatedDate}`,
+            );
+        }
+      }
+
+      doc.moveDown();
+      doc
+        .fontSize(12)
+        .text(`Total tax withheld for ${year}: ${formatCurrency(totalWithheld)}`);
+
+      doc.end();
+    });
+  }
+
   async getClaimsForEmployee(employeeId: string) {
     if (!Types.ObjectId.isValid(employeeId))
       throw new BadRequestException('Invalid employee id');
@@ -532,6 +624,121 @@ export class PayrollTrackingService {
     ];
 
     return this.payslipModel.aggregate(pipeline);
+  }
+
+  /**
+   * Export payroll report as CSV (same data as generatePayrollReport)
+   */
+  async exportPayrollReportCsv(query: PayrollReportQueryDto): Promise<Buffer> {
+    const data = await this.generatePayrollReport(query);
+
+    const rows: string[] = [];
+    rows.push(
+      'Payroll Run ID,Total Gross,Total Net,Payslips Count,Avg Net Per Employee',
+    );
+
+    for (const row of data as any[]) {
+      const id = row._id ?? '';
+      const totalGross = Number(row.totalGross ?? 0);
+      const totalNet = Number(row.totalNet ?? 0);
+      const count = Number(row.count ?? 0);
+      const avgNet = count > 0 ? totalNet / count : 0;
+
+      rows.push(
+        `${id},${totalGross.toFixed(2)},${totalNet.toFixed(2)},${count},${avgNet.toFixed(2)}`,
+      );
+    }
+
+    return Buffer.from(rows.join('\n'), 'utf-8');
+  }
+
+  /**
+   * Export payroll report as a simple PDF summary
+   */
+  async exportPayrollReportPdf(query: PayrollReportQueryDto): Promise<Buffer> {
+    const data = (await this.generatePayrollReport(query)) as any[];
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(value ?? 0);
+
+      doc.fontSize(20).text('Payroll Report Summary', { align: 'center' });
+      doc.moveDown();
+
+      if (query.month) {
+        doc.fontSize(11).text(`Filter: Payroll Run / Month = ${query.month}`);
+        doc.moveDown(0.5);
+      }
+
+      // Table header
+      doc
+        .fontSize(12)
+        .text(
+          'Run ID                 Total Gross      Total Net        Count   Avg Net/Employee',
+        );
+      doc.moveDown(0.5);
+
+      let grandGross = 0;
+      let grandNet = 0;
+      let grandCount = 0;
+
+      data.forEach((row) => {
+        const id = String(row._id ?? 'N/A');
+        const totalGross = Number(row.totalGross ?? 0);
+        const totalNet = Number(row.totalNet ?? 0);
+        const count = Number(row.count ?? 0);
+        const avgNet = count > 0 ? totalNet / count : 0;
+
+        grandGross += totalGross;
+        grandNet += totalNet;
+        grandCount += count;
+
+        const grossStr = formatCurrency(totalGross);
+        const netStr = formatCurrency(totalNet);
+        const avgStr = formatCurrency(avgNet);
+
+        doc
+          .fontSize(11)
+          .text(
+            `${id.padEnd(22)}${grossStr.padEnd(16)}${netStr.padEnd(16)}${String(
+              count,
+            ).padEnd(7)}${avgStr}`,
+          );
+      });
+
+      doc.moveDown();
+
+      const overallAvg = grandCount > 0 ? grandNet / grandCount : 0;
+
+      doc.fontSize(12).text('Totals:', { underline: true }).moveDown(0.3);
+      doc.text(`Total Gross: ${formatCurrency(grandGross)}`);
+      doc.text(`Total Net: ${formatCurrency(grandNet)}`);
+      doc.text(`Payslips Count: ${grandCount}`);
+      doc.text(`Average Net per Employee: ${formatCurrency(overallAvg)}`);
+
+      doc.end();
+    });
   }
 
   async transparencySummary() {
@@ -813,16 +1020,151 @@ export class PayrollTrackingService {
         reject(err);
       });
 
-      doc.fontSize(18).text('Payslip', { align: 'center' }).moveDown();
+      const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(value ?? 0);
 
-      doc.fontSize(12);
-      doc.text(`Month: ${slip.month}`);
-      doc.text(`Status: ${slip.paymentStatus}`);
+      const issueDate = slip.generatedAt
+        ? new Date(slip.generatedAt).toISOString().slice(0, 10)
+        : '';
+
+      // Header
+      doc
+        .fontSize(20)
+        .text('PAYSLIP', { align: 'center' })
+        .moveDown(0.5);
+
+      if (issueDate) {
+        doc.fontSize(10).text(`Issued on: ${issueDate}`, { align: 'center' });
+      }
+
       doc.moveDown();
-      doc.text(`Base Salary: ${slip.baseSalary}`);
-      doc.text(`Gross Salary: ${slip.grossSalary}`);
-      doc.text(`Total Deductions: ${slip.totalDeductions}`);
-      doc.text(`Net Pay: ${slip.netPay}`);
+
+      // Employee / period info
+      doc
+        .fontSize(12)
+        .text(`Period: ${slip.month}`, { continued: true })
+        .text(`   Status: ${slip.paymentStatus}`)
+        .moveDown(0.5);
+
+      if (slip.contractType || slip.workType) {
+        doc
+          .text(
+            `Contract: ${slip.contractType || 'N/A'}   Work Type: ${
+              slip.workType || 'N/A'
+            }`,
+          )
+          .moveDown(0.5);
+      }
+
+      doc.moveDown(0.5);
+
+      // Summary
+      doc.fontSize(12).text('Summary', { underline: true }).moveDown(0.5);
+      doc.text(`Base Salary: ${formatCurrency(slip.baseSalary)}`);
+      doc.text(`Gross Salary: ${formatCurrency(slip.grossSalary)}`);
+      doc.text(`Total Deductions: ${formatCurrency(slip.totalDeductions)}`);
+      doc.text(`Net Pay: ${formatCurrency(slip.netPay)}`).moveDown();
+
+      // Earnings section
+      doc.fontSize(12).text('Earnings', { underline: true }).moveDown(0.5);
+
+      if (Array.isArray(slip.allowances) && slip.allowances.length) {
+        doc.fontSize(11).text('Allowances:');
+        slip.allowances.forEach((a: any) => {
+          const name = a?.name || 'Allowance';
+          const amount = formatCurrency(Number(a?.amount ?? 0));
+          doc.text(`  • ${name}: ${amount}`);
+        });
+        doc.moveDown(0.5);
+      }
+
+      if (Array.isArray(slip.bonuses) && slip.bonuses.length) {
+        doc.fontSize(11).text('Bonuses:');
+        slip.bonuses.forEach((b: any) => {
+          const name = b?.name || 'Bonus';
+          const amount = formatCurrency(Number(b?.amount ?? 0));
+          doc.text(`  • ${name}: ${amount}`);
+        });
+        doc.moveDown(0.5);
+      }
+
+      if (Array.isArray(slip.benefits) && slip.benefits.length) {
+        doc.fontSize(11).text('Benefits:');
+        slip.benefits.forEach((b: any) => {
+          const name = b?.name || 'Benefit';
+          const amount = formatCurrency(Number(b?.amount ?? 0));
+          doc.text(`  • ${name}: ${amount}`);
+        });
+        doc.moveDown(0.5);
+      }
+
+      if (Array.isArray(slip.refunds) && slip.refunds.length) {
+        doc.fontSize(11).text('Refunds:');
+        slip.refunds.forEach((r: any) => {
+          const label = r?.description || 'Refund';
+          const amount = formatCurrency(Number(r?.amount ?? 0));
+          doc.text(`  • ${label}: ${amount}`);
+        });
+        doc.moveDown(0.5);
+      }
+
+      if (
+        !slip.allowances.length &&
+        !slip.bonuses.length &&
+        !slip.benefits.length &&
+        !slip.refunds.length
+      ) {
+        doc.fontSize(11).text('No additional earnings recorded.').moveDown();
+      } else {
+        doc.moveDown(0.5);
+      }
+
+      // Deductions section
+      doc.fontSize(12).text('Deductions', { underline: true }).moveDown(0.5);
+
+      if (Array.isArray(slip.taxes) && slip.taxes.length) {
+        doc.fontSize(11).text('Taxes:');
+        slip.taxes.forEach((t: any) => {
+          const name = t?.name || 'Tax';
+          const amount = formatCurrency(Number(t?.amount ?? 0));
+          doc.text(`  • ${name}: -${amount}`);
+        });
+        doc.moveDown(0.5);
+      }
+
+      if (Array.isArray(slip.insurances) && slip.insurances.length) {
+        doc.fontSize(11).text('Insurance:');
+        slip.insurances.forEach((i: any) => {
+          const name = i?.name || 'Insurance';
+          const amount = formatCurrency(Number(i?.amount ?? 0));
+          doc.text(`  • ${name}: -${amount}`);
+        });
+        doc.moveDown(0.5);
+      }
+
+      if (slip.unpaidLeaveDays && slip.unpaidLeaveDays > 0) {
+        doc
+          .fontSize(11)
+          .text(`Unpaid leave days: ${slip.unpaidLeaveDays}`, {
+            continued: false,
+          })
+          .moveDown(0.5);
+      }
+
+      if (!slip.taxes.length && !slip.insurances.length && !slip.unpaidLeaveDays) {
+        doc.fontSize(11).text('No deductions recorded.').moveDown();
+      }
+
+      // Net pay highlight at the bottom
+      doc.moveDown();
+      doc
+        .fontSize(14)
+        .text(`Net Pay: ${formatCurrency(slip.netPay)}`, {
+          align: 'right',
+        });
 
       doc.end();
     });

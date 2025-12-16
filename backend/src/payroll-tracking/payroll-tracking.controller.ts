@@ -355,7 +355,7 @@ export class PayrollTrackingController {
   async downloadMyTaxDocument(
     @Req() req: Request & { user?: { sub?: string } },
     @Param('year') yearStr: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const employeeId = req.user?.sub;
     if (!employeeId) throw new ForbiddenException('User ID missing in token');
@@ -363,15 +363,16 @@ export class PayrollTrackingController {
     const year = parseInt(yearStr, 10);
     if (isNaN(year)) throw new BadRequestException('Invalid year');
 
-    const csvBuffer = await this.svc.downloadTaxDocumentCsv(employeeId, year);
+    const pdfBuffer = await this.svc.generateTaxDocumentPdf(employeeId, year);
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="tax_document_${year}.csv"`,
+      `attachment; filename="tax_document_${year}.pdf"`,
     );
 
-    return csvBuffer;
+    // Send raw PDF bytes so the client receives a proper PDF file.
+    res.end(pdfBuffer);
   }
 
   @Get('reports/payroll')
@@ -383,6 +384,46 @@ export class PayrollTrackingController {
   )
   async getPayrollReport(@Query() q: PayrollReportQueryDto) {
     return this.svc.generatePayrollReport(q);
+  }
+
+  @Get('reports/payroll/export/csv')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportPayrollReportCsv(@Query() q: PayrollReportQueryDto, @Res() res: Response) {
+    const csvBuffer = await this.svc.exportPayrollReportCsv(q);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="payroll_report.csv"',
+    );
+
+    res.end(csvBuffer);
+  }
+
+  @Get('reports/payroll/export/pdf')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportPayrollReportPdf(@Query() q: PayrollReportQueryDto, @Res() res: Response) {
+    const pdfBuffer = await this.svc.exportPayrollReportPdf(q);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="payroll_report.pdf"',
+    );
+
+    res.end(pdfBuffer);
   }
 
   @Get('disputes')

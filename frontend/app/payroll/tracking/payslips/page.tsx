@@ -71,6 +71,27 @@ export default function PayslipsPage() {
     });
   };
 
+  const downloadPayslip = async (payslipId: string, month: string | null) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/payroll-tracking/me/payslips/${payslipId}/download`,
+        { credentials: "include" }
+      );
+      if (!response.ok) throw new Error("Failed to download payslip");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payslip-${month || "payslip"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Failed to download payslip");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
@@ -228,13 +249,11 @@ export default function PayslipsPage() {
                         </Link>
                         <button
                           onClick={() =>
-                            router.push(
-                              `/payroll/tracking/payslips/${payslip._id}/download`
-                            )
+                            downloadPayslip(payslip._id, payslip.month || null)
                           }
                           className="text-green-400 hover:text-green-300"
                         >
-                          Download
+                          Download PDF
                         </button>
                       </td>
                     </tr>

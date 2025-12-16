@@ -251,7 +251,7 @@ export default function TaxDocumentsPage() {
                               const url = window.URL.createObjectURL(blob);
                               const a = document.createElement("a");
                               a.href = url;
-                              a.download = `tax_document_${doc.taxYear}.csv`;
+                              a.download = `tax_document_${doc.taxYear}.pdf`;
                               document.body.appendChild(a);
                               a.click();
                               document.body.removeChild(a);

@@ -83,7 +83,7 @@ export default function PayslipDetailPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `payslip-${payslip?.month}.csv`;
+      a.download = `payslip-${payslip?.month}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -156,7 +156,7 @@ export default function PayslipDetailPage() {
               onClick={downloadPayslip}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
             >
-              📥 Download CSV
+              📄 Download PDF
             </button>
             <Link
               href="/payroll/tracking/payslips"

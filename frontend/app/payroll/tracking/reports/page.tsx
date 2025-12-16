@@ -35,16 +35,21 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
-    const role = userStr ? JSON.parse(userStr).role || "" : "";
-    const adminRoles = [
-      "admin",
-      "system_admin",
-      "payroll_manager",
-      "payroll_specialist",
-      "finance_staff",
+    const role: string = userStr ? JSON.parse(userStr).role || "" : "";
+
+    // Match backend roles from Role enum (case-insensitive)
+    const allowedRoles = [
+      "System Admin",
+      "Payroll Manager",
+      "Payroll Specialist",
+      "Finance Staff",
+      "HR Admin",
     ];
+
     setIsAdmin(
-      adminRoles.some((r) => role.toLowerCase().includes(r.toLowerCase()))
+      allowedRoles.some(
+        (r) => r.toLowerCase() === role.toLowerCase()
+      )
     );
     fetchPayrollReports();
   }, []);
@@ -90,6 +95,44 @@ export default function ReportsPage() {
       style: "currency",
       currency: "USD",
     }).format(amount);
+  };
+
+  const exportCsv = async () => {
+    try {
+      const url = selectedMonth
+        ? `http://localhost:3000/payroll-tracking/reports/payroll/export/csv?month=${selectedMonth}`
+        : "http://localhost:3000/payroll-tracking/reports/payroll/export/csv";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to export CSV");
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "payroll_report.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Failed to export CSV report");
+    }
+  };
+
+  const exportPdf = async () => {
+    try {
+      const url = selectedMonth
+        ? `http://localhost:3000/payroll-tracking/reports/payroll/export/pdf?month=${selectedMonth}`
+        : "http://localhost:3000/payroll-tracking/reports/payroll/export/pdf";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to export PDF");
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "payroll_report.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Failed to export PDF report");
+    }
   };
 
   // Calculate overall totals
@@ -395,14 +438,14 @@ export default function ReportsPage() {
           </h3>
           <div className="flex gap-4">
             <button
-              onClick={() => alert("CSV export coming soon!")}
+              onClick={exportCsv}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
             >
               <span>📥</span>
               Export as CSV
             </button>
             <button
-              onClick={() => alert("PDF export coming soon!")}
+              onClick={exportPdf}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
             >
               <span>📄</span>
