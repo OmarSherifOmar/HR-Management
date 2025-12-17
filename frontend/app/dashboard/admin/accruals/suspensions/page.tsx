@@ -2,7 +2,7 @@
 
 import DashboardLayout from '../../../../components/DashboardLayout';
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '../../../../context/AuthContext';
+import { fetchSuspensions as apiFetchSuspensions, createSuspension as apiCreateSuspension, updateSuspension as apiUpdateSuspension } from '../../api/adminApi';
 import { Loader } from 'lucide-react';
 
 type Suspension = {
@@ -28,16 +28,14 @@ export default function AccrualSuspensionsPage() {
   const [reason, setReason] = useState('');
 
   useEffect(() => {
-    fetchSuspensions();
+    loadSuspensions();
   }, []);
 
-  const fetchSuspensions = async () => {
+  const loadSuspensions = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await authenticatedFetch('http://localhost:3000/leaves/accruals/suspensions');
-      if (!res.ok) throw new Error('Failed to load suspensions');
-      const json = await res.json();
+      const json = await apiFetchSuspensions();
       setSuspensions(json || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -46,45 +44,30 @@ export default function AccrualSuspensionsPage() {
     }
   };
 
-  const createSuspension = async (e: React.FormEvent) => {
+  const handleCreateSuspension = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employeeId || !startDate) return setError('Employee and start date are required');
     setSubmitting(true);
     setError(null);
     try {
-      const res = await authenticatedFetch('http://localhost:3000/leaves/accruals/suspensions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId, startDate, endDate: endDate || null, reason }),
-      });
-
-      if (!res.ok) {
-        const j = await res.json();
-        throw new Error(j.message || 'Failed to create suspension');
-      }
+      await apiCreateSuspension({ employeeId, startDate, endDate: endDate || null, reason });
 
       // reset form and reload
       setEmployeeId('');
       setStartDate('');
       setEndDate('');
       setReason('');
-      await fetchSuspensions();
+      await loadSuspensions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create suspension');
     } finally {
       setSubmitting(false);
     }
   };
-
-  const togglePause = async (id: string, paused: boolean) => {
+  const handleTogglePause = async (id: string, paused: boolean) => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/leaves/accruals/suspensions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paused: !paused }),
-      });
-      if (!res.ok) throw new Error('Failed to update suspension');
-      await fetchSuspensions();
+      await apiUpdateSuspension(id, { paused: !paused });
+      await loadSuspensions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update suspension');
     }
@@ -96,7 +79,7 @@ export default function AccrualSuspensionsPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-white mb-3">Create Suspension / Pause Accrual</h3>
           {error && <div className="mb-3 text-red-400">{error}</div>}
-          <form onSubmit={createSuspension} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <form onSubmit={handleCreateSuspension} className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
               placeholder="Employee ID"
               value={employeeId}
@@ -142,7 +125,7 @@ export default function AccrualSuspensionsPage() {
 
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-white mb-3">Active Suspensions</h3>
-          {loading ? (
+            {loading ? (
             <div className="p-6 text-center">
               <Loader className="animate-spin mx-auto text-blue-500 mb-2" size={28} />
               <p className="text-gray-400">Loading...</p>
@@ -160,7 +143,7 @@ export default function AccrualSuspensionsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => togglePause(s._id, !!s.paused)}
+                      onClick={() => handleTogglePause(s._id, !!s.paused)}
                       title={s.paused ? 'Resume accrual' : 'Pause accrual'}
                       className={`px-3 py-2 rounded-lg text-white ${s.paused ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
                     >

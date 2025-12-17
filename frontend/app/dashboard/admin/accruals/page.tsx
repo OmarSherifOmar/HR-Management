@@ -2,7 +2,7 @@
 
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { fetchLeaveTypes, fetchPolicies, runAccrual } from '../api/adminApi';
 import { Loader, RefreshCw, List } from 'lucide-react';
 
 type LeaveType = {
@@ -35,17 +35,7 @@ export default function AdminAccrualsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [typesRes, policiesRes] = await Promise.all([
-        authenticatedFetch('http://localhost:3000/leaves/types'),
-        authenticatedFetch('http://localhost:3000/leaves/configuration/policies'),
-      ]);
-
-      if (!typesRes.ok) throw new Error('Failed to load leave types');
-      if (!policiesRes.ok) throw new Error('Failed to load policies');
-
-      const typesJson = await typesRes.json();
-      const policiesJson = await policiesRes.json();
-
+      const [typesJson, policiesJson] = await Promise.all([fetchLeaveTypes(), fetchPolicies()]);
       setLeaveTypes(typesJson || []);
       setPolicies(policiesJson || []);
     } catch (err) {
@@ -55,23 +45,11 @@ export default function AdminAccrualsPage() {
     }
   };
 
-  const runAccrual = async (leaveTypeId?: string) => {
+  const runAccrualAction = async (leaveTypeId?: string) => {
     setRunning(true);
     setError(null);
     try {
-      const url = 'http://localhost:3000/leaves/accruals/run';
-      const res = await authenticatedFetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leaveTypeId ? { leaveTypeId } : {}),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Accrual run failed');
-      }
-
-      // refresh policies/state after run
+      await runAccrual(leaveTypeId);
       await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run accrual');
@@ -89,7 +67,7 @@ export default function AdminAccrualsPage() {
           <h2 className="text-xl font-semibold text-white">Accrual Settings</h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => runAccrual()}
+              onClick={() => runAccrualAction()}
               disabled={running}
               title="Run accrual for all leave types now"
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"

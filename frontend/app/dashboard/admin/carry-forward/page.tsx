@@ -2,7 +2,7 @@
 
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { fetchLeaveTypes, fetchPolicies, runCarryForward } from '../api/adminApi';
 import { Loader, RefreshCw } from 'lucide-react';
 
 type LeaveType = { _id: string; code?: string; name: string };
@@ -29,17 +29,7 @@ export default function CarryForwardPage() {
     setLoading(true);
     setError(null);
     try {
-      const [typesRes, policiesRes] = await Promise.all([
-        authenticatedFetch('http://localhost:3000/leaves/types'),
-        authenticatedFetch('http://localhost:3000/leaves/configuration/policies'),
-      ]);
-
-      if (!typesRes.ok) throw new Error('Failed to load leave types');
-      if (!policiesRes.ok) throw new Error('Failed to load policies');
-
-      const typesJson = await typesRes.json();
-      const policiesJson = await policiesRes.json();
-
+      const [typesJson, policiesJson] = await Promise.all([fetchLeaveTypes(), fetchPolicies()]);
       setLeaveTypes(typesJson || []);
       setPolicies(policiesJson || []);
     } catch (err) {
@@ -49,22 +39,11 @@ export default function CarryForwardPage() {
     }
   };
 
-  const runCarryForward = async (leaveTypeId?: string) => {
+  const runCarryForwardAction = async (leaveTypeId?: string) => {
     setRunning(true);
     setError(null);
     try {
-      const url = 'http://localhost:3000/leaves/carryforward/run';
-      const res = await authenticatedFetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leaveTypeId ? { leaveTypeId } : {}),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Carry-forward run failed');
-      }
-
+      await runCarryForward(leaveTypeId);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run carry-forward');
@@ -82,7 +61,7 @@ export default function CarryForwardPage() {
           <h2 className="text-xl font-semibold text-white">Carry-Forward Rules</h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => runCarryForward()}
+              onClick={() => runCarryForwardAction()}
               disabled={running}
               title="Run carry-forward for all leave types now"
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
@@ -127,7 +106,7 @@ export default function CarryForwardPage() {
                     <p className="text-sm text-gray-400 mb-3">Expiry (months): {p?.expiryAfterMonths ?? '—'}</p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => runCarryForward(t._id)}
+                        onClick={() => runCarryForwardAction(t._id)}
                         disabled={running}
                         title={`Run carry-forward for ${t.name}`}
                         className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"

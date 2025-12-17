@@ -2,7 +2,7 @@
 
 import DashboardLayout from '../../../../components/DashboardLayout';
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '../../../../context/AuthContext';
+import { fetchAccrualHistory } from '../../api/adminApi';
 import { Loader } from 'lucide-react';
 
 type AccrualRecord = {
@@ -27,9 +27,7 @@ export default function AccrualHistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await authenticatedFetch('http://localhost:3000/leaves/accruals/history');
-      if (!res.ok) throw new Error('Failed to fetch accrual history');
-      const json = await res.json();
+      const json = await fetchAccrualHistory();
       setRecords(json || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load history');

@@ -2,7 +2,7 @@
 
 import DashboardLayout from '../../../../components/DashboardLayout';
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '../../../../context/AuthContext';
+import { fetchPayrollHistory } from '../../../api/adminApi';
 import { Loader } from 'lucide-react';
 
 type SyncRecord = {
@@ -27,9 +27,7 @@ export default function PayrollSyncHistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await authenticatedFetch('http://localhost:3000/payroll/sync/history');
-      if (!res.ok) throw new Error('Failed to fetch payroll sync history');
-      const json = await res.json();
+      const json = await fetchPayrollHistory();
       setRecords(json || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load history');
