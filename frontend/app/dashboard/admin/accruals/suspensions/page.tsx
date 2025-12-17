@@ -76,84 +76,144 @@ export default function AccrualSuspensionsPage() {
   return (
     <DashboardLayout title="Accrual Suspensions" description="Manage accrual suspensions and adjustments">
       <div className="space-y-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-white mb-3">Create Suspension / Pause Accrual</h3>
-          {error && <div className="mb-3 text-red-400">{error}</div>}
-          <form onSubmit={handleCreateSuspension} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input
-              placeholder="Employee ID"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              title="Employee ID"
-              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-              required
-            />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              title="Start date"
-              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-              required
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              title="End date (optional)"
-              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-            />
-            <input
-              placeholder="Reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              title="Reason"
-              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-            />
-            <div className="md:col-span-4 flex justify-end gap-3 mt-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                title={submitting ? 'Submitting...' : 'Create suspension'}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
-              >
-                {submitting ? 'Saving...' : 'Create'}
-              </button>
+        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold text-white">Create Suspension</h3>
+              <p className="text-sm text-gray-400">Pause or suspend accruals for an employee for a date range.</p>
             </div>
-          </form>
+            <div className="text-sm text-gray-400">Admin • Accruals</div>
+          </div>
+
+          <div className="px-6 py-5">
+            {error && <div className="mb-4 text-red-400">{error}</div>}
+            <form onSubmit={handleCreateSuspension} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <div className="md:col-span-4">
+                <label className="text-xs text-gray-300 mb-1 block">Employee ID</label>
+                <input
+                  placeholder="e.g. 63a1f4... or employee number"
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  title="Employee ID"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <div className="text-xs text-gray-500 mt-1">You can paste employee id or use a lookup (future).</div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-300 mb-1 block">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  title="Start date"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-300 mb-1 block">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  title="End date (optional)"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="md:col-span-4">
+                <label className="text-xs text-gray-300 mb-1 block">Reason</label>
+                <input
+                  placeholder="Optional: reason or notes"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  title="Reason"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="md:col-span-12 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  title={submitting ? 'Submitting...' : 'Create suspension'}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm disabled:opacity-60"
+                >
+                  {submitting ? (
+                    <Loader className="animate-spin" size={16} />
+                  ) : null}
+                  <span>{submitting ? 'Saving...' : 'Create Suspension'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-white mb-3">Active Suspensions</h3>
+        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold text-white">Active Suspensions</h3>
+              <p className="text-sm text-gray-400">Current suspension records and quick actions.</p>
+            </div>
+            <div className="text-sm text-gray-400">{loading ? 'Updating…' : `${suspensions.length} records`}</div>
+          </div>
+
+          <div className="px-6 py-4">
             {loading ? (
-            <div className="p-6 text-center">
-              <Loader className="animate-spin mx-auto text-blue-500 mb-2" size={28} />
-              <p className="text-gray-400">Loading...</p>
-            </div>
-          ) : suspensions.length === 0 ? (
-            <div className="p-6 text-gray-400">No suspensions found.</div>
-          ) : (
-            <div className="space-y-3">
-              {suspensions.map((s) => (
-                <div key={s._id} className="p-3 bg-[#1a1a1a] rounded-lg border border-gray-800 flex items-center justify-between">
-                  <div>
-                    <div className="text-white font-medium">{typeof s.employeeId === 'string' ? s.employeeId : `${s.employeeId.firstName} ${s.employeeId.lastName}`}</div>
-                    <div className="text-xs text-gray-400">{s.startDate} {s.endDate ? `— ${s.endDate}` : ''}</div>
-                    {s.reason && <div className="text-xs text-gray-300 mt-1">{s.reason}</div>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleTogglePause(s._id, !!s.paused)}
-                      title={s.paused ? 'Resume accrual' : 'Pause accrual'}
-                      className={`px-3 py-2 rounded-lg text-white ${s.paused ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
-                    >
-                      {s.paused ? 'Resume' : 'Pause'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+              <div className="p-8 text-center">
+                <Loader className="animate-spin mx-auto text-blue-500 mb-4" size={36} />
+                <p className="text-gray-400">Loading suspensions...</p>
+              </div>
+            ) : suspensions.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">No suspensions found.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-700">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-400">
+                      <th className="px-4 py-2">Employee</th>
+                      <th className="px-4 py-2">Period</th>
+                      <th className="px-4 py-2">Reason</th>
+                      <th className="px-4 py-2">Status</th>
+                      <th className="px-4 py-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {suspensions.map((s) => (
+                      <tr key={s._id} className="hover:bg-gray-850">
+                        <td className="px-4 py-3 text-sm text-white">
+                          {typeof s.employeeId === 'string' ? s.employeeId : `${s.employeeId.firstName} ${s.employeeId.lastName}`}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-300">
+                          {new Date(s.startDate).toLocaleDateString()} {s.endDate ? `— ${new Date(s.endDate).toLocaleDateString()}` : ''}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-300">{s.reason || '—'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${s.paused ? 'bg-blue-600 text-white' : 'bg-green-700 text-white'}`}>
+                            {s.paused ? 'Paused' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleTogglePause(s._id, !!s.paused)}
+                              title={s.paused ? 'Resume accrual' : 'Pause accrual'}
+                              className={`px-3 py-1 rounded-md text-sm text-white ${s.paused ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
+                            >
+                              {s.paused ? 'Resume' : 'Pause'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </DashboardLayout>
