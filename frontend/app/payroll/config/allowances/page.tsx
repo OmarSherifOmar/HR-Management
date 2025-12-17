@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 // Inlined API utilities (previously from _shared/http)
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -99,6 +100,7 @@ interface UpdateAllowanceData {
 }
 
 export default function AllowancesPage() {
+  const { user } = useAuth();
   const [allowances, setAllowances] = useState<Allowance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +110,33 @@ export default function AllowancesPage() {
   const [formData, setFormData] = useState<CreateAllowanceData>({ name: '', amount: 0 });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Role-based permission checks
+  const canCreate = () => {
+    return user?.role === 'Payroll Specialist';
+  };
+
+  const canEdit = (allowance: Allowance) => {
+    const isDraftStatus = allowance.status?.toUpperCase() === 'DRAFT' || allowance.status?.toLowerCase() === 'draft';
+    const canEditRole = user?.role === 'Payroll Specialist' || user?.role === 'Payroll Manager';
+    return isDraftStatus && canEditRole;
+  };
+
+  const canApproveReject = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canDelete = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canView = () => {
+    const allowedRoles = [
+      'Payroll Specialist', 
+      'Payroll Manager'
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
 
   const fetchAllowances = async () => {
     setLoading(true);
@@ -204,6 +233,46 @@ export default function AllowancesPage() {
     setSubmitting(false);
   };
 
+  const handleApprove = async (allowanceId: string) => {
+    const response = await http(`/configurations/allowance/${allowanceId}/approve`, {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      fetchAllowances();
+    } else {
+      setError(response.error || 'Failed to approve allowance');
+    }
+  };
+
+  const handleReject = async (allowanceId: string) => {
+    const response = await http(`/configurations/allowance/${allowanceId}/reject`, {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      fetchAllowances();
+    } else {
+      setError(response.error || 'Failed to reject allowance');
+    }
+  };
+
+  const handleDelete = async (allowanceId: string) => {
+    if (!confirm('Are you sure you want to delete this allowance? This action cannot be undone.')) {
+      return;
+    }
+
+    const response = await http(`/configurations/allowance/${allowanceId}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      fetchAllowances();
+    } else {
+      setError(response.error || 'Failed to delete allowance');
+    }
+  };
+
   const openCreateModal = () => {
     setFormData({ name: '', amount: 0 });
     setFormError(null);
@@ -234,6 +303,18 @@ export default function AllowancesPage() {
     }
   };
 
+  // Check if user has permission to view this page
+  if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view allowance configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout 
       title="Payroll Config — Allowances" 
@@ -245,6 +326,10 @@ export default function AllowancesPage() {
           <div>
             <h1 className="text-2xl font-bold text-white">Allowances</h1>
             <p className="text-gray-400">Configure allowances for different types of compensation</p>
+            <p className="text-sm text-yellow-400 mt-1">
+              Role: {user?.role} | {canCreate() ? 'Can create/edit' : 'View only'}
+              {canApproveReject() && ' | Can approve/reject'}
+            </p>
           </div>
           <div className="flex gap-3">
             <button
@@ -253,12 +338,14 @@ export default function AllowancesPage() {
             >
               Refresh
             </button>
-            <button
-              onClick={openCreateModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              + Create Allowance
-            </button>
+            {canCreate() && (
+              <button
+                onClick={openCreateModal}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                + Create Allowance
+              </button>
+            )}
           </div>
         </div>
 
@@ -304,22 +391,56 @@ export default function AllowancesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {isDraft(allowance.status) ? (
-                        <button
-                          onClick={() => openEditModal(allowance)}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                        >
-                          Edit
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          title="Only draft allowances can be edited"
-                          className="px-3 py-1 bg-gray-600 text-gray-400 text-sm rounded cursor-not-allowed"
-                        >
-                          Edit
-                        </button>
-                      )}
+                      <div className="flex space-x-2">
+                        {canEdit(allowance) && (
+                          <button
+                            onClick={() => openEditModal(allowance)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        
+                        {canApproveReject() && (allowance.status?.toUpperCase() === 'DRAFT' || allowance.status?.toLowerCase() === 'draft') && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(allowance._id)}
+                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleReject(allowance._id)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+
+                        {/* Remove debug info now that we found the issue */}
+                        {/* {canApproveReject() && (
+                          <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded ml-2">
+                            Debug: Status="{allowance.status || 'undefined'}" | 
+                            IsDraft={allowance.status === 'DRAFT' ? 'YES' : 'NO'}
+                          </span>
+                        )} */}
+                        
+                        {canDelete() && allowance.status !== 'APPROVED' && (
+                          <button
+                            onClick={() => handleDelete(allowance._id)}
+                            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                        
+                        {!canEdit(allowance) && !canApproveReject() && !canDelete() && (
+                          <span className="px-3 py-1 bg-gray-600 text-gray-400 text-sm rounded">
+                            View Only
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -330,7 +451,7 @@ export default function AllowancesPage() {
       </div>
 
       {/* Create Modal */}
-      {isCreateModalOpen && (
+      {isCreateModalOpen && canCreate() && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Create Allowance</h3>
@@ -396,7 +517,7 @@ export default function AllowancesPage() {
       )}
 
       {/* Edit Modal */}
-      {isEditModalOpen && editingAllowance && (
+      {isEditModalOpen && editingAllowance && canEdit(editingAllowance) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Edit Allowance</h3>

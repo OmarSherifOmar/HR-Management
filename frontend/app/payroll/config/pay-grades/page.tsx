@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 // Inlined API utilities (previously from _shared/http)
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -102,6 +103,7 @@ interface UpdatePayGradeData {
 }
 
 export default function PayGradesPage() {
+  const { user } = useAuth();
   const [payGrades, setPayGrades] = useState<PayGrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +113,33 @@ export default function PayGradesPage() {
   const [formData, setFormData] = useState<CreatePayGradeData>({ grade: '', baseSalary: 0, grossSalary: 0 });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Role-based permission checks
+  const canCreate = () => {
+    return user?.role === 'Payroll Specialist';
+  };
+
+  const canEdit = (payGrade: PayGrade) => {
+    const isDraftStatus = payGrade.status?.toUpperCase() === 'DRAFT' || payGrade.status?.toLowerCase() === 'draft';
+    const canEditRole = user?.role === 'Payroll Specialist' || user?.role === 'Payroll Manager';
+    return isDraftStatus && canEditRole;
+  };
+
+  const canApproveReject = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canDelete = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canView = () => {
+    const allowedRoles = [
+      'Payroll Specialist', 
+      'Payroll Manager'
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
 
   const fetchPayGrades = async () => {
     setLoading(true);
@@ -214,6 +243,46 @@ export default function PayGradesPage() {
     setSubmitting(false);
   };
 
+  const handleApprove = async (payGradeId: string) => {
+    const response = await http(`/configurations/payGrade/${payGradeId}/approve`, {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      fetchPayGrades();
+    } else {
+      setError(response.error || 'Failed to approve pay grade');
+    }
+  };
+
+  const handleReject = async (payGradeId: string) => {
+    const response = await http(`/configurations/payGrade/${payGradeId}/reject`, {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      fetchPayGrades();
+    } else {
+      setError(response.error || 'Failed to reject pay grade');
+    }
+  };
+
+  const handleDelete = async (payGradeId: string) => {
+    if (!confirm('Are you sure you want to delete this pay grade? This action cannot be undone.')) {
+      return;
+    }
+
+    const response = await http(`/configurations/payGrade/${payGradeId}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      fetchPayGrades();
+    } else {
+      setError(response.error || 'Failed to delete pay grade');
+    }
+  };
+
   const openCreateModal = () => {
     setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
     setFormError(null);
@@ -248,6 +317,18 @@ export default function PayGradesPage() {
     }
   };
 
+  // Check if user has permission to view this page
+  if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view pay grade configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout 
       title="Payroll Config — Pay Grades" 
@@ -259,6 +340,10 @@ export default function PayGradesPage() {
           <div>
             <h1 className="text-2xl font-bold text-white">Pay Grades</h1>
             <p className="text-gray-400">Configure pay grades with base and gross salary information</p>
+            <p className="text-sm text-yellow-400 mt-1">
+              Role: {user?.role} | {canCreate() ? 'Can create/edit' : 'View only'}
+              {canApproveReject() && ' | Can approve/reject'}
+            </p>
           </div>
           <div className="flex gap-3">
             <button
@@ -267,12 +352,14 @@ export default function PayGradesPage() {
             >
               Refresh
             </button>
-            <button
-              onClick={openCreateModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              + Create Pay Grade
-            </button>
+            {canCreate() && (
+              <button
+                onClick={openCreateModal}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                + Create Pay Grade
+              </button>
+            )}
           </div>
         </div>
 
@@ -320,22 +407,48 @@ export default function PayGradesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {isDraft(payGrade.status) ? (
-                        <button
-                          onClick={() => openEditModal(payGrade)}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                        >
-                          Edit
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          title="Only draft pay grades can be edited"
-                          className="px-3 py-1 bg-gray-600 text-gray-400 text-sm rounded cursor-not-allowed"
-                        >
-                          Edit
-                        </button>
-                      )}
+                      <div className="flex space-x-2">
+                        {canEdit(payGrade) && (
+                          <button
+                            onClick={() => openEditModal(payGrade)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        
+                        {canApproveReject() && (payGrade.status?.toUpperCase() === 'DRAFT' || payGrade.status?.toLowerCase() === 'draft') && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(payGrade._id)}
+                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleReject(payGrade._id)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        
+                        {canDelete() && payGrade.status !== 'APPROVED' && (
+                          <button
+                            onClick={() => handleDelete(payGrade._id)}
+                            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                        
+                        {!canEdit(payGrade) && !canApproveReject() && !canDelete() && (
+                          <span className="px-3 py-1 bg-gray-600 text-gray-400 text-sm rounded">
+                            View Only
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -346,7 +459,7 @@ export default function PayGradesPage() {
       </div>
 
       {/* Create Modal */}
-      {isCreateModalOpen && (
+      {isCreateModalOpen && canCreate() && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Create Pay Grade</h3>
@@ -431,7 +544,7 @@ export default function PayGradesPage() {
       )}
 
       {/* Edit Modal */}
-      {isEditModalOpen && editingPayGrade && (
+      {isEditModalOpen && editingPayGrade && canEdit(editingPayGrade) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#2a2a2a] rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Edit Pay Grade</h3>

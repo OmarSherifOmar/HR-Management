@@ -44,7 +44,7 @@ export class AllowancesController {
     return this.allowancesService.findOneAllowance(id);
   }
 
-  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   @Patch(':id')
   async updateAllowance(
     @Param('id') id: string,

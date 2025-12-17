@@ -44,7 +44,7 @@ import {
       return this.payTypesService.findOnePayType(id);
     }
   
-    @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+    @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
     @Patch(':id')
     async updatePayType(
       @Param('id') id: string,
