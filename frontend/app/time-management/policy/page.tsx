@@ -306,13 +306,20 @@ export default function TimeManagementPoliciesPage() {
   };
 
   useEffect(() => {
-    fetchOvertime();
-    fetchLatenessRules();
+  fetchOvertime();
+  fetchLatenessRules();
+  fetchExceptions();
+  fetchPermissions();
+
+  if (repeatedEmployeeId) {
     fetchRepeatedLateness();
+  }
+
+  if (employeeId) {
     fetchCorrections();
-    fetchExceptions();
-    fetchPermissions();
-  }, [repeatedDays]);
+  }
+}, [repeatedDays, employeeId, repeatedEmployeeId]);
+
 
   const handleCorrectionSubmit = async () => {
     if (!correctionDate || !correctionReason || correctionPunches.length === 0) {
