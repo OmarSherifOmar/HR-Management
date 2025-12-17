@@ -61,7 +61,6 @@ export default function Home() {
         setError(data.message || 'Invalid email or password');
       }
     } catch (err) {
-      console.error('Login error:', err);
       setError('Failed to connect to server. Make sure the backend is running on port 3000.');
     } finally {
       setLoading(false);
@@ -121,7 +120,6 @@ export default function Home() {
         setError(data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      console.error('Registration error:', err);
       setError('Failed to connect to server. Make sure the backend is running on port 3000.');
     } finally {
       setLoading(false);

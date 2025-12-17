@@ -19,10 +19,18 @@ export class PositionController {
   }
 
   @Get()
-  async list(@Query('departmentId') departmentId?: string, @Query('active') active = 'true') {
+  async list(@Query('departmentId') departmentId?: string, @Query('active') active?: string) {
     const filters: any = {};
     if (departmentId) filters.departmentId = departmentId;
-    if (active === 'true') filters.isActive = true;
+    // If active is not provided or is 'undefined', get all positions
+    // If active is 'true', get only active positions
+    // If active is 'false', get only inactive positions
+    if (active === 'true') {
+      filters.isActive = true;
+    } else if (active === 'false') {
+      filters.isActive = false;
+    }
+    // If active is undefined, no filter is applied - returns all positions
     return this.svc.findAll(filters);
   }
 
