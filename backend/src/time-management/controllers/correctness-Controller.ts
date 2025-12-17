@@ -11,7 +11,7 @@ import { Roles, Role } from '../../auth/decorators/roles.decorator';
 
 type CorrectionSubmit = { employeeId: string; attendanceRecordId: string; reason?: string };
 type ReviewDto = { status: CorrectionRequestStatus };
-type PolicySubmitDto = { employeeId: string; date: string; punches: { type: 'IN' | 'OUT'; time: Date }[] };
+type PolicySubmitDto = { employeeId: string; date: string; punches: { type: 'IN' | 'OUT'; time: Date }[]; reason?: string };
 type ApproveCorrectionDto = { approvedBy: string };
 type RejectCorrectionDto = { approvedBy: string; reason: string };
 type EscalateExceptionsDto = { cutoffDate: string };
@@ -34,6 +34,31 @@ export class CorrectnessController {
 	@Post()
 	async submit(@Body() body: CorrectionSubmit) {
 		return this.correctionService.createRequest(body.employeeId, body.attendanceRecordId, body.reason);
+	}
+
+	@Post('submit')
+  	async submitPolicyCorrection(@Body() body: PolicySubmitDto) {
+		const date = new Date(body.date);
+		const reason = body.reason || 'Manual correction';
+		return this.policyService.correctionRequestSubmission(body.employeeId, date, reason, body.punches);
+  }
+
+	@Post('exceptions/escalate')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+	async escalate(@Body() body: EscalateExceptionsDto) {
+		const cutoff = new Date(body.cutoffDate);
+		return this.policyService.escalatePendingExceptions(cutoff);
+  }
+
+	@Post('review-and-correct')
+	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
+	async reviewAndCorrect(@Body() body: ReviewAndCorrectDto) {
+		return this.correctionService.reviewAndCorrectAttendance(
+			body.attendanceRecordId,
+			body.correctedPunches,
+			body.reviewerId,
+			body.reason
+		);
 	}
 
 	@Get('mine/:employeeId')
@@ -63,12 +88,6 @@ export class CorrectnessController {
 		return req;
 	}
 
-	@Post('submit')
-  	async submitPolicyCorrection(@Body() body: PolicySubmitDto) {
-		const date = new Date(body.date);
-		return this.policyService.correctionRequestSubmission(body.employeeId, date, 'Manual correction', body.punches);
-  }
-
   	@Post(':id/approve')
 	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
 	async approve(@Param('id') requestId: string, @Body() body: ApproveCorrectionDto) {
@@ -80,22 +99,4 @@ export class CorrectnessController {
 	async reject(@Param('id') requestId: string, @Body() body: RejectCorrectionDto) {
 		return this.policyService.rejectCorrectionRequest(requestId, body.approvedBy, body.reason);
   }
-
-  	@Post('exceptions/escalate')
-	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
-	async escalate(@Body() body: EscalateExceptionsDto) {
-		const cutoff = new Date(body.cutoffDate);
-		return this.policyService.escalatePendingExceptions(cutoff);
-  }
-
-	@Post('review-and-correct')
-	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
-	async reviewAndCorrect(@Body() body: ReviewAndCorrectDto) {
-		return this.correctionService.reviewAndCorrectAttendance(
-			body.attendanceRecordId,
-			body.correctedPunches,
-			body.reviewerId,
-			body.reason
-		);
-	}
 }

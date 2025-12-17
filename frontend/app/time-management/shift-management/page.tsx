@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import DashboardLayout from "../../components/DashboardLayout";
 import {
   Plus,
   Search,
@@ -622,24 +623,19 @@ export default function ShiftManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white">
-      {/* Header */}
-      <div className="border-b border-neutral-800 bg-[#1a1a1a] px-8 py-6 flex justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Shift Management</h1>
-          <p className="text-sm text-neutral-400">
-            Create, assign, and manage employee shift schedules
-          </p>
+    <DashboardLayout title="Shift Management" description="Create, assign, and manage employee shift schedules">
+      <div className="text-white">
+        {/* Header */}
+        <div className="border-b border-neutral-800 bg-[#1a1a1a] px-8 py-6 flex justify-between">
+          <div />
+          <button
+            onClick={() => setCreateDialogOpen(true)}
+            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded"
+          >
+            <Plus size={16} />
+            Create Shift
+          </button>
         </div>
-
-        <button
-          onClick={() => setCreateDialogOpen(true)}
-          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded"
-        >
-          <Plus size={16} />
-          Create Shift
-        </button>
-      </div>
 
       {/* Create Shift Assignment Dialog - FR-TM-01 */}
       {createDialogOpen && (
@@ -1598,7 +1594,8 @@ export default function ShiftManagement() {
           </div>
           </>
         )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

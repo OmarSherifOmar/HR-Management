@@ -76,6 +76,17 @@ export class AttendanceController {
 		return this.policyService.getAttendanceExceptions(startDate, endDate);
 	}
 
+	@Get('integrated-view')
+	async getIntegratedAttendanceLeaveView(
+		@Query('start') start: string,
+		@Query('end') end: string,
+		@Query('employeeId') employeeId?: string
+	) {
+		const startDate = new Date(start);
+		const endDate = new Date(end);
+		return this.attendanceService.getIntegratedAttendanceLeaveView(startDate, endDate, employeeId);
+	}
+
 	@Get(':employeeId/:date')
 	async getByDate(@Param('employeeId') employeeIdParam: string, @Param('date') dateParam: string) {
 		// dateParam expected as YYYY-MM-DD

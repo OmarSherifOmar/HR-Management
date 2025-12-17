@@ -15,6 +15,7 @@ import { ShiftAssignmentModule } from './modules/shift-assignment.module';
 import { ScheduleRuleModule } from './modules/schedule-rule.module';
 import { AttendanceController } from './controllers/attendance-Controller';
 import { CorrectnessController } from './controllers/correctness-Controller';
+import { HolidayController } from './controllers/holiday.controller';
 import { AttendanceService } from './services/attendance.service';
 import { CorrectionService } from './services/correction.service';
 import { PolicyService } from './services/policy.service';
@@ -43,7 +44,7 @@ import { ShiftAssignment, ShiftAssignmentSchema } from './models/shift-assignmen
     ShiftAssignmentModule,
     ScheduleRuleModule,
   ],
-  controllers: [TimeManagementController, AttendanceController, CorrectnessController],
+  controllers: [TimeManagementController, AttendanceController, CorrectnessController, HolidayController],
   providers: [
     TimeManagementService,
     AttendanceService,
