@@ -90,15 +90,15 @@ export default function EmployerContributionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-4xl font-bold text-white mb-2">
               Employer Contributions
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-white">
               View contributions made by your employer on your behalf
             </p>
           </div>
@@ -188,13 +188,15 @@ export default function EmployerContributionsPage() {
         {/* Month Selector */}
         {data?.history && data.history.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <label className="block text-gray-700 font-medium mb-2">
+            <label className="block text-black font-medium mb-2">
               Select Month to View Details:
             </label>
             <select
               value={selectedMonth ?? ""}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full md:w-auto border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              className="w-full max-w-sm rounded-lg border border-gray-200 bg-white px-4 py-2.5
+             text-gray-900 shadow-sm focus:border-blue-200 focus:ring-2 focus:ring-blue-500
+             transition"
             >
               {data.history.map((h) => (
                 <option key={h.month} value={h.month}>

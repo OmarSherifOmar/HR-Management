@@ -136,15 +136,14 @@ export default function ClaimDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2">
               Claim Details
             </h1>
-            <p className="text-lg text-gray-600">Claim ID: {claim.claimId}</p>
           </div>
           <Link
             href="/payroll/tracking/claims"
@@ -232,49 +231,49 @@ export default function ClaimDetailPage() {
         {/* Resolution Details */}
         {normalizeStatus(claim.status) === "approved" &&
           claim.resolutionComment && (
-          <div className="bg-green-50 border border-green-200 rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-bold text-green-900 mb-4">
-              Approval Details
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-green-900 mb-1">
-                  Resolution Comment
-                </p>
-                <p className="text-green-800 whitespace-pre-wrap">
-                  {claim.resolutionComment}
-                </p>
-              </div>
-              {claim.approvedAmount !== null && (
+            <div className="bg-green-50 border border-green-200 rounded-lg shadow p-6 mb-6">
+              <h2 className="text-xl font-bold text-green-900 mb-4">
+                Approval Details
+              </h2>
+              <div className="space-y-3">
                 <div>
                   <p className="text-sm font-medium text-green-900 mb-1">
-                    Approved Amount
+                    Resolution Comment
                   </p>
-                  <p className="text-2xl font-bold text-green-700">
-                    {formatCurrency(claim.approvedAmount)}
+                  <p className="text-green-800 whitespace-pre-wrap">
+                    {claim.resolutionComment}
                   </p>
                 </div>
-              )}
+                {claim.approvedAmount !== null && (
+                  <div>
+                    <p className="text-sm font-medium text-green-900 mb-1">
+                      Approved Amount
+                    </p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {formatCurrency(claim.approvedAmount)}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {normalizeStatus(claim.status) === "rejected" &&
           claim.rejectionReason && (
-          <div className="bg-red-50 border border-red-200 rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-bold text-red-900 mb-4">
-              Rejection Details
-            </h2>
-            <div>
-              <p className="text-sm font-medium text-red-900 mb-2">
-                Reason for Rejection
-              </p>
-              <p className="text-red-800 whitespace-pre-wrap">
-                {claim.rejectionReason}
-              </p>
+            <div className="bg-red-50 border border-red-200 rounded-lg shadow p-6 mb-6">
+              <h2 className="text-xl font-bold text-red-900 mb-4">
+                Rejection Details
+              </h2>
+              <div>
+                <p className="text-sm font-medium text-red-900 mb-2">
+                  Reason for Rejection
+                </p>
+                <p className="text-red-800 whitespace-pre-wrap">
+                  {claim.rejectionReason}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Timeline */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -309,7 +308,7 @@ export default function ClaimDetailPage() {
             ) && (
               <div className="flex items-start">
                 <div
-                    className={`shrink-0 w-10 h-10 ${
+                  className={`shrink-0 w-10 h-10 ${
                     normalizeStatus(claim.status) === "approved"
                       ? "bg-green-500"
                       : "bg-red-500"
@@ -372,11 +371,12 @@ export default function ClaimDetailPage() {
             </h2>
 
             {/* Only allow specialist on under review, manager on pending manager approval */}
-            {isSpecialist && normalizeStatus(claim.status) !== "under review" && (
-              <p className="text-sm text-gray-600">
-                This claim is no longer awaiting specialist review.
-              </p>
-            )}
+            {isSpecialist &&
+              normalizeStatus(claim.status) !== "under review" && (
+                <p className="text-sm text-gray-600">
+                  This claim is no longer awaiting specialist review.
+                </p>
+              )}
             {isManager &&
               normalizeStatus(claim.status) !==
                 "pending payroll manager approval" && (

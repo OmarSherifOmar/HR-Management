@@ -5,6 +5,14 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../../../context/AuthContext";
 
+interface Dispute {
+  disputeId: string;
+  description: string;
+  createdAt: string;
+  status: string;
+  // Add other fields as needed based on your API response
+}
+
 export default function ReviewDisputePage() {
   const router = useRouter();
   const params = useParams();
@@ -12,7 +20,7 @@ export default function ReviewDisputePage() {
 
   const { user } = useAuth();
 
-  const [dispute, setDispute] = useState<any>(null);
+  const [dispute, setDispute] = useState<Dispute | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,16 +127,11 @@ export default function ReviewDisputePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Review Dispute
-          </h1>
-          <p className="text-lg text-gray-600">
-            Dispute ID: {dispute.disputeId}
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Review Dispute</h1>
         </div>
 
         {/* Dispute Summary */}
@@ -217,7 +220,7 @@ export default function ReviewDisputePage() {
                     ? "Describe the resolution and any adjustments made..."
                     : "Explain why this dispute is being rejected..."
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>

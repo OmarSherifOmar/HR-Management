@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../../context/AuthContext";
 
@@ -21,7 +21,6 @@ interface Dispute {
 }
 
 export default function DisputeDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const disputeId = params?.disputeId as string;
 
@@ -138,17 +137,12 @@ export default function DisputeDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Dispute Details
-            </h1>
-            <p className="text-lg text-gray-600">
-              Dispute ID: {dispute.disputeId}
-            </p>
+            <h1 className="text-3xl font-bold white mb-2">Dispute Details</h1>
           </div>
           <Link
             href="/payroll/tracking/disputes"

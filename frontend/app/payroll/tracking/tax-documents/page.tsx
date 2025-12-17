@@ -256,7 +256,7 @@ export default function TaxDocumentsPage() {
                               a.click();
                               document.body.removeChild(a);
                               window.URL.revokeObjectURL(url);
-                            } catch (err) {
+                            } catch {
                               alert("Failed to download tax document");
                             }
                           }}
