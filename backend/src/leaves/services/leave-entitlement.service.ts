@@ -103,12 +103,14 @@ export class LeaveEntitlementService {
       }
     }
 
-    // Calculate initial values based on policy (always use policy values, never DTO override)
+    // Calculate initial values based on policy
+    // Use yearlyEntitlement from DTO if provided, otherwise calculate from policy
     const monthlyRate = policy.monthlyRate || 0;
     const fullYearly = policy.accrualMethod === AccrualMethod.MONTHLY ? monthlyRate * 12 : (policy.yearlyRate || 0);
-    let yearlyEntitlement = fullYearly;
+    let yearlyEntitlement = createEntitlementDto.yearlyEntitlement ?? fullYearly;
     
     // Determine initial accrued based on accrual method
+    // ALWAYS recalculate based on the yearlyEntitlement value
     let initialAccrued: number;
     
     // Calculate next reset date (January 1st of next year)
@@ -116,14 +118,18 @@ export class LeaveEntitlementService {
     const nextResetDate = new Date(today.getFullYear() + 1, 0, 1);
     
     if (policy.accrualMethod === AccrualMethod.MONTHLY) {
-      // Monthly accrual: grant first month's worth immediately
-      initialAccrued = monthlyRate;
+      // Monthly accrual: recalculate monthly rate from yearlyEntitlement
+      // Grant first month's worth immediately
+      initialAccrued = yearlyEntitlement / 12;
     } else if (policy.accrualMethod === AccrualMethod.YEARLY) {
       // Yearly accrual: grant full entitlement upfront
-      initialAccrued = fullYearly;
+      initialAccrued = yearlyEntitlement;
+    } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
+      // Per term accrual: grant one term's worth immediately
+      initialAccrued = yearlyEntitlement / 4;
     } else {
       // Default to yearly
-      initialAccrued = fullYearly;
+      initialAccrued = yearlyEntitlement;
     }
 
     // Apply rounding rule
@@ -354,7 +360,10 @@ export class LeaveEntitlementService {
           );
 
           // Calculate accrual based on actual service days percentage
-          const originalAccrual = policy.monthlyRate;
+          // Use entitlement's yearlyEntitlement as source of truth for calculation
+          const originalAccrual = entitlement.yearlyEntitlement 
+            ? entitlement.yearlyEntitlement / 12 
+            : policy.monthlyRate;
           const adjustedAccrual = (originalAccrual * serviceDays.serviceDaysPercentage) / 100;
 
           // Only accrue if there were actual service days
