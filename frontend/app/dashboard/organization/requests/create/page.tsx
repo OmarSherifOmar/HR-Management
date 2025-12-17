@@ -85,10 +85,23 @@ export default function CreateChangeRequestPage() {
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
+
+      // Auto-set reportsToPositionId when departmentId changes
+      if (name === 'departmentId' && value) {
+        const selectedDept = departments.find((d) => d._id === value);
+        if (selectedDept && selectedDept.headPositionId) {
+          updated.reportsToPositionId = selectedDept.headPositionId;
+        }
+      }
+
+      return updated;
+    });
   };
 
   const handleCheckboxChange = (
