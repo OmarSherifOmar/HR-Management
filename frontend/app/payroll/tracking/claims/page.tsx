@@ -27,6 +27,7 @@ export default function ClaimsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFinanceStaff, setIsFinanceStaff] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -42,6 +43,7 @@ export default function ClaimsPage() {
 
     const isAdminRole = adminRoles.includes(normalizedRole);
     setIsAdmin(isAdminRole);
+    setIsFinanceStaff(normalizedRole === "finance staff");
 
     if (isAdminRole) {
       fetchAllClaims();
@@ -202,6 +204,28 @@ export default function ClaimsPage() {
           </div>
         </div>
 
+        {/* Finance Notification for Approved Claims */}
+        {isFinanceStaff && claimStats.approved > 0 && (
+          <div className="mb-6 bg-green-500/10 border border-green-500/40 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-green-300 font-semibold">
+                {claimStats.approved} approved claims need refunds to be
+                processed.
+              </p>
+              <p className="text-green-200/80 text-sm">
+                Click below to filter approved claims ready for refund
+                generation.
+              </p>
+            </div>
+            <button
+              onClick={() => setFilterStatus("APPROVED")}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            >
+              View Approved Claims
+            </button>
+          </div>
+        )}
+
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-[#232340] rounded-xl p-5 border border-gray-700/50">
@@ -336,10 +360,19 @@ export default function ClaimsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <Link
                           href={`/payroll/tracking/claims/${claim._id}`}
-                          className="text-blue-400 hover:text-blue-300"
+                          className="text-blue-400 hover:text-blue-300 mr-3"
                         >
                           View Details
                         </Link>
+                        {isFinanceStaff &&
+                          normalizeStatus(claim.status) === "APPROVED" && (
+                            <Link
+                              href={`/payroll/tracking/refunds?claimId=${claim.claimId}`}
+                              className="text-purple-400 hover:text-purple-300"
+                            >
+                              Generate Refund
+                            </Link>
+                          )}
                       </td>
                     </tr>
                   ))}

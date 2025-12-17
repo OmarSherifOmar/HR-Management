@@ -103,6 +103,7 @@ export default function ClaimDetailPage() {
   const normalizedRole = String(user?.role || "").toLowerCase();
   const isSpecialist = normalizedRole === "payroll specialist";
   const isManager = normalizedRole === "payroll manager";
+  const isFinanceStaff = normalizedRole === "finance staff";
   const isAdminReviewer = isSpecialist || isManager;
 
   if (loading) {
@@ -358,6 +359,25 @@ export default function ClaimDetailPage() {
               Your approved claim will be processed in the next payroll cycle.
               The refund will appear in your upcoming payslip.
             </p>
+          </div>
+        )}
+
+        {/* Finance Staff Actions - Generate Refund for Approved Claims */}
+        {isFinanceStaff && normalizeStatus(claim.status) === "approved" && (
+          <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Finance Actions
+            </h2>
+            <p className="text-gray-600 mb-4">
+              This {claim.claimType} claim has been approved. Generate a refund
+              to include it in the next payroll cycle.
+            </p>
+            <Link
+              href={`/payroll/tracking/refunds?claimId=${claim.claimId}`}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-block"
+            >
+              Generate Refund
+            </Link>
           </div>
         )}
 

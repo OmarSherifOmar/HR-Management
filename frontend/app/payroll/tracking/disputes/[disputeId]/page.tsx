@@ -30,6 +30,7 @@ export default function DisputeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFinanceStaff, setIsFinanceStaff] = useState(false);
 
   useEffect(() => {
     if (!disputeId) {
@@ -50,6 +51,7 @@ export default function DisputeDetailPage() {
     ];
     const isAdminRole = adminRoles.includes(normalizedRole);
     setIsAdmin(isAdminRole);
+    setIsFinanceStaff(normalizedRole === "finance staff");
 
     fetchDisputeDetail(disputeId, isAdminRole);
   }, [disputeId, user]);
@@ -324,13 +326,26 @@ export default function DisputeDetailPage() {
               >
                 Review & Make Decision
               </Link>
-              <Link
-                href={`/payroll/tracking/refunds?disputeId=${dispute._id}`}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Process Refund
-              </Link>
             </div>
+          </div>
+        )}
+
+        {/* Finance Staff Actions - Generate Refund for Approved Disputes */}
+        {isFinanceStaff && dispute.status === "APPROVED" && (
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Finance Actions
+            </h2>
+            <p className="text-gray-600 mb-4">
+              This dispute has been approved. Generate a refund to include it in
+              the next payroll cycle.
+            </p>
+            <Link
+              href={`/payroll/tracking/refunds?disputeId=${dispute.disputeId}`}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-block"
+            >
+              Generate Refund
+            </Link>
           </div>
         )}
 

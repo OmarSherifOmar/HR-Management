@@ -211,10 +211,12 @@ export default function DisputesPage() {
           <div className="mb-6 bg-green-500/10 border border-green-500/40 rounded-xl p-4 flex items-center justify-between">
             <div>
               <p className="text-green-300 font-semibold">
-                {disputeStats.approved} approved disputes need payroll adjustments.
+                {disputeStats.approved} approved disputes need payroll
+                adjustments.
               </p>
               <p className="text-green-200/80 text-sm">
-                Click below to focus on manager-approved disputes ready for processing.
+                Click below to focus on manager-approved disputes ready for
+                processing.
               </p>
             </div>
             <button
@@ -355,13 +357,22 @@ export default function DisputesPage() {
                         {canReview &&
                           normalizeStatus(dispute.status) ===
                             "under review" && (
-                          <Link
-                            href={`/payroll/tracking/disputes/${dispute._id}/review`}
-                            className="text-green-400 hover:text-green-300"
-                          >
-                            Review
-                          </Link>
-                        )}
+                            <Link
+                              href={`/payroll/tracking/disputes/${dispute._id}/review`}
+                              className="text-green-400 hover:text-green-300 mr-3"
+                            >
+                              Review
+                            </Link>
+                          )}
+                        {isFinanceStaff &&
+                          normalizeStatus(dispute.status) === "approved" && (
+                            <Link
+                              href={`/payroll/tracking/refunds?disputeId=${dispute.disputeId}`}
+                              className="text-purple-400 hover:text-purple-300"
+                            >
+                              Generate Refund
+                            </Link>
+                          )}
                       </td>
                     </tr>
                   ))}
