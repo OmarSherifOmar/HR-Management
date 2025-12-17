@@ -3,6 +3,7 @@
 import DashboardLayout from '../../../components/DashboardLayout';
 import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Calendar,
   FileText,
@@ -63,7 +64,8 @@ interface LeaveRequest {
 }
 
 export default function HRPendingReviewsPage() {
-  const { user } = useAuth();
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -85,9 +87,44 @@ export default function HRPendingReviewsPage() {
   const [bulkComments, setBulkComments] = useState('');
 
   useEffect(() => {
-    fetchPendingRequests();
-    fetchRejectedRequests();
-  }, []);
+    if (!isLoading) {
+      if (!isLoggedIn) {
+        router.replace('/');
+        return;
+      }
+      
+      // Only HR Employee, HR Manager, and HR Admin can access this page
+      if (user?.role !== 'HR Employee' && user?.role !== 'HR Manager' && user?.role !== 'HR Admin') {
+        router.replace('/dashboard');
+        return;
+      }
+    }
+  }, [isLoading, isLoggedIn, user, router]);
+
+  useEffect(() => {
+    if (isLoggedIn && (user?.role === 'HR Employee' || user?.role === 'HR Manager' || user?.role === 'HR Admin')) {
+      fetchPendingRequests();
+      fetchRejectedRequests();
+    }
+  }, [isLoggedIn, user]);
+  
+  // Early return if not authenticated or not authorized
+  if (isLoading) {
+    return (
+      <DashboardLayout
+        title="HR Leave Reviews"
+        description="Review and finalize leave requests approved by managers"
+      >
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-primary-600" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isLoggedIn || (user?.role !== 'HR Employee' && user?.role !== 'HR Manager' && user?.role !== 'HR Admin')) {
+    return null;
+  }
 
   const fetchPendingRequests = async () => {
     try {

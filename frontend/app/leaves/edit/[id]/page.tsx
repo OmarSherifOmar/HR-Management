@@ -1,7 +1,7 @@
 'use client';
 
 import DashboardLayout from '../../../components/DashboardLayout';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -45,6 +45,7 @@ interface LeaveRequest {
 }
 
 export default function EditLeaveRequestPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const requestId = params.id as string;
@@ -77,9 +78,16 @@ export default function EditLeaveRequestPage() {
   const [originalRequest, setOriginalRequest] = useState<LeaveRequest | null>(null);
 
   useEffect(() => {
-    fetchLeaveRequest();
-    fetchLeaveTypes();
-  }, [requestId]);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (isLoggedIn && requestId) {
+      fetchLeaveRequest();
+      fetchLeaveTypes();
+    }
+  }, [isLoading, isLoggedIn, requestId, router]);
 
   const fetchLeaveRequest = async () => {
     try {
@@ -341,6 +349,18 @@ export default function EditLeaveRequestPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
   if (loading) {
     return (
       <DashboardLayout title="Edit Leave Request" description="Loading...">
@@ -415,7 +435,7 @@ export default function EditLeaveRequestPage() {
                 className={`w-full bg-[#1a1a1a] border ${
                   formErrors.leaveTypeId ? 'border-red-500' : 'border-gray-700'
                 } rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500`}
-                disabled={submitting}
+                disabled={submitting || !!originalRequest}
               >
                 <option value="">Select a leave type</option>
                 {leaveTypes.map((type, index) => (
@@ -424,6 +444,9 @@ export default function EditLeaveRequestPage() {
                   </option>
                 ))}
               </select>
+              {originalRequest && (
+                <p className="text-gray-400 text-sm mt-1">Leave type cannot be changed.</p>
+              )}
               {formErrors.leaveTypeId && (
                 <p className="text-red-500 text-sm mt-1">{formErrors.leaveTypeId}</p>
               )}

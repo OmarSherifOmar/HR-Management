@@ -9,7 +9,6 @@ import { CreateLeaveEntitlementDto } from '../dto/leave-entitlement/create-leave
 import { UpdateLeaveEntitlementDto } from '../dto/leave-entitlement/update-leave-entitlement.dto';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
 import { AccrualSuspensionService } from './accrual-suspension.service';
-import { LeaveYearConfigService } from './leave-year-config.service';
 import { LeaveEligibilityService } from './leave-eligibility.service';
 import { AccrualMethod } from '../enums/accrual-method.enum';
 import { RoundingRule } from '../enums/rounding-rule.enum';
@@ -33,7 +32,6 @@ export class LeaveEntitlementService {
     @InjectModel(LeaveType.name) private leaveTypeModel: Model<LeaveTypeDocument>,
     @InjectModel(LeaveAdjustment.name) private adjustmentModel: Model<LeaveAdjustmentDocument>,
     private employeeService: EmployeeService,
-    private leaveYearConfigService: LeaveYearConfigService,
     private leaveEligibilityService: LeaveEligibilityService,
     @Inject(forwardRef(() => AccrualSuspensionService))
     private accrualSuspensionService: AccrualSuspensionService,
@@ -110,15 +108,12 @@ export class LeaveEntitlementService {
     const fullYearly = policy.accrualMethod === AccrualMethod.MONTHLY ? monthlyRate * 12 : (policy.yearlyRate || 0);
     let yearlyEntitlement = fullYearly;
     
-    // Calculate next reset date using LeaveYearConfigService
-    const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
-      new Date(),
-      employee.dateOfHire ? new Date(employee.dateOfHire) : undefined,
-    );
-    const nextResetDate = leaveYearDates.nextResetDate;
-    
     // Determine initial accrued based on accrual method
     let initialAccrued: number;
+    
+    // Calculate next reset date (January 1st of next year)
+    const today = new Date();
+    const nextResetDate = new Date(today.getFullYear() + 1, 0, 1);
     
     if (policy.accrualMethod === AccrualMethod.MONTHLY) {
       // Monthly accrual: grant first month's worth immediately
@@ -430,15 +425,11 @@ export class LeaveEntitlementService {
             carryForwardAmount = policy.maxCarryForward;
           }
 
-          // Calculate next reset date using LeaveYearConfigService
-          const employee = await this.employeeService.findById(entitlement.employeeId.toString());
-          const leaveYearDates = this.leaveYearConfigService.calculateLeaveYearDates(
-            new Date(),
-            employee?.dateOfHire ? new Date(employee.dateOfHire) : undefined,
-          );
-          const nextResetDate = leaveYearDates.nextResetDate;
+          // Calculate next reset date (January 1st of next year)
+          const today = new Date();
+          const nextResetDate = new Date(today.getFullYear() + 1, 0, 1);
 
-          // Apply expiry after months if configured (overrides leave year config)
+          // Apply expiry after months if configured (overrides annual reset)
           const expiryDate = policy.expiryAfterMonths
             ? new Date(new Date().setMonth(new Date().getMonth() + policy.expiryAfterMonths))
             : nextResetDate;

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../context/AuthContext';
 import { Users, Plus, TrendingUp, TrendingDown, DollarSign, RotateCcw, Search } from 'lucide-react';
 import DashboardLayout from '../../../components/DashboardLayout';
 
@@ -38,6 +40,8 @@ interface Entitlement {
 }
 
 export default function PersonalizedEntitlementsPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -97,10 +101,22 @@ export default function PersonalizedEntitlementsPage() {
   });
 
   useEffect(() => {
-    fetchLeaveTypes();
-    fetchEmployees();
-    fetchEligibilityOptions();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (!isLoading && user && user.role !== 'HR Admin') {
+      router.replace('/dashboard');
+      return;
+    }
+
+    if (isLoggedIn && user?.role === 'HR Admin') {
+      fetchLeaveTypes();
+      fetchEmployees();
+      fetchEligibilityOptions();
+    }
+  }, [isLoading, isLoggedIn, user, router]);
 
   const fetchLeaveTypes = async () => {
     try {
@@ -382,6 +398,18 @@ export default function PersonalizedEntitlementsPage() {
       },
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn || user?.role !== 'HR Admin') {
+    return null;
+  }
 
   return (
     <DashboardLayout 

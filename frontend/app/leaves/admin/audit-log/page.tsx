@@ -195,7 +195,7 @@ export default function AuditLogPage() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || user?.role !== 'HR Admin') {
     return null;
   }
 

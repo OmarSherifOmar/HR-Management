@@ -216,7 +216,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         ] : []),
         ...(hasPermission('manage_leave_types') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Leave Types', href: '/leaves/admin/leave-types' },
-          { name: 'Admin: Leave Year Config', href: '/leaves/admin/leave-year' },
         ] : []),
         ...(hasPermission('manage_entitlements') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Adding normal and Personalized Entitlements', href: '/leaves/admin/personalized-entitlements' },

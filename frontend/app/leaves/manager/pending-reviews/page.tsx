@@ -1,7 +1,8 @@
 'use client';
 
 import DashboardLayout from '../../../components/DashboardLayout';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   Calendar,
@@ -62,6 +63,8 @@ interface LeaveRequest {
 }
 
 export default function ManagerPendingReviewsPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,8 +76,20 @@ export default function ManagerPendingReviewsPage() {
   const [irregularPatternFlag, setIrregularPatternFlag] = useState(false);
 
   useEffect(() => {
-    fetchPendingRequests();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (!isLoading && user && user.role !== 'Manager' && user.role !== 'department head') {
+      router.replace('/dashboard');
+      return;
+    }
+
+    if (isLoggedIn && (user?.role === 'Manager' || user?.role === 'department head')) {
+      fetchPendingRequests();
+    }
+  }, [isLoading, isLoggedIn, user, router]);
 
   const fetchPendingRequests = async () => {
     try {
@@ -214,6 +229,18 @@ export default function ManagerPendingReviewsPage() {
       </span>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn || (user?.role !== 'Manager' && user?.role !== 'department head')) {
+    return null;
+  }
 
   return (
     <DashboardLayout

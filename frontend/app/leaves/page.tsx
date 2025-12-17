@@ -32,6 +32,7 @@ type LeaveRequest = {
 };
 
 export default function LeaveRequestsPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -41,8 +42,15 @@ export default function LeaveRequestsPage() {
   const [cancelError, setCancelError] = useState('');
 
   useEffect(() => {
-    fetchLeaveRequests();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (isLoggedIn) {
+      fetchLeaveRequests();
+    }
+  }, [isLoading, isLoggedIn, router]);
 
   const cancelLeaveRequest = async (requestId: string) => {
     try {
@@ -131,6 +139,18 @@ export default function LeaveRequestsPage() {
     if (filter === 'all') return true;
     return request.status === filter;
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   return (
     <>

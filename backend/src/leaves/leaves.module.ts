@@ -7,7 +7,6 @@ import { PersonalizedEntitlementController } from './controllers/personalized-en
 import { LeaveParametersController } from './controllers/leave-parameters.controller';
 import { CalendarController } from './controllers/calendar.controller';
 import { SpecialAbsenceController } from './controllers/special-absence.controller';
-import { LeaveYearConfigController } from './controllers/leave-year-config.controller';
 import { BalanceAdjustmentController } from './controllers/balance-adjustment.controller';
 import { LeaveRoleManagementController } from './controllers/leave-role-management.controller';
 import { LeaveRequestController } from './controllers/leave-request.controller';
@@ -24,7 +23,6 @@ import { PersonalizedEntitlementService } from './services/personalized-entitlem
 import { LeaveParametersService } from './services/leave-parameters.service';
 import { CalendarService } from './services/calendar.service';
 import { SpecialAbsenceService } from './services/special-absence.service';
-import { LeaveYearConfigService } from './services/leave-year-config.service';
 import { BalanceAdjustmentService } from './services/balance-adjustment.service';
 import { LeaveRoleManagementService } from './services/leave-role-management.service';
 import { LeaveRequestService } from './services/leave-request.service';
@@ -76,7 +74,6 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveParametersController,
     CalendarController,
     SpecialAbsenceController,
-    LeaveYearConfigController,
     BalanceAdjustmentController,
     LeaveRoleManagementController,
     LeaveRequestController,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { Calendar as CalendarIcon, Plus, Trash2, Edit, X, Ban } from 'lucide-react';
@@ -28,7 +29,8 @@ type CalendarData = {
 };
 
 export default function CalendarPage() {
-  const { user } = useAuth();
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [calendars, setCalendars] = useState<CalendarData[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentCalendar, setCurrentCalendar] = useState<CalendarData | null>(null);
@@ -50,8 +52,20 @@ export default function CalendarPage() {
   });
 
   useEffect(() => {
-    fetchCalendars();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (!isLoading && user && user.role !== 'HR Admin') {
+      router.replace('/dashboard');
+      return;
+    }
+
+    if (isLoggedIn && user?.role === 'HR Admin') {
+      fetchCalendars();
+    }
+  }, [isLoading, isLoggedIn, user, router]);
 
   useEffect(() => {
     if (selectedYear) {
@@ -230,6 +244,18 @@ export default function CalendarPage() {
       day: 'numeric',
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn || user?.role !== 'HR Admin') {
+    return null;
+  }
 
   if (loading) {
     return (

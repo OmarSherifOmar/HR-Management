@@ -346,7 +346,7 @@ export default function RoleManagementPage() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || user?.role !== 'HR Admin') {
     return null;
   }
 
