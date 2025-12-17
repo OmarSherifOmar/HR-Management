@@ -73,28 +73,35 @@ export class LeaveAccrualService {
 
   /**
    * Calculate accrual amount for an employee based on policy and employment type
+   * Now uses the entitlement's yearlyEntitlement as the source of truth
    */
   private calculateAccrualAmount(
     policy: LeavePolicyDocument,
     serviceDays: number,
     accrualMethod: AccrualMethod,
+    yearlyEntitlement?: number,
   ): number {
     let rawAmount = 0;
 
+    // Use yearlyEntitlement if provided, otherwise fall back to policy rates
+    const effectiveYearlyEntitlement = yearlyEntitlement ?? 
+      (policy.accrualMethod === AccrualMethod.MONTHLY ? policy.monthlyRate * 12 : policy.yearlyRate);
+
     switch (accrualMethod) {
       case AccrualMethod.MONTHLY:
-        rawAmount = policy.monthlyRate;
+        // Recalculate monthly rate based on total annual entitlement
+        rawAmount = effectiveYearlyEntitlement / 12;
         break;
       case AccrualMethod.YEARLY:
         // Pro-rate based on service days in the year
-        rawAmount = (policy.yearlyRate / 365) * serviceDays;
+        rawAmount = (effectiveYearlyEntitlement / 365) * serviceDays;
         break;
       case AccrualMethod.PER_TERM:
-        // Quarterly accrual
-        rawAmount = policy.yearlyRate / 4;
+        // Quarterly accrual - recalculate based on total annual entitlement
+        rawAmount = effectiveYearlyEntitlement / 4;
         break;
       default:
-        rawAmount = policy.monthlyRate;
+        rawAmount = effectiveYearlyEntitlement / 12;
     }
 
     // Apply rounding rule
@@ -167,12 +174,13 @@ export class LeaveAccrualService {
     // Calculate service days if not provided (default to 30 for monthly)
     const effectiveServiceDays = serviceDays ?? 30;
 
-    // Calculate accrual
+    // Calculate accrual using entitlement's yearlyEntitlement as source of truth
     const previousBalance = entitlement.remaining;
     const accruedAmount = this.calculateAccrualAmount(
       policy,
       effectiveServiceDays,
       policy.accrualMethod,
+      entitlement.yearlyEntitlement,
     );
 
     // Update entitlement

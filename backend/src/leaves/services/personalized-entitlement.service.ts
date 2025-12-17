@@ -93,12 +93,14 @@ export class PersonalizedEntitlementService {
 
     if (!entitlement) {
       // Calculate initial accrued based on policy's accrual method
+      // ALWAYS use yearlyEntitlement as the source of truth for calculation
       let initialAccrued: number;
       
       if (policy.accrualMethod === AccrualMethod.MONTHLY) {
-        // Monthly accrual: grant first month's worth immediately
-        initialAccrued = policy.monthlyRate || (yearlyEntitlement / 12);
-        console.log('Monthly accrual detected - initial accrued:', initialAccrued);
+        // Monthly accrual: recalculate monthly rate from yearlyEntitlement
+        // Grant first month's worth immediately
+        initialAccrued = yearlyEntitlement / 12;
+        console.log('Monthly accrual detected - initial accrued (recalculated):', initialAccrued);
       } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
         // Per term accrual: grant one term's worth immediately (yearly / 4 for quarterly)
         initialAccrued = yearlyEntitlement / 4;
@@ -135,11 +137,13 @@ export class PersonalizedEntitlementService {
       console.log('Updating existing entitlement');
       
       // Recalculate based on policy accrual method
+      // ALWAYS use yearlyEntitlement as the source of truth for calculation
       let newAccrued: number;
       
       if (policy.accrualMethod === AccrualMethod.MONTHLY) {
-        newAccrued = policy.monthlyRate || (yearlyEntitlement / 12);
-        console.log('Monthly accrual - setting accrued to:', newAccrued);
+        // Recalculate monthly rate from yearlyEntitlement
+        newAccrued = yearlyEntitlement / 12;
+        console.log('Monthly accrual - setting accrued to (recalculated):', newAccrued);
       } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
         newAccrued = yearlyEntitlement / 4;
         console.log('Per term accrual - setting accrued to:', newAccrued);
