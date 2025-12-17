@@ -5,13 +5,14 @@ import { AppraisalTemplate } from '../models/appraisal-template.schema';
 import { AppraisalCycle } from '../models/appraisal-cycle.schema';
 import { AppraisalCycleStatus } from '../enums/performance.enums';
 import { CreateTemplateDto, UpdateTemplateDto } from '../dtos/create-template.dto';
+import { NotificationLog } from '../../time-management/models/notification-log.schema';
 
 @Injectable()
 export class TemplateService {
   constructor(
     @InjectModel(AppraisalTemplate.name) private templateModel: Model<any>,
     @InjectModel(AppraisalCycle.name) private cycleModel: Model<any>,
-    @InjectModel('NotificationLog') private notificationModel: Model<any>,
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
   ) {}
 
   private validateObjectIds(fieldName: string, ids?: string[]) {
@@ -24,33 +25,43 @@ export class TemplateService {
   }
 
   async create(dto: CreateTemplateDto, actorId?: string) {
-    const existing = await this.templateModel.findOne({ name: dto.name }).lean().exec() as any;
-    if (existing) throw new BadRequestException('Template with this name already exists');
+    try {
+      const existing = await this.templateModel.findOne({ name: dto.name }).lean().exec() as any;
+      if (existing) throw new BadRequestException('Template with this name already exists');
 
-    const toCreate: any = {
-      _id: new Types.ObjectId(),
-      name: dto.name,
-      description: dto.description,
-      templateType: dto.templateType,
-      ratingScale: dto.ratingScale,
-      criteria: dto.criteria || [],
-      instructions: dto.instructions,
-      applicableDepartmentIds: this.validateObjectIds('applicableDepartmentIds', dto.applicableDepartmentIds),
-      applicablePositionIds: this.validateObjectIds('applicablePositionIds', dto.applicablePositionIds),
-      isActive: true,
-    };
+      const toCreate: any = {
+        name: dto.name,
+        description: dto.description,
+        templateType: dto.templateType,
+        ratingScale: dto.ratingScale,
+        criteria: dto.criteria || [],
+        instructions: dto.instructions,
+        applicableDepartmentIds: this.validateObjectIds('applicableDepartmentIds', dto.applicableDepartmentIds),
+        applicablePositionIds: this.validateObjectIds('applicablePositionIds', dto.applicablePositionIds),
+        isActive: true,
+      };
 
-    const created = await this.templateModel.create(toCreate);
+      const created = await this.templateModel.create(toCreate);
+      console.log('Template created successfully:', created._id);
 
-    if (actorId) {
-      await this.notificationModel.create({
-        to: new Types.ObjectId(actorId),
-        type: 'TEMPLATE_CREATED',
-        message: `Appraisal template "${dto.name}" created`,
-      } as any);
+      if (actorId) {
+        try {
+          await this.notificationModel.create({
+            to: new Types.ObjectId(actorId),
+            type: 'TEMPLATE_CREATED',
+            message: `Appraisal template "${dto.name}" created`,
+          } as any);
+        } catch (notifErr) {
+          console.warn('Failed to create notification:', notifErr);
+          // Don't throw, just warn
+        }
+      }
+
+      return created;
+    } catch (error) {
+      console.error('Template creation failed:', error);
+      throw error;
     }
-
-    return created;
   }
 
   async findAll(filters: any = {}) {

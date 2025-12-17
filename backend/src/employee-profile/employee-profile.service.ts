@@ -516,7 +516,12 @@ async searchEmployees(queryDto: SearchEmployeesDto) {
   }
 
   if (queryDto.department) {
-    filter.primaryDepartmentId = queryDto.department;
+    // Convert department ID string to ObjectId for proper MongoDB matching
+    if (Types.ObjectId.isValid(queryDto.department)) {
+      filter.primaryDepartmentId = new Types.ObjectId(queryDto.department);
+    } else {
+      filter.primaryDepartmentId = queryDto.department;
+    }
   }
 
   if (queryDto.status) {

@@ -13,6 +13,7 @@ import {
   User,
   ChevronRight,
   AlertCircle,
+  Award,
 } from 'lucide-react';
 import {
   SelfServiceContactInfo,
@@ -23,6 +24,7 @@ import {
   HRChangeRequestReview,
   CandidateManagement,
 } from '../components/EmployeeProfile';
+import { PerformanceManagement } from '../components/Performance';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -52,18 +54,21 @@ export default function DashboardPage() {
   const menuItems = [];
   
   if (canAccess) {
-    menuItems.push({ id: 'profile', label: 'My Profile' });
+    menuItems.push({ id: 'profile', label: 'My Profile', icon: User });
   }
   if (canAccessTeam) {
-    menuItems.push({ id: 'team', label: 'My Team' });
+    menuItems.push({ id: 'team', label: 'My Team', icon: UserPlus });
   }
   if (canSearchEmployees()) {
-    menuItems.push({ id: 'employees', label: 'View All' });
-    menuItems.push({ id: 'candidates', label: 'Candidates' });
+    menuItems.push({ id: 'employees', label: 'View All', icon: FileInput });
+    menuItems.push({ id: 'candidates', label: 'Candidates', icon: UserPlus });
   }
   if (canListChangeRequests()) {
-    menuItems.push({ id: 'review-requests', label: 'Review Requests' });
+    menuItems.push({ id: 'review-requests', label: 'Review Requests', icon: TrendingUp });
   }
+  
+  // Always add Performance tab for authorized roles
+  menuItems.push({ id: 'performance', label: 'Performance', icon: Award });
 
   // Set default active view to first available menu item if not set
   const currentActiveView = activeView || (menuItems.length > 0 ? menuItems[0].id : null);
@@ -78,22 +83,28 @@ export default function DashboardPage() {
         {menuItems.length > 0 ? (
           <div className="lg:col-span-1">
             <div className="bg-[#2a2a2a] rounded-lg p-4 border border-gray-700 sticky top-20">
-              <h3 className="text-sm font-semibold text-gray-400 mb-3 px-2">EMPLOYEES</h3>
+              <h3 className="text-sm font-semibold text-gray-400 mb-3 px-2">MENU</h3>
               <nav className="space-y-1">
-                {menuItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveView(item.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-sm transition-colors ${
-                      currentActiveView === item.id
-                        ? 'bg-blue-600/20 text-blue-400 border border-blue-600'
-                        : 'text-gray-300 hover:bg-gray-700/50'
-                    }`}
-                  >
-                    {item.label}
-                    {currentActiveView === item.id && <ChevronRight size={16} />}
-                  </button>
-                ))}
+                {menuItems.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveView(item.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-sm transition-colors ${
+                        currentActiveView === item.id
+                          ? 'bg-blue-600/20 text-blue-400 border border-blue-600'
+                          : 'text-gray-300 hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {IconComponent && <IconComponent size={16} />}
+                        {item.label}
+                      </div>
+                      {currentActiveView === item.id && <ChevronRight size={16} />}
+                    </button>
+                  );
+                })}
               </nav>
             </div>
           </div>
@@ -150,6 +161,13 @@ export default function DashboardPage() {
               {currentActiveView === 'review-requests' && canListChangeRequests() && (
                 <div>
                   <HRChangeRequestReview />
+                </div>
+              )}
+
+              {/* Performance Management */}
+              {currentActiveView === 'performance' && user && (
+                <div>
+                  <PerformanceManagement userRole={user.role} employeeId={user.id} />
                 </div>
               )}
             </>

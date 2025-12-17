@@ -5,13 +5,14 @@ import { AppraisalCycle } from '../models/appraisal-cycle.schema';
 import { AppraisalAssignment } from '../models/appraisal-assignment.schema';
 import { AppraisalCycleStatus } from '../enums/performance.enums';
 import { CreateCycleDto, UpdateCycleDto } from '../dtos/create-cycle.dto';
+import { NotificationLog } from '../../time-management/models/notification-log.schema';
 
 @Injectable()
 export class CycleService {
   constructor(
     @InjectModel(AppraisalCycle.name) private cycleModel: Model<any>,
     @InjectModel(AppraisalAssignment.name) private assignmentModel: Model<any>,
-    @InjectModel('NotificationLog') private notificationModel: Model<any>,
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
   ) {}
 
   private validateObjectIds(fieldName: string, ids?: string[]) {

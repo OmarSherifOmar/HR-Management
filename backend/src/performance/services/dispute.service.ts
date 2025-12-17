@@ -6,6 +6,7 @@ import { AppraisalRecord } from '../models/appraisal-record.schema';
 import { AppraisalRecordStatus, AppraisalDisputeStatus } from '../enums/performance.enums';
 import { CreateDisputeDto } from '../dtos/create-dispute.dto';
 import { ResolveDisputeDto, DisputeDecision } from '../dtos/resolve-dispute.dto';
+import { NotificationLog } from '../../time-management/models/notification-log.schema';
 
 const DISPUTE_WINDOW_DAYS = 7;
 
@@ -14,14 +15,14 @@ export class DisputeService {
   constructor(
     @InjectModel(AppraisalDispute.name) private disputeModel: Model<any>,
     @InjectModel(AppraisalRecord.name) private recordModel: Model<any>,
-    @InjectModel('NotificationLog') private notificationModel: Model<any>,
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
     @InjectModel('EmployeeProfile') private employeeModel: Model<any>,
   ) {}
 
   async create(dto: CreateDisputeDto) {
     const record = await this.recordModel.findById(dto.appraisalRecordId).lean().exec() as any;
     if (!record) throw new NotFoundException('Appraisal record not found');
-    if (record.employeeProfileId?.toString() !== dto.raisedByEmployeeId) throw new ForbiddenException('You can only dispute your own appraisal');
+    // Allow all roles to submit disputes - remove employee ownership check
     if (record.status !== AppraisalRecordStatus.HR_PUBLISHED) throw new BadRequestException('Only published appraisals can be disputed');
 
     const publishedAt = record.hrPublishedAt || record.managerSubmittedAt;
@@ -106,5 +107,10 @@ export class DisputeService {
     const dispute = await this.disputeModel.findById(disputeId).lean().exec();
     if (!dispute) throw new NotFoundException('Dispute not found');
     return dispute;
+  }
+
+  async findByEmployee(employeeId?: string) {
+    if (!employeeId) throw new BadRequestException('Employee ID is required');
+    return this.disputeModel.find({ raisedByEmployeeId: new Types.ObjectId(employeeId) }).lean().exec();
   }
 }

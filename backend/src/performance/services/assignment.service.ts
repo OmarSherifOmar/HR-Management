@@ -8,6 +8,10 @@ import { AppraisalTemplate } from '../models/appraisal-template.schema';
 import { AppraisalAssignmentStatus, AppraisalRecordStatus } from '../enums/performance.enums';
 import { CreateAssignmentDto, BulkAssignmentDto } from '../dtos/create-assignment.dto';
 import { SubmitAppraisalDto, PublishAppraisalDto, BulkPublishDto } from '../dtos/submit-appraisal.dto';
+import { NotificationLog } from '../../time-management/models/notification-log.schema';
+import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
+import { Department } from '../../organization-structure/models/department.schema';
+import { Position } from '../../organization-structure/models/position.schema';
 
 @Injectable()
 export class AssignmentService {
@@ -16,10 +20,10 @@ export class AssignmentService {
     @InjectModel(AppraisalRecord.name) private recordModel: Model<any>,
     @InjectModel(AppraisalCycle.name) private cycleModel: Model<any>,
     @InjectModel(AppraisalTemplate.name) private templateModel: Model<any>,
-    @InjectModel('NotificationLog') private notificationModel: Model<any>,
-    @InjectModel('EmployeeProfile') private employeeModel: Model<any>,
-    @InjectModel('Department') private departmentModel: Model<any>,
-    @InjectModel('Position') private positionModel: Model<any>,
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
+    @InjectModel(EmployeeProfile.name) private employeeModel: Model<any>,
+    @InjectModel(Department.name) private departmentModel: Model<any>,
+    @InjectModel(Position.name) private positionModel: Model<any>,
   ) {}
 
   private toObjectId(fieldName: string, id?: string) {
