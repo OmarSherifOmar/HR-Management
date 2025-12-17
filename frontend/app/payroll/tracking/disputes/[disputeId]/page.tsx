@@ -73,12 +73,23 @@ export default function DisputeDetailPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
+  const getStatusColor = (status: string, hasSpecialist: boolean) => {
+    const normalized = status.toUpperCase();
+
+    // Derive "pending manager" purely in UI: under review + specialist assigned
+    if (
+      hasSpecialist &&
+      (normalized === "UNDER REVIEW" || normalized === "UNDER_REVIEW")
+    ) {
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    }
+
+    switch (normalized) {
       case "APPROVED":
         return "bg-green-100 text-green-800 border-green-200";
       case "REJECTED":
         return "bg-red-100 text-red-800 border-red-200";
+      case "UNDER REVIEW":
       case "UNDER_REVIEW":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default:
@@ -150,14 +161,18 @@ export default function DisputeDetailPage() {
         {/* Status Card */}
         <div
           className={`rounded-lg shadow p-6 mb-6 border-2 ${getStatusColor(
-            dispute.status
+            dispute.status,
+            !!dispute.payrollSpecialistId
           )}`}
         >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium mb-1">Current Status</p>
               <p className="text-2xl font-bold">
-                {dispute.status.replace("_", " ")}
+                {dispute.status.toLowerCase() === "under review" &&
+                dispute.payrollSpecialistId
+                  ? "Pending Payroll Manager Approval"
+                  : dispute.status.replace("_", " ")}
               </p>
             </div>
             <div className="text-right">
@@ -303,7 +318,7 @@ export default function DisputeDetailPage() {
         </div>
 
         {/* Admin Actions */}
-        {isAdmin && dispute.status === "UNDER_REVIEW" && (
+        {isAdmin && dispute.status.toLowerCase() === "under review" && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Admin Actions
@@ -326,7 +341,7 @@ export default function DisputeDetailPage() {
         )}
 
         {/* Under Review Message */}
-        {!isAdmin && dispute.status === "UNDER_REVIEW" && (
+        {!isAdmin && dispute.status.toLowerCase() === "under review" && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 className="font-semibold text-blue-900 mb-2">
               Dispute Under Review

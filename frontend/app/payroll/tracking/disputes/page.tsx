@@ -28,6 +28,45 @@ export default function DisputesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const fetchEmployeeDisputes = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        "http://localhost:3000/payroll-tracking/disputes/mine",
+        { credentials: "include" }
+      );
+      if (!response.ok) throw new Error("Failed to fetch disputes");
+      const data = await response.json();
+      setDisputes(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllDisputes = async (status?: string) => {
+    try {
+      setLoading(true);
+      const url =
+        status && status !== "all"
+          ? `http://localhost:3000/payroll-tracking/disputes?status=${encodeURIComponent(
+              status
+            )}`
+          : "http://localhost:3000/payroll-tracking/disputes";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch disputes");
+      const data = await response.json();
+      setAllDisputes(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
 
@@ -50,52 +89,18 @@ export default function DisputesPage() {
     }
   }, [user]);
 
-  const fetchEmployeeDisputes = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `http://localhost:3000/payroll-tracking/disputes/mine`,
-        { credentials: "include" }
-      );
-      if (!response.ok) throw new Error("Failed to fetch disputes");
-      const data = await response.json();
-      setDisputes(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAllDisputes = async (status?: string) => {
-    try {
-      setLoading(true);
-      const url =
-        status && status !== "all"
-          ? `http://localhost:3000/payroll-tracking/disputes?status=${status}`
-          : "http://localhost:3000/payroll-tracking/disputes";
-      const response = await fetch(url, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch disputes");
-      const data = await response.json();
-      setAllDisputes(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const normalizeStatus = (status: string) => (status || "").toLowerCase();
 
   const getStatusColor = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case "APPROVED":
+    const normalized = normalizeStatus(status);
+    switch (normalized) {
+      case "approved":
         return "bg-green-500/20 text-green-400";
-      case "REJECTED":
+      case "rejected":
         return "bg-red-500/20 text-red-400";
-      case "UNDER_REVIEW":
+      case "under review":
         return "bg-yellow-500/20 text-yellow-400";
-      case "PENDING":
+      case "pending":
         return "bg-blue-500/20 text-blue-400";
       default:
         return "bg-gray-500/20 text-gray-400";
@@ -111,18 +116,33 @@ export default function DisputesPage() {
     });
   };
 
+  const normalizedRole = String(user?.role || "").toLowerCase();
+  const canReview =
+    normalizedRole === "payroll manager" ||
+    normalizedRole === "payroll specialist" ||
+    normalizedRole === "system admin";
+  const isFinanceStaff = normalizedRole === "finance staff";
+
   const displayedDisputes = isAdmin ? allDisputes : disputes;
+  const normalizedFilter = filterStatus.toLowerCase();
   const filteredDisputes =
-    filterStatus === "all"
+    normalizedFilter === "all"
       ? displayedDisputes
-      : displayedDisputes.filter((d) => d.status === filterStatus);
+      : displayedDisputes.filter(
+          (d) => normalizeStatus(d.status) === normalizedFilter
+        );
 
   const disputeStats = {
     total: displayedDisputes.length,
-    pending: displayedDisputes.filter((d) => d.status === "UNDER_REVIEW")
-      .length,
-    approved: displayedDisputes.filter((d) => d.status === "APPROVED").length,
-    rejected: displayedDisputes.filter((d) => d.status === "REJECTED").length,
+    pending: displayedDisputes.filter(
+      (d) => normalizeStatus(d.status) === "under review"
+    ).length,
+    approved: displayedDisputes.filter(
+      (d) => normalizeStatus(d.status) === "approved"
+    ).length,
+    rejected: displayedDisputes.filter(
+      (d) => normalizeStatus(d.status) === "rejected"
+    ).length,
   };
 
   if (loading) {
@@ -181,10 +201,35 @@ export default function DisputesPage() {
               href="/payroll/tracking"
               className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
             >
-              ← Back
+               Back
             </Link>
           </div>
         </div>
+
+        {/* Finance Notification for Approved Disputes */}
+        {isFinanceStaff && disputeStats.approved > 0 && (
+          <div className="mb-6 bg-green-500/10 border border-green-500/40 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-green-300 font-semibold">
+                {disputeStats.approved} approved disputes need payroll adjustments.
+              </p>
+              <p className="text-green-200/80 text-sm">
+                Click below to focus on manager-approved disputes ready for processing.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setFilterStatus("approved");
+                if (isAdmin) {
+                  fetchAllDisputes("approved");
+                }
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            >
+              View Approved Disputes
+            </button>
+          </div>
+        )}
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -229,9 +274,9 @@ export default function DisputesPage() {
               className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             >
               <option value="all">All Disputes</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="under review">Under Review</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
             </select>
             <span className="text-gray-500">
               Showing {filteredDisputes.length} of {displayedDisputes.length}{" "}
@@ -307,7 +352,9 @@ export default function DisputesPage() {
                         >
                           View
                         </Link>
-                        {isAdmin && dispute.status === "UNDER_REVIEW" && (
+                        {canReview &&
+                          normalizeStatus(dispute.status) ===
+                            "under review" && (
                           <Link
                             href={`/payroll/tracking/disputes/${dispute._id}/review`}
                             className="text-green-400 hover:text-green-300"

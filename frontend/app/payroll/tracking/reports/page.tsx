@@ -18,6 +18,30 @@ interface DepartmentReport {
   totalGross: number;
   totalNet: number;
   totalDeductions: number;
+   averageNetPerEmployee: number;
+}
+
+interface FinanceTaxBenefitsReport {
+  period: {
+    year: string | null;
+    month: string | null;
+  };
+  totalPayslips: number;
+  totals: {
+    totalTax: number;
+    totalInsuranceEmployee: number;
+    totalInsuranceEmployer: number;
+    totalBenefits: number;
+  };
+  taxesByType: { name: string; totalAmount: number }[];
+  insuranceByType: {
+    name: string;
+    employeeShare: number;
+    employerShare: number;
+    total: number;
+  }[];
+  benefitsByType: { name: string; totalAmount: number }[];
+  note?: string;
 }
 
 export default function ReportsPage() {
@@ -28,7 +52,10 @@ export default function ReportsPage() {
   const [departmentReports, setDepartmentReports] = useState<
     DepartmentReport[]
   >([]);
+  const [financeReport, setFinanceReport] =
+    useState<FinanceTaxBenefitsReport | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("payroll");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -47,18 +74,30 @@ export default function ReportsPage() {
     ];
 
     setIsAdmin(
-      allowedRoles.some(
-        (r) => r.toLowerCase() === role.toLowerCase()
-      )
+      allowedRoles.some((r) => r.toLowerCase() === role.toLowerCase())
     );
     fetchPayrollReports();
+    fetchFinanceReport();
   }, []);
 
   const fetchPayrollReports = async () => {
     try {
+      // Basic UI validation: if year is provided, ensure it's a 4-digit number in a sane range
+      if (selectedYear) {
+        const yearNum = Number(selectedYear);
+        if (!Number.isFinite(yearNum) || selectedYear.length !== 4 || yearNum < 2000 || yearNum > 2100) {
+          setError("Please enter a valid year between 2000 and 2100.");
+          return;
+        }
+      }
+
       setLoading(true);
-      const url = selectedMonth
-        ? `http://localhost:3000/payroll-tracking/reports/payroll?month=${selectedMonth}`
+      const params = new URLSearchParams();
+      if (selectedMonth) params.append("month", selectedMonth);
+      if (selectedYear) params.append("year", selectedYear);
+
+      const url = params.toString()
+        ? `http://localhost:3000/payroll-tracking/reports/payroll?${params.toString()}`
         : "http://localhost:3000/payroll-tracking/reports/payroll";
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch payroll reports");
@@ -90,6 +129,44 @@ export default function ReportsPage() {
     }
   };
 
+  const fetchFinanceReport = async () => {
+    try {
+      // Reuse the same basic year validation
+      if (selectedYear) {
+        const yearNum = Number(selectedYear);
+        if (
+          !Number.isFinite(yearNum) ||
+          selectedYear.length !== 4 ||
+          yearNum < 2000 ||
+          yearNum > 2100
+        ) {
+          setError("Please enter a valid year between 2000 and 2100.");
+          return;
+        }
+      }
+
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (selectedMonth) params.append("month", selectedMonth);
+      if (selectedYear) params.append("year", selectedYear);
+
+      const url = params.toString()
+        ? `http://localhost:3000/payroll-tracking/reports/finance/tax-benefits?${params.toString()}`
+        : "http://localhost:3000/payroll-tracking/reports/finance/tax-benefits";
+
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok)
+        throw new Error("Failed to fetch tax & benefits finance report");
+      const data = await response.json();
+      setFinanceReport(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -99,15 +176,30 @@ export default function ReportsPage() {
 
   const exportCsv = async () => {
     try {
-      const url = selectedMonth
-        ? `http://localhost:3000/payroll-tracking/reports/payroll/export/csv?month=${selectedMonth}`
+      if (selectedYear) {
+        const yearNum = Number(selectedYear);
+        if (!Number.isFinite(yearNum) || selectedYear.length !== 4 || yearNum < 2000 || yearNum > 2100) {
+          alert("Please enter a valid year between 2000 and 2100 before exporting.");
+          return;
+        }
+      }
+
+      const params = new URLSearchParams();
+      if (selectedMonth) params.append("month", selectedMonth);
+      if (selectedYear) params.append("year", selectedYear);
+
+      const url = params.toString()
+        ? `http://localhost:3000/payroll-tracking/reports/payroll/export/csv?${params.toString()}`
         : "http://localhost:3000/payroll-tracking/reports/payroll/export/csv";
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to export CSV");
       const blob = await response.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "payroll_report.csv";
+      let suffix = "";
+      if (selectedYear) suffix += `_${selectedYear}`;
+      if (selectedMonth) suffix += `_${selectedMonth}`;
+      link.download = `payroll_report${suffix}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -118,15 +210,58 @@ export default function ReportsPage() {
 
   const exportPdf = async () => {
     try {
-      const url = selectedMonth
-        ? `http://localhost:3000/payroll-tracking/reports/payroll/export/pdf?month=${selectedMonth}`
-        : "http://localhost:3000/payroll-tracking/reports/payroll/export/pdf";
+      if (selectedYear) {
+        const yearNum = Number(selectedYear);
+        if (!Number.isFinite(yearNum) || selectedYear.length !== 4 || yearNum < 2000 || yearNum > 2100) {
+          alert("Please enter a valid year between 2000 and 2100 before exporting.");
+          return;
+        }
+      }
+
+      let url = "";
+      let filename = "report.pdf";
+
+      if (activeTab === "payroll") {
+        const params = new URLSearchParams();
+        if (selectedMonth) params.append("month", selectedMonth);
+        if (selectedYear) params.append("year", selectedYear);
+
+        url = params.toString()
+          ? `http://localhost:3000/payroll-tracking/reports/payroll/export/pdf?${params.toString()}`
+          : "http://localhost:3000/payroll-tracking/reports/payroll/export/pdf";
+
+        let suffix = "";
+        if (selectedYear) suffix += `_${selectedYear}`;
+        if (selectedMonth) suffix += `_${selectedMonth}`;
+        filename = `payroll_report${suffix}.pdf`;
+      } else if (activeTab === "finance") {
+        const params = new URLSearchParams();
+        if (selectedMonth) params.append("month", selectedMonth);
+        if (selectedYear) params.append("year", selectedYear);
+
+        url = params.toString()
+          ? `http://localhost:3000/payroll-tracking/reports/finance/tax-benefits/export/pdf?${params.toString()}`
+          : "http://localhost:3000/payroll-tracking/reports/finance/tax-benefits/export/pdf";
+
+        let suffix = "";
+        if (selectedYear) suffix += `_${selectedYear}`;
+        if (selectedMonth) suffix += `_${selectedMonth}`;
+        filename = `finance_tax_benefits_report${suffix}.pdf`;
+      } else if (activeTab === "department") {
+        if (!selectedDepartment) {
+          alert("Please enter a department ID before exporting.");
+          return;
+        }
+        url = `http://localhost:3000/payroll-tracking/reports/department/${selectedDepartment}/export/pdf`;
+        filename = `department_${selectedDepartment}_report.pdf`;
+      }
+
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to export PDF");
       const blob = await response.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "payroll_report.pdf";
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -235,6 +370,16 @@ export default function ReportsPage() {
               📊 Payroll Summary
             </button>
             <button
+              onClick={() => setActiveTab("finance")}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                activeTab === "finance"
+                  ? "bg-teal-600 text-white"
+                  : "text-gray-400 hover:bg-[#2a2a4a]"
+              }`}
+            >
+              🧾 Taxes & Contributions
+            </button>
+            <button
               onClick={() => setActiveTab("department")}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === "department"
@@ -260,6 +405,15 @@ export default function ReportsPage() {
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <input
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  placeholder="Year (e.g. 2025)"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 w-28"
                 />
                 <button
                   onClick={fetchPayrollReports}
@@ -291,9 +445,6 @@ export default function ReportsPage() {
                   <thead className="bg-[#1a1a2e]">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Payroll Run ID
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Total Gross
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -313,11 +464,6 @@ export default function ReportsPage() {
                         key={report._id}
                         className="hover:bg-[#2a2a4a] transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-white">
-                            {report._id || "N/A"}
-                          </div>
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-semibold text-teal-400">
                             {formatCurrency(report.totalGross)}
@@ -344,6 +490,215 @@ export default function ReportsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Finance: Taxes & Contributions Tab */}
+        {activeTab === "finance" && (
+          <div className="bg-[#232340] rounded-xl p-6 border border-gray-700/50">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Taxes, Insurance & Benefits
+                </h2>
+                <p className="text-gray-400 text-sm">
+                  Aggregated deductions and contributions for the selected
+                  period to support accounting and compliance.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <input
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  placeholder="Year (e.g. 2025)"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="px-4 py-2 bg-[#1a1a2e] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 w-28"
+                />
+                <button
+                  onClick={fetchFinanceReport}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                >
+                  Filter
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p className="text-red-400">{error}</p>
+              </div>
+            )}
+
+            {financeReport ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-red-500/10 border border-red-500/40 rounded-xl p-4">
+                    <p className="text-xs text-red-300 mb-1">
+                      Total Tax Withheld
+                    </p>
+                    <p className="text-2xl font-bold text-red-200">
+                      {formatCurrency(financeReport.totals.totalTax)}
+                    </p>
+                  </div>
+                  <div className="bg-blue-500/10 border border-blue-500/40 rounded-xl p-4">
+                    <p className="text-xs text-blue-300 mb-1">
+                      Employee Insurance Contributions
+                    </p>
+                    <p className="text-2xl font-bold text-blue-200">
+                      {formatCurrency(
+                        financeReport.totals.totalInsuranceEmployee
+                      )}
+                    </p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/40 rounded-xl p-4">
+                    <p className="text-xs text-emerald-300 mb-1">
+                      Employer Insurance Contributions
+                    </p>
+                    <p className="text-2xl font-bold text-emerald-200">
+                      {formatCurrency(
+                        financeReport.totals.totalInsuranceEmployer
+                      )}
+                    </p>
+                  </div>
+                  <div className="bg-purple-500/10 border border-purple-500/40 rounded-xl p-4">
+                    <p className="text-xs text-purple-300 mb-1">
+                      Benefits & Allowances
+                    </p>
+                    <p className="text-2xl font-bold text-purple-200">
+                      {formatCurrency(financeReport.totals.totalBenefits)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Taxes by type */}
+                  <div className="bg-[#1a1a2e] rounded-xl p-4 border border-gray-700/50">
+                    <h3 className="text-sm font-semibold text-white mb-3">
+                      Taxes by Type
+                    </h3>
+                    {financeReport.taxesByType.length > 0 ? (
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-400">
+                            <th className="text-left pb-2">Tax Type</th>
+                            <th className="text-right pb-2">Total Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/60">
+                          {financeReport.taxesByType.map((t) => (
+                            <tr key={t.name}>
+                              <td className="py-2 text-gray-200">{t.name}</td>
+                              <td className="py-2 text-right text-red-300">
+                                {formatCurrency(t.totalAmount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        No tax deductions found for this period.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Insurance by type */}
+                  <div className="bg-[#1a1a2e] rounded-xl p-4 border border-gray-700/50">
+                    <h3 className="text-sm font-semibold text-white mb-3">
+                      Insurance Contributions by Type
+                    </h3>
+                    {financeReport.insuranceByType.length > 0 ? (
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-400">
+                            <th className="text-left pb-2">Insurance</th>
+                            <th className="text-right pb-2">Employee</th>
+                            <th className="text-right pb-2">Employer</th>
+                            <th className="text-right pb-2">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/60">
+                          {financeReport.insuranceByType.map((i) => (
+                            <tr key={i.name}>
+                              <td className="py-2 text-gray-200">{i.name}</td>
+                              <td className="py-2 text-right text-blue-300">
+                                {formatCurrency(i.employeeShare)}
+                              </td>
+                              <td className="py-2 text-right text-emerald-300">
+                                {formatCurrency(i.employerShare)}
+                              </td>
+                              <td className="py-2 text-right text-gray-200">
+                                {formatCurrency(i.total)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        No insurance contributions found for this period.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Benefits by type */}
+                  <div className="bg-[#1a1a2e] rounded-xl p-4 border border-gray-700/50">
+                    <h3 className="text-sm font-semibold text-white mb-3">
+                      Benefits & Allowances by Type
+                    </h3>
+                    {financeReport.benefitsByType.length > 0 ? (
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-400">
+                            <th className="text-left pb-2">Benefit</th>
+                            <th className="text-right pb-2">Total Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/60">
+                          {financeReport.benefitsByType.map((b) => (
+                            <tr key={b.name}>
+                              <td className="py-2 text-gray-200">{b.name}</td>
+                              <td className="py-2 text-right text-purple-300">
+                                {formatCurrency(b.totalAmount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        No benefit or allowance records found for this period.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {financeReport.note && (
+                  <p className="mt-4 text-xs text-gray-500 italic">
+                    {financeReport.note}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🧾</div>
+                <p className="text-gray-400 text-lg">
+                  No finance report data yet.
+                </p>
+                <p className="text-gray-500 mt-2">
+                  Adjust the period above and click Filter to
+                  regenerate.
+                </p>
               </div>
             )}
           </div>
@@ -414,6 +769,14 @@ export default function ReportsPage() {
                         </span>
                         <span className="font-bold text-green-400">
                           {formatCurrency(report.totalNet)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-gray-700/50 pt-3">
+                        <span className="text-white font-semibold">
+                          Avg Net per Employee
+                        </span>
+                        <span className="font-bold text-blue-400">
+                          {formatCurrency(report.averageNetPerEmployee)}
                         </span>
                       </div>
                     </div>

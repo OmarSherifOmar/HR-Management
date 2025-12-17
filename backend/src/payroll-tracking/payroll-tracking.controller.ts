@@ -465,6 +465,31 @@ export class PayrollTrackingController {
     res.end(pdfBuffer);
   }
 
+  @Get('reports/department/:departmentId/export/pdf')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportDepartmentReportPdf(
+    @Param('departmentId') departmentId: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.svc.exportDepartmentPayrollReportPdf(
+      departmentId,
+    );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="department_payroll_report.pdf"',
+    );
+
+    res.end(pdfBuffer);
+  }
+
   @Get('disputes')
   @Roles(
     Role.PAYROLL_SPECIALIST,
@@ -531,9 +556,35 @@ export class PayrollTrackingController {
   }
 
   @Get('transparency/summary')
-  @Roles(Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
+  @Roles(
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.PAYROLL_SPECIALIST,
+    Role.HR_ADMIN,
+  )
   async getTransparency() {
     return this.svc.transparencySummary();
+  }
+
+  @Get('transparency/summary/export/pdf')
+  @Roles(
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.PAYROLL_SPECIALIST,
+    Role.HR_ADMIN,
+  )
+  async exportTransparencyPdf(@Res() res: Response) {
+    const pdfBuffer = await this.svc.exportTransparencySummaryPdf();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="transparency_summary.pdf"',
+    );
+
+    res.end(pdfBuffer);
   }
 
   @Get('refunds/pending')
@@ -727,5 +778,49 @@ export class PayrollTrackingController {
     const employeeId = req.user?.sub;
     if (!employeeId) throw new ForbiddenException('User ID missing in token');
     return this.svc.getEmployerContributions(employeeId);
+  }
+
+  /**
+   * Finance staff export: taxes, insurance contributions and benefits as PDF
+   */
+  @Get('reports/finance/tax-benefits/export/pdf')
+  @Roles(
+    Role.FINANCE_STAFF,
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportFinanceTaxBenefitsPdf(
+    @Query() query: PayrollReportQueryDto,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.svc.exportFinanceTaxBenefitsPdf(query);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="finance_tax_benefits_report.pdf"',
+    );
+
+    res.end(pdfBuffer);
+  }
+
+  /**
+   * Finance staff report: aggregate taxes, insurance contributions, and benefits
+   * across all payslips in a period (month/year).
+   */
+  @Get('reports/finance/tax-benefits')
+  @Roles(
+    Role.FINANCE_STAFF,
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async getFinanceTaxBenefitsReport(
+    @Query() query: PayrollReportQueryDto,
+  ) {
+    return this.svc.generateFinanceTaxBenefitsReport(query);
   }
 }

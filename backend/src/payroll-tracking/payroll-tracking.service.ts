@@ -30,6 +30,11 @@ import {
 } from '../employee-profile/models/employee-profile.schema';
 
 import {
+  Department,
+  DepartmentDocument,
+} from '../organization-structure/models/department.schema';
+
+import {
   allowance,
   allowanceDocument,
 } from '../payroll-configuration/models/allowance.schema';
@@ -160,6 +165,9 @@ export class PayrollTrackingService {
 
     @InjectModel(allowance.name)
     private readonly allowanceModel: Model<allowanceDocument>,
+
+    @InjectModel(Department.name)
+    private readonly departmentModel: Model<DepartmentDocument>,
   ) {}
 
   /**
@@ -680,12 +688,50 @@ export class PayrollTrackingService {
   }
 
   async generatePayrollReport(query: PayrollReportQueryDto) {
-    const match: Record<string, Types.ObjectId | string> = {};
+    const match: Record<string, any> = {};
+
+    // We support two styles of filtering:
+    // 1) Legacy: month is a payrollRunId (string/ObjectId) -> match on payrollRunId.
+    // 2) Calendar: month is in YYYY-MM format and/or year is provided -> match on createdAt range.
+
+    let rangeStart: Date | undefined;
+    let rangeEnd: Date | undefined;
+
+    // Calendar year filter using createdAt
+    if (query.year) {
+      const yearNum = parseInt(String(query.year), 10);
+      if (!Number.isFinite(yearNum)) {
+        throw new BadRequestException(`Invalid year: ${query.year}`);
+      }
+
+      rangeStart = new Date(yearNum, 0, 1);
+      rangeEnd = new Date(yearNum + 1, 0, 1);
+    }
 
     if (query.month) {
-      match.payrollRunId = Types.ObjectId.isValid(query.month)
-        ? new Types.ObjectId(query.month)
-        : query.month;
+      const monthStr = String(query.month);
+      const calendarMatch = monthStr.match(/^(\d{4})-(\d{2})$/);
+
+      if (calendarMatch) {
+        // Treat as calendar month (YYYY-MM) regardless of legacy behaviour
+        const yearNum = parseInt(calendarMatch[1], 10);
+        const monthIndex = parseInt(calendarMatch[2], 10) - 1; // 0-based
+        if (Number.isNaN(yearNum) || Number.isNaN(monthIndex)) {
+          throw new BadRequestException(`Invalid month: ${query.month}`);
+        }
+
+        rangeStart = new Date(yearNum, monthIndex, 1);
+        rangeEnd = new Date(yearNum, monthIndex + 1, 1);
+      } else if (!query.year) {
+        // Fallback legacy behaviour: assume month is actually a payrollRunId
+        match.payrollRunId = Types.ObjectId.isValid(monthStr)
+          ? new Types.ObjectId(monthStr)
+          : monthStr;
+      }
+    }
+
+    if (rangeStart && rangeEnd) {
+      match.createdAt = { $gte: rangeStart, $lt: rangeEnd };
     }
 
     const pipeline = [
@@ -711,19 +757,16 @@ export class PayrollTrackingService {
     const data = await this.generatePayrollReport(query);
 
     const rows: string[] = [];
-    rows.push(
-      'Payroll Run ID,Total Gross,Total Net,Payslips Count,Avg Net Per Employee',
-    );
+    rows.push('Total Gross,Total Net,Payslips Count,Avg Net Per Employee');
 
     for (const row of data as any[]) {
-      const id = row._id ?? '';
       const totalGross = Number(row.totalGross ?? 0);
       const totalNet = Number(row.totalNet ?? 0);
       const count = Number(row.count ?? 0);
       const avgNet = count > 0 ? totalNet / count : 0;
 
       rows.push(
-        `${id},${totalGross.toFixed(2)},${totalNet.toFixed(2)},${count},${avgNet.toFixed(2)}`,
+        `${totalGross.toFixed(2)},${totalNet.toFixed(2)},${count},${avgNet.toFixed(2)}`,
       );
     }
 
@@ -761,28 +804,75 @@ export class PayrollTrackingService {
           currency: 'USD',
         }).format(value ?? 0);
 
-      doc.fontSize(20).text('Payroll Report Summary', { align: 'center' });
+      // Title
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(20)
+        .fillColor('#111111')
+        .text('Payroll Report Summary', { align: 'center' });
+      doc.moveDown(0.5);
+
+      // Subheading (generation timestamp)
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .fillColor('#555555')
+        .text(`Generated at: ${new Date().toLocaleString()}`, {
+          align: 'center',
+        });
       doc.moveDown();
 
+      const filters: string[] = [];
+      if (query.year) {
+        filters.push(`Year = ${query.year}`);
+      }
       if (query.month) {
-        doc.fontSize(11).text(`Filter: Payroll Run / Month = ${query.month}`);
-        doc.moveDown(0.5);
+        filters.push(`Month = ${query.month}`);
       }
 
-      // Table header
+      if (filters.length > 0) {
+        doc
+          .font('Helvetica')
+          .fontSize(11)
+          .fillColor('#222222')
+          .text(`Filter: ${filters.join(' · ')}`);
+        doc.moveDown(0.75);
+      }
+
+      // Horizontal rule
+      const startX = doc.x;
+      const currentY = doc.y;
       doc
-        .fontSize(12)
-        .text(
-          'Run ID                 Total Gross      Total Net        Count   Avg Net/Employee',
-        );
-      doc.moveDown(0.5);
+        .moveTo(startX, currentY)
+        .lineTo(startX + 500, currentY)
+        .lineWidth(0.5)
+        .stroke('#cccccc');
+      doc.moveDown(1);
+
+      // Table header (manual column positions so values don't run together)
+      const tableTop = doc.y + 5;
+      const col1X = doc.page.margins.left; // Total Gross
+      const col2X = col1X + 130; // Total Net
+      const col3X = col2X + 120; // Payslips Count
+      const col4X = col3X + 110; // Avg Net / Employee
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .fillColor('#111111');
+
+      doc.text('Total Gross', col1X, tableTop);
+      doc.text('Total Net', col2X, tableTop);
+      doc.text('Payslips Count', col3X, tableTop);
+      doc.text('Avg Net / Employee', col4X, tableTop);
+
+      let rowY = tableTop + 16;
 
       let grandGross = 0;
       let grandNet = 0;
       let grandCount = 0;
 
       data.forEach((row) => {
-        const id = String(row._id ?? 'N/A');
         const totalGross = Number(row.totalGross ?? 0);
         const totalNet = Number(row.totalNet ?? 0);
         const count = Number(row.count ?? 0);
@@ -797,23 +887,604 @@ export class PayrollTrackingService {
         const avgStr = formatCurrency(avgNet);
 
         doc
-          .fontSize(11)
-          .text(
-            `${id.padEnd(22)}${grossStr.padEnd(16)}${netStr.padEnd(16)}${String(
-              count,
-            ).padEnd(7)}${avgStr}`,
-          );
-      });
+          .font('Helvetica')
+          .fontSize(10)
+          .fillColor('#222222');
 
+        doc.text(grossStr, col1X, rowY);
+        doc.text(netStr, col2X, rowY);
+        doc.text(String(count), col3X, rowY);
+        doc.text(avgStr, col4X, rowY);
+
+        rowY += 14;
+      });
+      // Move cursor below the last row before rendering totals
       doc.moveDown();
 
       const overallAvg = grandCount > 0 ? grandNet / grandCount : 0;
 
-      doc.fontSize(12).text('Totals:', { underline: true }).moveDown(0.3);
-      doc.text(`Total Gross: ${formatCurrency(grandGross)}`);
-      doc.text(`Total Net: ${formatCurrency(grandNet)}`);
-      doc.text(`Payslips Count: ${grandCount}`);
-      doc.text(`Average Net per Employee: ${formatCurrency(overallAvg)}`);
+      doc
+        .moveDown(1)
+        .font('Helvetica-Bold')
+        .fontSize(12)
+        .fillColor('#111111')
+        .text('Totals:', { underline: true })
+        .moveDown(0.3);
+
+      doc
+        .font('Helvetica')
+        .fontSize(11)
+        .fillColor('#222222')
+        .text(`Total Gross: ${formatCurrency(grandGross)}`)
+        .text(`Total Net: ${formatCurrency(grandNet)}`)
+        .text(`Payslips Count: ${grandCount}`)
+        .text(
+          `Average Net per Employee: ${formatCurrency(overallAvg)}`,
+        );
+
+      doc.end();
+    });
+  }
+
+  /**
+   * Export a single department payroll report as PDF
+   */
+  async exportDepartmentPayrollReportPdf(
+    departmentId: string,
+  ): Promise<Buffer> {
+    const report = await this.getDepartmentPayrollReport(departmentId);
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(value ?? 0);
+
+      doc
+        .fontSize(18)
+        .text('Department Payroll Report', { align: 'center' })
+        .moveDown(0.5);
+
+      const avgNet =
+        report.totalEmployees > 0
+          ? report.totalNet / report.totalEmployees
+          : 0;
+
+      doc
+        .fontSize(14)
+        .text(`Department: ${report.departmentName}`, { align: 'center' })
+        .moveDown(1);
+
+      doc.fontSize(12).text(`Total Employees: ${report.totalEmployees}`);
+      doc
+        .text(`Total Gross: ${formatCurrency(report.totalGross)}`)
+        .text(`Total Deductions: ${formatCurrency(report.totalDeductions)}`)
+        .text(`Total Net: ${formatCurrency(report.totalNet)}`)
+        .text(
+          `Average Net per Employee: ${formatCurrency(avgNet)}`,
+        );
+
+      doc.end();
+    });
+  }
+
+  /**
+   * Finance-facing report that aggregates taxes, insurance contributions, and benefits
+   * across all payslips in a given period (month/year).
+   */
+  async generateFinanceTaxBenefitsReport(query: PayrollReportQueryDto) {
+    const match: Record<string, any> = {};
+
+    let rangeStart: Date | undefined;
+    let rangeEnd: Date | undefined;
+
+    if (query.year) {
+      const yearNum = parseInt(String(query.year), 10);
+      if (!Number.isFinite(yearNum)) {
+        throw new BadRequestException(`Invalid year: ${query.year}`);
+      }
+      rangeStart = new Date(yearNum, 0, 1);
+      rangeEnd = new Date(yearNum + 1, 0, 1);
+    }
+
+    if (query.month) {
+      const monthStr = String(query.month);
+      const calendarMatch = monthStr.match(/^(\d{4})-(\d{2})$/);
+
+      if (calendarMatch) {
+        const yearNum = parseInt(calendarMatch[1], 10);
+        const monthIndex = parseInt(calendarMatch[2], 10) - 1;
+        if (Number.isNaN(yearNum) || Number.isNaN(monthIndex)) {
+          throw new BadRequestException(`Invalid month: ${query.month}`);
+        }
+
+        rangeStart = new Date(yearNum, monthIndex, 1);
+        rangeEnd = new Date(yearNum, monthIndex + 1, 1);
+      }
+    }
+
+    if (rangeStart && rangeEnd) {
+      match.createdAt = { $gte: rangeStart, $lt: rangeEnd };
+    }
+
+    const slips = await this.payslipModel
+      .find(match)
+      .lean<LeanPayslip[]>();
+
+    if (slips.length === 0) {
+      return {
+        period: {
+          year: query.year ?? null,
+          month: query.month ?? null,
+        },
+        totalPayslips: 0,
+        totals: {
+          totalTax: 0,
+          totalInsuranceEmployee: 0,
+          totalInsuranceEmployer: 0,
+          totalBenefits: 0,
+        },
+        taxesByType: [],
+        insuranceByType: [],
+        benefitsByType: [],
+        note: 'No payslips found for the selected period.',
+      };
+    }
+
+    const tryNumber = (v: unknown): number | null => {
+      if (v == null) return null;
+      if (typeof v === 'number') return v;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    type TaxAgg = { name: string; totalAmount: number };
+    type InsuranceAgg = {
+      name: string;
+      employeeShare: number;
+      employerShare: number;
+      total: number;
+    };
+    type BenefitAgg = { name: string; totalAmount: number };
+
+    const taxMap = new Map<string, TaxAgg>();
+    const insuranceMap = new Map<string, InsuranceAgg>();
+    const benefitMap = new Map<string, BenefitAgg>();
+
+    let totalTax = 0;
+    let totalInsEmployee = 0;
+    let totalInsEmployer = 0;
+    let totalBenefits = 0;
+
+    const getName = (raw: unknown, fallback: string): string => {
+      if (typeof raw === 'string') return raw;
+      if (typeof raw === 'number' || typeof raw === 'boolean')
+        return String(raw);
+      if (raw && typeof raw === 'object') {
+        const o = raw as Record<string, unknown>;
+        if (typeof o.label === 'string') return o.label;
+        if (typeof o.name === 'string') return o.name;
+        if (typeof o.type === 'string') return o.type;
+      }
+      return fallback;
+    };
+
+    for (const slip of slips) {
+      // Taxes
+      const taxesRaw = slip.deductionsDetails?.taxes ?? [];
+      if (Array.isArray(taxesRaw)) {
+        for (const t of taxesRaw) {
+          const obj: Record<string, unknown> =
+            t && typeof t === 'object' ? (t as Record<string, unknown>) : {};
+          const get = (k: string) =>
+            Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : undefined;
+
+          const nameRaw =
+            get('name') ?? get('label') ?? get('type') ?? 'Tax';
+          const amount =
+            tryNumber(get('amount')) ??
+            tryNumber(get('value')) ??
+            tryNumber(get('total')) ??
+            0;
+
+          const name = getName(nameRaw, 'Tax');
+          const amt = Math.round((amount || 0) * 100) / 100;
+
+          totalTax += amt;
+
+          const existing = taxMap.get(name) ?? {
+            name,
+            totalAmount: 0,
+          };
+          existing.totalAmount += amt;
+          taxMap.set(name, existing);
+        }
+      }
+
+      // Insurance contributions
+      const insRaw = slip.deductionsDetails?.insurances ?? [];
+      if (Array.isArray(insRaw)) {
+        for (const it of insRaw) {
+          const obj: Record<string, unknown> =
+            it && typeof it === 'object' ? (it as Record<string, unknown>) : {};
+          const get = (k: string) =>
+            Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : undefined;
+
+          const nameRaw =
+            get('name') ?? get('label') ?? get('type') ?? 'Insurance';
+
+          const employeeShare =
+            tryNumber(get('employee')) ??
+            tryNumber(get('employeeShare')) ??
+            tryNumber(get('employee_amount')) ??
+            tryNumber(get('employeeAmount')) ??
+            0;
+
+          const employerShare =
+            tryNumber(get('employer')) ??
+            tryNumber(get('employerShare')) ??
+            tryNumber(get('employer_amount')) ??
+            tryNumber(get('employerAmount')) ??
+            0;
+
+          const name = getName(nameRaw, 'Insurance');
+
+          const emp = Math.round((employeeShare || 0) * 100) / 100;
+          const empr = Math.round((employerShare || 0) * 100) / 100;
+          const tot = Math.round((emp + empr) * 100) / 100;
+
+          totalInsEmployee += emp;
+          totalInsEmployer += empr;
+
+          const existing = insuranceMap.get(name) ?? {
+            name,
+            employeeShare: 0,
+            employerShare: 0,
+            total: 0,
+          };
+          existing.employeeShare += emp;
+          existing.employerShare += empr;
+          existing.total += tot;
+          insuranceMap.set(name, existing);
+        }
+      }
+
+      // Benefits & allowances
+      const allowances =
+        (slip.earningsDetails?.allowances as unknown[]) ?? ([] as unknown[]);
+      const benefits =
+        (slip.earningsDetails?.benefits as unknown[]) ?? ([] as unknown[]);
+      const benefitItems = [...allowances, ...benefits];
+
+      for (const b of benefitItems) {
+        const obj: Record<string, unknown> =
+          b && typeof b === 'object' ? (b as Record<string, unknown>) : {};
+        const get = (k: string) =>
+          Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : undefined;
+
+        const nameRaw =
+          get('name') ?? get('label') ?? get('type') ?? 'Benefit';
+        const amount =
+          tryNumber(get('amount')) ??
+          tryNumber(get('value')) ??
+          tryNumber(get('total')) ??
+          0;
+
+        const name = getName(nameRaw, 'Benefit');
+        const amt = Math.round((amount || 0) * 100) / 100;
+        totalBenefits += amt;
+
+        const existing = benefitMap.get(name) ?? {
+          name,
+          totalAmount: 0,
+        };
+        existing.totalAmount += amt;
+        benefitMap.set(name, existing);
+      }
+    }
+
+    return {
+      period: {
+        year: query.year ?? null,
+        month: query.month ?? null,
+      },
+      totalPayslips: slips.length,
+      totals: {
+        totalTax: Math.round(totalTax * 100) / 100,
+        totalInsuranceEmployee: Math.round(totalInsEmployee * 100) / 100,
+        totalInsuranceEmployer: Math.round(totalInsEmployer * 100) / 100,
+        totalBenefits: Math.round(totalBenefits * 100) / 100,
+      },
+      taxesByType: Array.from(taxMap.values()),
+      insuranceByType: Array.from(insuranceMap.values()),
+      benefitsByType: Array.from(benefitMap.values()),
+      note:
+        'Aggregated from payslip deduction and earnings details for the selected period.',
+    };
+  }
+
+  /**
+   * Export finance tax/benefits aggregation as a styled PDF
+   * with a similar look-and-feel to the payroll summary PDF.
+   */
+  async exportFinanceTaxBenefitsPdf(
+    query: PayrollReportQueryDto,
+  ): Promise<Buffer> {
+    const report = await this.generateFinanceTaxBenefitsReport(query);
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(value ?? 0);
+
+      const filters: string[] = [];
+      if (query.year) filters.push(`Year = ${query.year}`);
+      if (query.month) filters.push(`Month = ${query.month}`);
+
+      // Title
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(20)
+        .fillColor('#111111')
+        .text('Taxes, Insurance & Benefits Report', { align: 'center' });
+      doc.moveDown(0.5);
+
+      // Subheading (generation timestamp)
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .fillColor('#555555')
+        .text(`Generated at: ${new Date().toLocaleString()}`, {
+          align: 'center',
+        });
+      doc.moveDown(0.5);
+
+      if (filters.length > 0) {
+        doc
+          .font('Helvetica')
+          .fontSize(11)
+          .fillColor('#222222')
+          .text(`Filter: ${filters.join(' · ')}`, { align: 'center' });
+        doc.moveDown(0.75);
+      }
+
+      // Horizontal rule
+      const startX = doc.page.margins.left;
+      const currentY = doc.y;
+      doc
+        .moveTo(startX, currentY)
+        .lineTo(startX + 500, currentY)
+        .lineWidth(0.5)
+        .stroke('#cccccc');
+      doc.moveDown(1);
+
+      // Summary row for key totals (4 columns similar to payroll report)
+      const tableTop = doc.y + 5;
+      const col1X = doc.page.margins.left; // Total Tax
+      const col2X = col1X + 150; // Employee Insurance
+      const col3X = col2X + 150; // Employer Insurance
+      const col4X = col3X + 150; // Benefits
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .fillColor('#111111');
+
+      doc.text('Total Tax Withheld', col1X, tableTop);
+      doc.text('Employee Insurance', col2X, tableTop);
+      doc.text('Employer Insurance', col3X, tableTop);
+      doc.text('Benefits', col4X, tableTop);
+
+      const rowY = tableTop + 16;
+
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .fillColor('#222222');
+
+      doc.text(
+        formatCurrency(report.totals.totalTax || 0),
+        col1X,
+        rowY,
+      );
+      doc.text(
+        formatCurrency(report.totals.totalInsuranceEmployee || 0),
+        col2X,
+        rowY,
+      );
+      doc.text(
+        formatCurrency(report.totals.totalInsuranceEmployer || 0),
+        col3X,
+        rowY,
+      );
+      doc.text(
+        formatCurrency(report.totals.totalBenefits || 0),
+        col4X,
+        rowY,
+      );
+
+      doc.moveDown(3);
+
+      // Detail tables: Taxes, Insurance, Benefits
+      const renderSectionHeader = (title: string) => {
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(12)
+          .fillColor('#111111')
+          .text(title)
+          .moveDown(0.3);
+      };
+
+      const renderTaxTable = () => {
+        renderSectionHeader('Taxes by Type');
+        if (!report.taxesByType.length) {
+          doc
+            .font('Helvetica')
+            .fontSize(10)
+            .fillColor('#555555')
+            .text('No tax deductions found for this period.')
+            .moveDown(0.75);
+          return;
+        }
+
+        const colNameX = doc.page.margins.left;
+        const colAmtX = colNameX + 350;
+
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(10)
+          .fillColor('#333333');
+        doc.text('Tax Type', colNameX);
+        doc.text('Total Amount', colAmtX);
+
+        let y = doc.y + 4;
+
+        for (const row of report.taxesByType) {
+          doc
+            .font('Helvetica')
+            .fontSize(10)
+            .fillColor('#222222');
+          doc.text(row.name, colNameX, y);
+          doc.text(formatCurrency(row.totalAmount || 0), colAmtX, y);
+          y += 14;
+        }
+
+        doc.moveDown(1);
+      };
+
+      const renderInsuranceTable = () => {
+        // keep spacing consistent without an extra large section heading
+        doc.moveDown(0.5);
+        if (!report.insuranceByType.length) {
+          doc
+            .font('Helvetica')
+            .fontSize(10)
+            .fillColor('#555555')
+            .text('No insurance contributions found for this period.')
+            .moveDown(0.75);
+          return;
+        }
+
+        const colNameX = doc.page.margins.left;
+        const colEmpX = colNameX + 220;
+        const colEmprX = colEmpX + 120;
+        const colTotX = colEmprX + 120;
+
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(10)
+          .fillColor('#333333');
+        doc.text('Insurance', colNameX);
+        doc.text('Employee', colEmpX);
+        doc.text('Employer', colEmprX);
+        doc.text('Total', colTotX);
+
+        let y = doc.y + 4;
+
+        for (const row of report.insuranceByType) {
+          doc
+            .font('Helvetica')
+            .fontSize(10)
+            .fillColor('#222222');
+          doc.text(row.name, colNameX, y);
+          doc.text(formatCurrency(row.employeeShare || 0), colEmpX, y);
+          doc.text(formatCurrency(row.employerShare || 0), colEmprX, y);
+          doc.text(formatCurrency(row.total || 0), colTotX, y);
+          y += 14;
+        }
+
+        doc.moveDown(1);
+      };
+
+      const renderBenefitsTable = () => {
+        // spacing before benefits table, without a separate large heading
+        doc.moveDown(0.5);
+        if (!report.benefitsByType.length) {
+          doc
+            .font('Helvetica')
+            .fontSize(10)
+            .fillColor('#555555')
+            .text('No benefit records found for this period.')
+            .moveDown(0.75);
+          return;
+        }
+
+        const colNameX = doc.page.margins.left;
+        const colAmtX = colNameX + 350;
+
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(10)
+          .fillColor('#333333');
+        doc.text('Benefit', colNameX);
+        doc.text('Total Amount', colAmtX);
+
+        let y = doc.y + 4;
+
+        for (const row of report.benefitsByType) {
+          doc
+            .font('Helvetica')
+            .fontSize(10)
+            .fillColor('#222222');
+          doc.text(row.name, colNameX, y);
+          doc.text(formatCurrency(row.totalAmount || 0), colAmtX, y);
+          y += 14;
+        }
+
+        doc.moveDown(1);
+      };
+
+      renderTaxTable();
+      renderInsuranceTable();
+      renderBenefitsTable();
+
+      if (report.note) {
+        doc
+          .moveDown(0.5)
+          .font('Helvetica-Oblique')
+          .fontSize(9)
+          .fillColor('#666666')
+          .text(report.note);
+      }
 
       doc.end();
     });
@@ -844,6 +1515,49 @@ export class PayrollTrackingService {
       pendingClaims,
       refundsProcessed,
     };
+  }
+
+  /**
+   * Export transparency summary as a simple PDF snapshot
+   */
+  async exportTransparencySummaryPdf(): Promise<Buffer> {
+    const summary = await this.transparencySummary();
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as any);
+        chunks.push(buf);
+      });
+
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
+      doc
+        .fontSize(18)
+        .text('Payroll Transparency Summary', { align: 'center' })
+        .moveDown(1);
+
+      doc.fontSize(12).text(`Total Payslips: ${summary.totalPayslips}`);
+      doc.text(`Total Claims: ${summary.totalClaims}`);
+      doc.text(`Total Disputes: ${summary.totalDisputes}`).moveDown(0.5);
+
+      doc.text(`Pending Claims: ${summary.pendingClaims}`);
+      doc.text(`Pending Disputes: ${summary.pendingDisputes}`).moveDown(0.5);
+
+      doc.text(`Refunds Processed: ${summary.refundsProcessed}`);
+
+      doc.end();
+    });
   }
 
   async processRefund(
@@ -2259,7 +2973,8 @@ export class PayrollTrackingService {
       if (payrollSpecialistId)
         claim.payrollSpecialistId = ensureObjectId(payrollSpecialistId);
     } else {
-      claim.status = ClaimStatus.APPROVED;
+      // Specialist approval should escalate to manager, not finalize
+      claim.status = ClaimStatus.PENDING_MANAGER_APPROVAL;
       if (payrollSpecialistId)
         claim.payrollSpecialistId = ensureObjectId(payrollSpecialistId);
       if (approvedAmount != null) claim.approvedAmount = approvedAmount;
@@ -2281,9 +2996,9 @@ export class PayrollTrackingService {
     const claim = await this.claimModel.findOne({ claimId });
     if (!claim) throw new NotFoundException('Claim not found');
 
-    if (
-      ![ClaimStatus.APPROVED, ClaimStatus.UNDER_REVIEW].includes(claim.status)
-    )
+    // Only claims that have been approved by specialist and are
+    // pending manager approval should reach this point
+    if (claim.status !== ClaimStatus.PENDING_MANAGER_APPROVAL)
       throw new BadRequestException('Claim not awaiting manager approval');
 
     if (action === 'reject') {
@@ -2318,7 +3033,11 @@ export class PayrollTrackingService {
     payrollSpecialistId: string | Types.ObjectId | null,
     comment?: string,
   ) {
-    const dispute = await this.disputeModel.findOne({ disputeId });
+    const disputeQuery = Types.ObjectId.isValid(disputeId)
+      ? { _id: new Types.ObjectId(disputeId) }
+      : { disputeId };
+
+    const dispute = await this.disputeModel.findOne(disputeQuery);
     if (!dispute) throw new NotFoundException('Dispute not found');
 
     if (
@@ -2332,6 +3051,7 @@ export class PayrollTrackingService {
       if (payrollSpecialistId)
         dispute.payrollSpecialistId = ensureObjectId(payrollSpecialistId);
     } else {
+      // Keep status as UNDER_REVIEW but record specialist approval and assign specialist
       if (payrollSpecialistId)
         dispute.payrollSpecialistId = ensureObjectId(payrollSpecialistId);
       dispute.resolutionComment = comment
@@ -2349,7 +3069,11 @@ export class PayrollTrackingService {
     payrollManagerId: string | Types.ObjectId | null,
     comment?: string,
   ) {
-    const dispute = await this.disputeModel.findOne({ disputeId });
+    const disputeQuery = Types.ObjectId.isValid(disputeId)
+      ? { _id: new Types.ObjectId(disputeId) }
+      : { disputeId };
+
+    const dispute = await this.disputeModel.findOne(disputeQuery);
     if (!dispute) throw new NotFoundException('Dispute not found');
 
     if (
@@ -2486,14 +3210,82 @@ export class PayrollTrackingService {
 
   // PAYROLL REPORT: DEPARTMENT (REQ-PY-38)
   async getDepartmentPayrollReport(departmentId: string) {
-    const claims = await this.claimModel.find({
-      departmentId,
-      status: ClaimStatus.APPROVED,
-    });
-    const disputes = await this.disputeModel.find({
-      departmentId,
-      status: DisputeStatus.APPROVED,
-    });
-    return { claims, disputes };
+    const depObjectId = ensureObjectId(departmentId);
+
+    if (!depObjectId) {
+      throw new BadRequestException('Invalid department ID');
+    }
+
+    const department = await this.departmentModel
+      .findById(depObjectId)
+      .lean<{ _id: Types.ObjectId; name?: string } | null>();
+
+    if (!department) {
+      throw new NotFoundException('Department not found');
+    }
+
+    const employees = await this.employeeModel
+      .find({ primaryDepartmentId: depObjectId })
+      .select('_id')
+      .lean<{ _id: Types.ObjectId }[]>();
+
+    const totalEmployees = employees.length;
+
+    if (totalEmployees === 0) {
+      return {
+        departmentId: department._id.toString(),
+        departmentName: department.name ?? 'Unnamed Department',
+        totalEmployees: 0,
+        totalGross: 0,
+        totalNet: 0,
+        totalDeductions: 0,
+        averageNetPerEmployee: 0,
+      };
+    }
+
+    const employeeIds = employees.map((e) => e._id);
+
+    const slips = await this.payslipModel
+      .find({ employeeId: { $in: employeeIds } })
+      .sort({ createdAt: -1 })
+      .lean<LeanPayslip[]>();
+
+    // Use the latest payslip per employee to reflect current payroll cost
+    const latestByEmployee = new Map<string, LeanPayslip>();
+
+    for (const slip of slips) {
+      const rawEmpId = (slip as any).employeeId;
+      const empIdStr = rawEmpId ? String(rawEmpId) : '';
+      if (!empIdStr) continue;
+      if (!latestByEmployee.has(empIdStr)) {
+        latestByEmployee.set(empIdStr, slip);
+      }
+    }
+
+    let totalGross = 0;
+    let totalNet = 0;
+    let totalDeductions = 0;
+
+    for (const slip of latestByEmployee.values()) {
+      const gross = Number((slip as any).totalGrossSalary ?? 0);
+      const net = Number((slip as any).netPay ?? 0);
+      const deductions = Number((slip as any).totaDeductions ?? 0);
+
+      totalGross += Number.isFinite(gross) ? gross : 0;
+      totalNet += Number.isFinite(net) ? net : 0;
+      totalDeductions += Number.isFinite(deductions) ? deductions : 0;
+    }
+
+    const avgNet = totalEmployees > 0 ? totalNet / totalEmployees : 0;
+
+    return {
+      departmentId: department._id.toString(),
+      departmentName: department.name ?? 'Unnamed Department',
+      totalEmployees,
+      totalGross,
+      totalNet,
+      totalDeductions,
+      averageNetPerEmployee: avgNet,
+    };
   }
 }
