@@ -15,6 +15,7 @@ import { CreateLeaveTypeDto } from '../dto/leave-type/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from '../dto/leave-type/update-leave-type.dto';
 import { CreateLeaveCategoryDto } from '../dto/leave-category/create-leave-category.dto';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
+import { authorizationGuard } from '../../auth/guards/authorization.guard';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
 
 /**
@@ -28,7 +29,7 @@ import { Roles, Role } from '../../auth/decorators/roles.decorator';
  * Input: None (internal system management)
  */
 @Controller('leaves/types')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, authorizationGuard)
 export class LeaveTypeController {
   constructor(private readonly leaveTypeService: LeaveTypeService) {}
 
@@ -108,7 +109,7 @@ export class LeaveTypeController {
    * GET /leaves/types
    */
   @Get()
-  @Roles(Role.HR_ADMIN)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.DEPARTMENT_HEAD)
   async getAllLeaveTypes() {
     return this.leaveTypeService.getAllLeaveTypes();
   }

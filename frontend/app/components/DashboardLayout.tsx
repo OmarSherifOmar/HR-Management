@@ -191,9 +191,9 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         // Manager Reviews - Only for Department Heads who manage teams
         ...(hasPermission('approve_team_leave') || 
             hasPermission('approve_department_leave') || 
-            user?.role === 'department head' || 
-            user?.role === 'HR Manager' ? [
+            user?.role === 'department head' || user?.role === 'HR Manager' ? [
           { name: 'Manager Reviews', href: '/leaves/manager/pending-reviews' },
+          { name: 'Team Balances', href: '/leaves/manager/team-leave-history' },
         ] : []),
         
         // HR Reviews - For HR Employees, HR Managers and HR Admins
@@ -203,7 +203,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
             user?.role === 'HR Admin' ? [
           { name: 'HR Reviews', href: '/leaves/hr/pending-reviews' },
         ] : []),
-        
+
         // HR Admin section - with role fallback to ensure HR Admin always sees these
         ...(hasPermission('adjust_balances') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Balance Adjustments', href: '/leaves/admin/balance-adjustments' },
@@ -374,6 +374,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                 <div className="relative" ref={notificationRef}>
                   <button 
                     onClick={toggleNotifications}
+                    aria-label="Toggle notifications"
+                    title="Notifications"
                     className="relative p-2 text-gray-400 hover:text-white transition-colors"
                   >
                     <Bell size={20} />
@@ -391,6 +393,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                         <h3 className="text-white font-semibold">Notifications</h3>
                         <button 
                           onClick={() => setNotificationsOpen(false)}
+                          aria-label="Close notifications"
+                          title="Close notifications"
                           className="text-gray-400 hover:text-white transition-colors"
                         >
                           <X size={18} />

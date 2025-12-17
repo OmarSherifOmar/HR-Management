@@ -2,11 +2,13 @@
 
 import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/DashboardLayout';
+import Link from 'next/link';
 import { 
   FileInput,
   UserPlus,
   Banknote,
-  TrendingUp
+  TrendingUp,
+  Calendar
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -57,7 +59,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-
+        
         {/* Quick Actions */}
         <div className="bg-[#2a2a2a] rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white mb-4">
