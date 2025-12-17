@@ -127,6 +127,17 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       ],
     },
     {
+      name: 'Time Management',
+      icon: <Clock size={20} />,
+      subItems: [
+        { name: 'Attendance', href: '/time-management/attendance' },
+        { name: 'Shift Management', href: '/time-management/shift-management' },
+        { name: 'Approvals', href: '/time-management/approvals' },
+        { name: 'Reports', href: '/time-management/reports' },
+        { name: 'Configuration', href: '/time-management/configuration' },
+      ],
+    },
+    {
       name: 'Payroll',
       icon: <DollarSign size={20} />,
       subItems: [
@@ -153,17 +164,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: 'Candidates', href: '/dashboard/recruitment/candidates' },
         { name: 'Interviews', href: '/dashboard/recruitment/interviews' },
         { name: 'Offers', href: '/dashboard/recruitment/offers' },
-      ],
-    },
-    {
-      name: 'Time Management',
-      icon: <Clock size={20} />,
-      subItems: [
-        { name: 'Attendance', href: '/dashboard/time-management' },
-        { name: 'Schedules', href: '/dashboard/time-management/schedules' },
-        { name: 'Overtime', href: '/dashboard/time-management/overtime' },
-        { name: 'Shift Management', href: '/time-management/shift-management' },
-        
       ],
     },
   ];

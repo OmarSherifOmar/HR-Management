@@ -8,7 +8,7 @@ import { TimeException, TimeExceptionDocument } from '../models/time-exception.s
 import { TimeExceptionType, TimeExceptionStatus, CorrectionRequestStatus, PunchType } from '../models/enums';
 import { startOfDay, endOfDay } from '../utils/time.utils';
 import { PolicyService } from '../services/policy.service';
-import { ShiftAssignmentService } from '../services/ShiftAssignmentService';
+import { ShiftAssignmentService } from '../services/shift-assignment.service';
 
 export interface OvertimeReportItem {
   employeeId: string;

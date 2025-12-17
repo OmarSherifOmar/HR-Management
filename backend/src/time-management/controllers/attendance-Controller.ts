@@ -1,7 +1,8 @@
 
-import { Controller, Post, Body, Get, Param, NotFoundException, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, NotFoundException, Query, UseGuards, Req } from '@nestjs/common';
 import { AttendanceService } from '../services/attendance.service';
 import { PolicyService } from '../services/policy.service';
+import { AuthGuard } from '../../auth/guards/authentication.guard';
 
 type ClockRequest = { employeeId: string; time?: string };
 
@@ -13,30 +14,45 @@ export class AttendanceController {
 	) {}
 
 	@Post('clock-in')
-	async clockIn(@Body() body: ClockRequest) {
-		const time = body.time ? new Date(body.time) : new Date();
-		return this.attendanceService.clockIn(body.employeeId, time);
+	@UseGuards(AuthGuard)
+	async clockIn(
+	  @Req() req,
+	  @Body() body: { time?: string }
+	) {
+	  return this.attendanceService.clockIn(
+		req.user.id,          // ← SOURCE OF TRUTH
+		body.time ? new Date(body.time) : undefined
+	  );
 	}
+
 
 	@Post('clock-out')
-	async clockOut(@Body() body: ClockRequest) {
-		const time = body.time ? new Date(body.time) : new Date();
-		return this.attendanceService.clockOut(body.employeeId, time);
+	@UseGuards(AuthGuard)
+	async clockOut(
+		@Req() req,
+		@Body() body: { time?: string }
+	) {
+		return this.attendanceService.clockOut(
+			req.user.id,
+			body.time ? new Date(body.time) : undefined
+		);
 	}
 
-	@Get(':employeeId/today')
-	async getToday(@Param('employeeId') employeeIdParam: string) {
+	@Get('today')
+	@UseGuards(AuthGuard)
+	async getToday(@Req() req) {
 		const now = new Date();
-		const record = await this.attendanceService.getRecordForEmployeeByDate(employeeIdParam, now);
+		const record = await this.attendanceService.getRecordForEmployeeByDate(req.user.id, now);
 		if (!record) throw new NotFoundException('Attendance record not found for today');
 		return record;
 	}
 
-	@Get(':employeeId/:date')
-	async getByDate(@Param('employeeId') employeeIdParam: string, @Param('date') dateParam: string) {
+	@Get('date/:date')
+	@UseGuards(AuthGuard)
+	async getByDate(@Req() req, @Param('date') dateParam: string) {
 		// dateParam expected as YYYY-MM-DD
 		const dt = new Date(dateParam + 'T00:00:00Z');
-		const record = await this.attendanceService.getRecordForEmployeeByDate(employeeIdParam, dt);
+		const record = await this.attendanceService.getRecordForEmployeeByDate(req.user.id, dt);
 		if (!record) throw new NotFoundException('Attendance record not found for that date');
 		return record;
 	}

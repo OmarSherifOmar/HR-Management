@@ -57,6 +57,18 @@ export class ShiftAssignmentService {
     // @Inject(forwardRef(() => PositionService)) private positionService: PositionService,
   ) {}
 
+  // Get active shift assignment for employee at given date 
+  async getEmployeeActiveShift(employeeId: string | Types.ObjectId, date: Date = new Date()) {
+    const emp = typeof employeeId === 'string' ? new Types.ObjectId(employeeId) : employeeId;
+    const today = date;
+    return this.shiftAssignmentModel.findOne({
+      employeeId: emp,
+      startDate: { $lte: today },
+      $or: [{ endDate: { $exists: false } }, { endDate: { $gte: today } }],
+      status: { $in: ['APPROVED', 'PENDING'] },
+    });
+  }
+
   // ==================== CREATE OPERATIONS ====================
 
   /**
