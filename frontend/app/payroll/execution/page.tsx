@@ -39,7 +39,9 @@ export default function PayrollExecutionPage() {
     amount: '',
     currency: 'USD',
     processedDate: '',
-    effectiveDate: ''
+    effectiveDate: '',
+    overrideEligibility: false,
+    overridePrerequisites: false
   });
 
   useEffect(() => {
@@ -348,7 +350,9 @@ export default function PayrollExecutionPage() {
       amount: comp.amount.toString(),
       currency: comp.currency,
       processedDate: comp.processedDate,
-      effectiveDate: comp.effectiveDate
+      effectiveDate: comp.effectiveDate,
+      overrideEligibility: false,
+      overridePrerequisites: false
     });
     setShowCreateModal(true);
   };
@@ -420,7 +424,9 @@ export default function PayrollExecutionPage() {
         amount: '',
         currency: 'USD',
         processedDate: today,
-        effectiveDate: today
+        effectiveDate: today,
+        overrideEligibility: false,
+        overridePrerequisites: false
       });
 
       setEditingId(null);
@@ -468,6 +474,8 @@ export default function PayrollExecutionPage() {
         currency: formData.currency,
         paymentDate: formData.effectiveDate,
         type: formData.type,
+        overrideEligibility: formData.overrideEligibility,
+        overridePrerequisites: formData.overridePrerequisites,
       };
 
       // Create compensation via API
@@ -504,7 +512,9 @@ export default function PayrollExecutionPage() {
         amount: '',
         currency: 'USD',
         processedDate: today,
-        effectiveDate: today
+        effectiveDate: today,
+        overrideEligibility: false,
+        overridePrerequisites: false
       });
 
       setShowCreateModal(false);
@@ -580,369 +590,404 @@ export default function PayrollExecutionPage() {
       <div className="space-y-6 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-[#2a2a2a] rounded-lg p-6 overflow-hidden">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Payroll Runs</h2>
-            <p className="text-sm text-gray-400 mt-1">Manage and review payroll execution</p>
-          </div>
-          <div className="flex gap-3">
-            {/* Only show Add Compensation and View Runs buttons for authorized roles */}
-            {user && (user.role === 'Payroll Specialist' || user.role === 'HR Manager' || user.role === 'Payroll Manager') && (
-              <>
-                <button
-                  onClick={() => router.push('/payroll/execution/review')}
-                  disabled={loading}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
-                >
-                  <Eye size={18} />
-                  View Runs
-                </button>
-
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
-                >
-                  <span>+</span>
-                  Add Compensation
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {loading && (
-          <div className="text-center py-8">
-            <div className="text-white">Loading payroll runs...</div>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        {/* Add Compensation Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                {editingId ? 'Edit Compensation Record' : 'Add Compensation Record'}
-              </h3>
-
-              <div className="space-y-4">
-                {/* Employee Selection Dropdown */}
-                {!editingId && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Employee <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.employeeId}
-                      onChange={(e) => {
-                        const selectedEmployee = employees.find(emp => emp._id === e.target.value);
-                        setFormData(prev => ({
-                          ...prev,
-                          employeeId: e.target.value,
-                          employeeName: selectedEmployee ? selectedEmployee.name : ''
-                        }));
-                      }}
-                      onFocus={() => {
-                        // Fetch employees when dropdown is opened
-                        if (employees.length === 0) {
-                          fetchEmployees();
-                        }
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={creating || loadingEmployees}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Payroll Runs</h2>
+                <p className="text-sm text-gray-400 mt-1">Manage and review payroll execution</p>
+              </div>
+              <div className="flex gap-3">
+                {/* Only show Add Compensation and View Runs buttons for authorized roles */}
+                {user && (user.role === 'Payroll Specialist' || user.role === 'HR Manager' || user.role === 'Payroll Manager') && (
+                  <>
+                    <button
+                      onClick={() => router.push('/payroll/execution/review')}
+                      disabled={loading}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
                     >
-                      <option value="">
-                        {loadingEmployees ? 'Loading employees...' : 'Select an employee'}
-                      </option>
-                      {employees.map((employee) => (
-                        <option key={employee._id} value={employee._id}>
-                          {employee.name} - {employee.email || employee.personalEmail || 'No email'}
-                        </option>
-                      ))}
-                    </select>
-                    {employees.length === 0 && !loadingEmployees && (
-                      <p className="mt-1 text-sm text-gray-500">No employees found</p>
+                      <Eye size={18} />
+                      View Runs
+                    </button>
+
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      disabled={loading}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                    >
+                      <span>+</span>
+                      Add Compensation
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {loading && (
+              <div className="text-center py-8">
+                <div className="text-white">Loading payroll runs...</div>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
+              </div>
+            )}
+
+            {/* Add Compensation Modal */}
+            {showCreateModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    {editingId ? 'Edit Compensation Record' : 'Add Compensation Record'}
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Employee Selection Dropdown */}
+                    {!editingId && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Select Employee <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.employeeId}
+                          onChange={(e) => {
+                            const selectedEmployee = employees.find(emp => emp._id === e.target.value);
+                            setFormData(prev => ({
+                              ...prev,
+                              employeeId: e.target.value,
+                              employeeName: selectedEmployee ? selectedEmployee.name : ''
+                            }));
+                          }}
+                          onFocus={() => {
+                            // Fetch employees when dropdown is opened
+                            if (employees.length === 0) {
+                              fetchEmployees();
+                            }
+                          }}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          disabled={creating || loadingEmployees}
+                        >
+                          <option value="">
+                            {loadingEmployees ? 'Loading employees...' : 'Select an employee'}
+                          </option>
+                          {employees.map((employee) => (
+                            <option key={employee._id} value={employee._id}>
+                              {employee.name} - {employee.email || employee.personalEmail || 'No email'}
+                            </option>
+                          ))}
+                        </select>
+                        {employees.length === 0 && !loadingEmployees && (
+                          <p className="mt-1 text-sm text-gray-500">No employees found</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Show employee info when editing */}
+                    {editingId && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Employee
+                        </label>
+                        <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
+                          <div className="text-sm font-medium text-gray-900">{formData.employeeName}</div>
+                          <div className="text-sm text-gray-500">{formData.employeeId}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Type <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        disabled={creating}
+                      >
+                        <option value="Signing Bonus">Signing Bonus</option>
+                        <option value="Termination">Termination</option>
+                        <option value="Resignation">Resignation</option>
+                      </select>
+                    </div>
+
+                    {/* Amount and Currency */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Amount <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.amount}
+                          onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="10000"
+                          min="0"
+                          step="0.01"
+                          disabled={creating}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Currency <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.currency}
+                          onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          disabled={creating}
+                        >
+                          <option value="USD">USD</option>
+                          <option value="GBP">GBP</option>
+                          <option value="EUR">EUR</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Dates */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Processed Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.processedDate}
+                          onChange={(e) => setFormData(prev => ({ ...prev, processedDate: e.target.value }))}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          disabled={creating}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Effective Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.effectiveDate}
+                          onChange={(e) => setFormData(prev => ({ ...prev, effectiveDate: e.target.value }))}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          disabled={creating}
+                        />
+                      </div>
+                    </div>
+                    {/* Override Eligibility Checkbox */}
+                    {!editingId && formData.type === 'Signing Bonus' && (
+                      <div className="flex items-center mt-4">
+                        <input
+                          id="overrideEligibility"
+                          type="checkbox"
+                          checked={formData.overrideEligibility}
+                          onChange={(e) => setFormData(prev => ({ ...prev, overrideEligibility: e.target.checked }))}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          disabled={creating}
+                        />
+                        <label htmlFor="overrideEligibility" className="ml-2 block text-sm text-gray-900">
+                          Override Contract Eligibility Check
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Override Prerequisites Checkbox for Termination/Resignation */}
+                    {!editingId && (formData.type === 'Termination' || formData.type === 'Resignation') && (
+                      <div className="flex items-center mt-4">
+                        <input
+                          id="overridePrerequisites"
+                          type="checkbox"
+                          checked={formData.overridePrerequisites}
+                          onChange={(e) => setFormData(prev => ({ ...prev, overridePrerequisites: e.target.checked }))}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          disabled={creating}
+                        />
+                        <label htmlFor="overridePrerequisites" className="ml-2 block text-sm text-gray-900">
+                          Override HR Clearance & Approval Checks
+                        </label>
+                      </div>
                     )}
                   </div>
-                )}
 
-                {/* Show employee info when editing */}
-                {editingId && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Employee
-                    </label>
-                    <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
-                      <div className="text-sm font-medium text-gray-900">{formData.employeeName}</div>
-                      <div className="text-sm text-gray-500">{formData.employeeId}</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled={creating}
-                  >
-                    <option value="Signing Bonus">Signing Bonus</option>
-                    <option value="Termination">Termination</option>
-                    <option value="Resignation">Resignation</option>
-                  </select>
-                </div>
-
-                {/* Amount and Currency */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Amount <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="10000"
-                      min="0"
-                      step="0.01"
+                  <div className="flex gap-3 justify-end mt-6">
+                    <button
+                      onClick={() => {
+                        setShowCreateModal(false);
+                        setEditingId(null);
+                        setError(null);
+                        // Reset form
+                        const today = new Date().toISOString().split('T')[0];
+                        setFormData({
+                          employeeName: '',
+                          employeeId: '',
+                          type: 'Signing Bonus',
+                          amount: '',
+                          currency: 'USD',
+                          processedDate: today,
+                          effectiveDate: today,
+                          overrideEligibility: false,
+                          overridePrerequisites: false
+                        });
+                      }}
                       disabled={creating}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Currency <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={creating}
+                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50"
                     >
-                      <option value="USD">USD</option>
-                      <option value="GBP">GBP</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Processed Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.processedDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, processedDate: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreatePayrollRun}
                       disabled={creating}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Effective Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.effectiveDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, effectiveDate: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={creating}
-                    />
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-all"
+                    >
+                      {creating ? 'Saving...' : (editingId ? 'Update' : 'Create')}
+                    </button>
                   </div>
                 </div>
               </div>
+            )}
 
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setEditingId(null);
-                    setError(null);
-                    // Reset form
-                    const today = new Date().toISOString().split('T')[0];
-                    setFormData({
-                      employeeName: '',
-                      employeeId: '',
-                      type: 'Signing Bonus',
-                      amount: '',
-                      currency: 'USD',
-                      processedDate: today,
-                      effectiveDate: today
-                    });
-                  }}
-                  disabled={creating}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreatePayrollRun}
-                  disabled={creating}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-all"
-                >
-                  {creating ? 'Saving...' : (editingId ? 'Update' : 'Create')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#1a1a1a] border-b border-gray-700">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Employee
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Processed Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Effective Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-transparent divide-y divide-gray-700">
-                  {compensations.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
-                        No compensation records found
-                      </td>
-                    </tr>
-                  ) : (
-                    compensations.map((comp) => (
-                      <tr key={comp._id} className="hover:bg-[#333333] transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-100">
-                            {comp.employeeName}
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            {comp.employeeId}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${comp.type === 'Signing Bonus' ? 'bg-purple-100 text-purple-700' :
-                              comp.type === 'Termination' ? 'bg-red-100 text-red-700' :
-                                comp.type === 'Resignation' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-gray-100 text-gray-700'
-                              }`}
-                          >
-                            {comp.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${comp.status === 'System Processed' ? 'bg-blue-100 text-blue-700' :
-                              comp.status === 'Under Review' ? 'bg-yellow-100 text-yellow-700' :
-                                comp.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                                  comp.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                    'bg-gray-100 text-gray-700'
-                              }`}
-                          >
-                            {comp.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
-                          {comp.currency} {comp.amount.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
-                          {new Date(comp.processedDate).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric'
-                          })}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
-                          {new Date(comp.effectiveDate).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric'
-                          })}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                          <div className="flex items-center gap-3">
-                            {/* View button - always visible */}
-                            <button
-                              className="text-blue-600 hover:text-blue-800 transition-colors"
-                              title="View Details"
-                            >
-                              <Eye size={20} />
-                            </button>
-
-                            {/* Edit, Approve, Reject buttons - only for active statuses */}
-                            {(comp.status.toLowerCase() !== 'approved' && comp.status.toLowerCase() !== 'rejected') && (
-                              <>
-                                {/* Edit button */}
-                                <button
-                                  onClick={() => handleEdit(comp)}
-                                  className="text-gray-600 hover:text-gray-800 transition-colors"
-                                  title="Edit"
-                                >
-                                  <Edit2 size={20} />
-                                </button>
-
-                                {/* Approve/Check button */}
-                                <button
-                                  onClick={() => {
-                                    handleApprove(comp._id);
-                                  }}
-                                  className="text-green-600 hover:text-green-800 transition-colors"
-                                  title="Approve"
-                                >
-                                  <Check size={20} />
-                                </button>
-
-                                {/* Reject/Delete button */}
-                                <button
-                                  onClick={() => {
-                                    handleReject(comp._id);
-                                  }}
-                                  className="text-red-600 hover:text-red-800 transition-colors"
-                                  title="Reject"
-                                >
-                                  <X size={20} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
+            {!loading && !error && (
+              <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[#1a1a1a] border-b border-gray-700">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Employee
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Processed Date
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Effective Date
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="bg-transparent divide-y divide-gray-700">
+                      {compensations.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                            No compensation records found
+                          </td>
+                        </tr>
+                      ) : (
+                        compensations.map((comp) => (
+                          <tr key={comp._id} className="hover:bg-[#333333] transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-100">
+                                {comp.employeeName}
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                {comp.employeeId}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${comp.type === 'Signing Bonus' ? 'bg-purple-100 text-purple-700' :
+                                  comp.type === 'Termination' ? 'bg-red-100 text-red-700' :
+                                    comp.type === 'Resignation' ? 'bg-orange-100 text-orange-700' :
+                                      'bg-gray-100 text-gray-700'
+                                  }`}
+                              >
+                                {comp.type}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${comp.status === 'System Processed' ? 'bg-blue-100 text-blue-700' :
+                                  comp.status === 'Under Review' ? 'bg-yellow-100 text-yellow-700' :
+                                    comp.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                      comp.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                        'bg-gray-100 text-gray-700'
+                                  }`}
+                              >
+                                {comp.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
+                              {comp.currency} {comp.amount.toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
+                              {new Date(comp.processedDate).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
+                              {new Date(comp.effectiveDate).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                              <div className="flex items-center gap-3">
+                                {/* View button - always visible */}
+                                <button
+                                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="View Details"
+                                >
+                                  <Eye size={20} />
+                                </button>
+
+                                {/* Edit, Approve, Reject buttons - only for active statuses */}
+                                {(comp.status.toLowerCase() !== 'approved' && comp.status.toLowerCase() !== 'rejected') && (
+                                  <>
+                                    {/* Edit button */}
+                                    <button
+                                      onClick={() => handleEdit(comp)}
+                                      className="text-gray-600 hover:text-gray-800 transition-colors"
+                                      title="Edit"
+                                    >
+                                      <Edit2 size={20} />
+                                    </button>
+
+                                    {/* Approve/Check button */}
+                                    <button
+                                      onClick={() => {
+                                        handleApprove(comp._id);
+                                      }}
+                                      className="text-green-600 hover:text-green-800 transition-colors"
+                                      title="Approve"
+                                    >
+                                      <Check size={20} />
+                                    </button>
+
+                                    {/* Reject/Delete button */}
+                                    <button
+                                      onClick={() => {
+                                        handleReject(comp._id);
+                                      }}
+                                      className="text-red-600 hover:text-red-800 transition-colors"
+                                      title="Reject"
+                                    >
+                                      <X size={20} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
         </div>
       </div>
     </DashboardLayout>
