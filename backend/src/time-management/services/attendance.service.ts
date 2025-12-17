@@ -184,4 +184,50 @@ export class AttendanceService {
     }
     await this.policyService.sendMissedPunchAlerts(date);
   }
+
+  /**
+   * FR-TM-16: Integrated Attendance + Leave View
+   * Returns attendance records and approved leave days for the date range
+   */
+  async getIntegratedAttendanceLeaveView(startDate: Date, endDate: Date, employeeId?: string) {
+    const query: any = {
+      date: { $gte: startDate, $lte: endDate }
+    };
+    
+    if (employeeId) {
+      query.employeeId = new Types.ObjectId(employeeId);
+    }
+
+    // Fetch attendance records
+    const attendanceRecords = await this.attendanceModel.find(query)
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .sort({ date: 1 })
+      .lean();
+
+    // Fetch approved leave requests from leaves subsystem via HTTP or direct DB access
+    // For now, we'll check shift assignments marked as ON_LEAVE (synced by leavesSync.service)
+    const shiftAssignments = await this.shiftAssignmentService.getAssignmentsInRange(startDate, endDate, employeeId);
+    
+    const leaveDays = shiftAssignments
+      .filter((sa: any) => sa.status === 'ON_LEAVE')
+      .map((sa: any) => ({
+        employeeId: sa.employeeId,
+        date: sa.startDate,
+        endDate: sa.endDate,
+        status: 'ON_LEAVE',
+        type: 'APPROVED_LEAVE'
+      }));
+
+    return {
+      attendanceRecords: attendanceRecords.map(record => ({
+        _id: record._id,
+        employeeId: record.employeeId,
+        date: record.date,
+        punches: record.punches,
+        totalWorkMinutes: record.totalWorkMinutes,
+      })),
+      leaveDays,
+      dateRange: { start: startDate, end: endDate }
+    };
+  }
 }

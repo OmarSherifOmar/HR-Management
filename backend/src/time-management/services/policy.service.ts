@@ -138,7 +138,53 @@ export class PolicyService {
     return scheduledMinutes;
   }
 
+  /**
+   * BR-TM-19: Check if employee is on approved leave for the given date
+   */
+  async isEmployeeOnLeave(employeeId: string | Types.ObjectId, date: Date): Promise<boolean> {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+    
+    // Check if shift assignment is marked as ON_LEAVE
+    const shiftAssignment = await this.shiftAssignmentModel.findOne({
+      employeeId,
+      startDate: { $lte: dayEnd },
+      $or: [{ endDate: { $exists: false } }, { endDate: { $gte: dayStart } }],
+      status: 'ON_LEAVE',
+    });
+    
+    if (shiftAssignment) {
+      return true;
+    }
+    
+    // Check if attendance record exists with zero punches (leave day marker)
+    const attendanceRecord = await this.attendanceRecordModel.findOne({
+      employeeId,
+      date: { $gte: dayStart, $lte: dayEnd },
+    });
+    
+    // Zero punches typically indicates leave or absence
+    if (attendanceRecord && attendanceRecord.punches.length === 0) {
+      return true;
+    }
+    
+    return false;
+  }
+
   async calcuateLateness(employeeId: string | Types.ObjectId, date: Date, punches: { type: 'IN' | 'OUT'; time: Date }[]): Promise<number> {
+    // BR-TM-19: Suppress lateness calculation on holidays, rest days, or leave days
+    const isHolidayOrRest = await this.isHolidayOrRestDay(employeeId, date);
+    if (isHolidayOrRest) {
+      this.logger.debug(`No lateness calculated - Holiday/Rest day for employee ${employeeId}`);
+      return 0;
+    }
+    
+    const isOnLeave = await this.isEmployeeOnLeave(employeeId, date);
+    if (isOnLeave) {
+      this.logger.debug(`No lateness calculated - Employee ${employeeId} is on leave`);
+      return 0;
+    }
+    
     const assignment = await this.shiftAssignmentService.getEmployeeActiveShift(employeeId, date);
     if (!assignment) return 0; 
 
@@ -186,6 +232,19 @@ export class PolicyService {
   }
 
   async applyPenalty(employeeId: string | Types.ObjectId, date: Date, latenessMinutes: number): Promise<{ applied: boolean; latenessMinutes: number }> {
+    // BR-TM-19: Suppress penalties on holidays, rest days, or leave days
+    const isHolidayOrRest = await this.isHolidayOrRestDay(employeeId, date);
+    if (isHolidayOrRest) {
+      this.logger.log(`Penalty suppressed for employee ${employeeId} - Holiday/Rest Day`);
+      return { applied: false, latenessMinutes: 0 };
+    }
+    
+    const isOnLeave = await this.isEmployeeOnLeave(employeeId, date);
+    if (isOnLeave) {
+      this.logger.log(`Penalty suppressed for employee ${employeeId} - On approved leave`);
+      return { applied: false, latenessMinutes: 0 };
+    }
+    
     const record = await this.attendanceService.getRecordForEmployeeByDate(employeeId.toString(), date);
 
     if(!record || !record.punches || record.punches.length === 0){

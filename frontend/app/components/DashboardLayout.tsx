@@ -164,7 +164,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: 'Overtime', href: '/dashboard/time-management/overtime' },
         { name: 'Policy', href: '/time-management/policy' },
         { name: 'Shift Management', href: '/time-management/shift-management' },
-        
+        { name: 'Configuration', href: '/time-management/configuration' },
+        { name: 'Exceptions', href: '/time-management/exceptions' },
       ],
     },
   ];
