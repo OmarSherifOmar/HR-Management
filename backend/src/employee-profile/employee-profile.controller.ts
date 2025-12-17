@@ -32,7 +32,7 @@ export class EmployeeController {
 
   @Get('searchs')
   @UseGuards(AuthGuard,authorizationGuard)
-  @Roles(Role.HR_ADMIN)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER)
   
   async searchEmployees(@Query() query: SearchEmployeesDto) {
     return this.employeeService.searchEmployees(query);

@@ -289,24 +289,6 @@ export class LeaveRequestController {
   }
 
   /**
-   * GET /leave-requests/:id
-   * 
-   * Get a specific leave request by ID
-   * 
-   * @param id - Leave request ID
-   * @returns Leave request details
-   */
-  @Get(':id')
-  async getLeaveRequest(@Param('id') id: string) {
-    const leaveRequest = await this.leaveRequestService.getLeaveRequestById(id);
-
-    return {
-      success: true,
-      data: leaveRequest,
-    };
-  }
-
-  /**
    * GET /leave-requests/employee/:employeeId
    * 
    * Get all leave requests for a specific employee (Admin/HR use)
@@ -366,7 +348,7 @@ export class LeaveRequestController {
    */
   @Get('manager/team-balances')
   @UseGuards(AuthGuard)
-  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER)
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN)
   async getTeamBalancesAndUpcomingLeaves(
     @Query('leaveTypeId') leaveTypeId: string,
     @Query('status') status: LeaveStatus,
@@ -827,6 +809,25 @@ export class LeaveRequestController {
       success: true,
       data: leaveRequests,
       count: leaveRequests.length,
+    };
+  }
+
+  /**
+   * GET /leave-requests/:id
+   * 
+   * Get a specific leave request by ID
+   * Must be placed after all specific routes to avoid route conflicts
+   * 
+   * @param id - Leave request ID
+   * @returns Leave request details
+   */
+  @Get(':id')
+  async getLeaveRequest(@Param('id') id: string) {
+    const leaveRequest = await this.leaveRequestService.getLeaveRequestById(id);
+
+    return {
+      success: true,
+      data: leaveRequest,
     };
   }
 }

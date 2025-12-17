@@ -11,7 +11,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  CalendarDays
+  CalendarDays,
+  X
 } from 'lucide-react';
 
 type LeaveRequest = {
@@ -37,6 +38,10 @@ export default function LeaveRequestsPage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'date-newest' | 'date-oldest' | 'leave-type' | 'status'>('date-newest');
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [cancellingRequest, setCancellingRequest] = useState(false);
   const [cancelError, setCancelError] = useState('');
@@ -135,9 +140,45 @@ export default function LeaveRequestsPage() {
     }
   };
 
+  // Extract unique leave types for filtering
+  const uniqueLeaveTypes = Array.from(
+    new Map(leaveRequests.map(req => [req.leaveTypeId.code, req.leaveTypeId])).values()
+  );
+
   const filteredRequests = leaveRequests.filter(request => {
-    if (filter === 'all') return true;
-    return request.status === filter;
+    // Status filter
+    if (filter !== 'all' && request.status !== filter) return false;
+
+    // Leave type filter
+    if (leaveTypeFilter !== 'all' && request.leaveTypeId.code !== leaveTypeFilter) return false;
+
+    // Date range filter - filter by leave period dates
+    if (dateFrom) {
+      const requestStartDate = new Date(request.dates.from);
+      const filterFromDate = new Date(dateFrom);
+      if (requestStartDate < filterFromDate) return false;
+    }
+
+    if (dateTo) {
+      const requestEndDate = new Date(request.dates.to);
+      const filterToDate = new Date(dateTo);
+      if (requestEndDate > filterToDate) return false;
+    }
+
+    return true;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'date-newest':
+        return new Date(b.dates.from).getTime() - new Date(a.dates.from).getTime();
+      case 'date-oldest':
+        return new Date(a.dates.from).getTime() - new Date(b.dates.from).getTime();
+      case 'leave-type':
+        return a.leaveTypeId.name.localeCompare(b.leaveTypeId.name);
+      case 'status':
+        return a.status.localeCompare(b.status);
+      default:
+        return 0;
+    }
   });
 
   if (isLoading) {
@@ -159,57 +200,131 @@ export default function LeaveRequestsPage() {
         description="View and manage your leave requests"
       >
         {/* Action Bar */}
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
-                }`}
+          <div className="mb-6 space-y-4">
+            {/* Filter Buttons */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setFilter('pending')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'pending'
+                      ? 'bg-yellow-600 text-white'
+                      : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Pending
+                </button>
+                <button
+                  onClick={() => setFilter('approved')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'approved'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Approved
+                </button>
+                <button
+                  onClick={() => setFilter('rejected')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'rejected'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Rejected
+                </button>
+              </div>
+
+              <Link
+                href="/leaves/new-request"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                All
-              </button>
-              <button
-                onClick={() => setFilter('pending')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'pending'
-                    ? 'bg-yellow-600 text-white'
-                    : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
-                }`}
-              >
-                Pending
-              </button>
-              <button
-                onClick={() => setFilter('approved')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'approved'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
-                }`}
-              >
-                Approved
-              </button>
-              <button
-                onClick={() => setFilter('rejected')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'rejected'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-[#2a2a2a] text-gray-400 hover:text-white'
-                }`}
-              >
-                Rejected
-              </button>
+                <Plus size={18} />
+                New Request
+              </Link>
             </div>
 
-            <Link
-              href="/leaves/new-request"
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              <Plus size={18} />
-              New Request
-            </Link>
+            {/* Date Range Filter */}
+            <div className="bg-[#2a2a2a] rounded-lg p-4 flex items-end gap-4 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-2 font-medium">
+                  Leave Period From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-2 font-medium">
+                  Leave Period To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-2 font-medium">
+                  Leave Type
+                </label>
+                <select
+                  value={leaveTypeFilter}
+                  onChange={(e) => setLeaveTypeFilter(e.target.value)}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+                >
+                  <option value="all">All Types</option>
+                  {uniqueLeaveTypes.map((type) => (
+                    <option key={type.code} value={type.code}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-2 font-medium">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+                >
+                  <option value="date-newest">Newest First</option>
+                  <option value="date-oldest">Oldest First</option>
+                  <option value="leave-type">Leave Type</option>
+                  <option value="status">Status</option>
+                </select>
+              </div>
+              {(dateFrom || dateTo || leaveTypeFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setDateFrom('');
+                    setDateTo('');
+                    setLeaveTypeFilter('all');
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+                >
+                  <X size={16} />
+                  Clear Filters
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Leave Requests List */}

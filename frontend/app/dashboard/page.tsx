@@ -59,23 +59,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-
-        {/* Leaves Summary */}
-        <div className="bg-[#2a2a2a] rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">My Leaves</h3>
-          <p className="text-gray-400 mb-4">View your leave requests, balances and history.</p>
-          <div className="grid grid-cols-2 gap-3">
-            <Link href="/leaves" className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left">
-              <div className="text-sm font-medium text-white">Requests</div>
-              <div className="text-xs text-gray-400">View and manage your requests</div>
-            </Link>
-            <Link href="/dashboard/leaves/history" className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left">
-              <div className="text-sm font-medium text-white">History</div>
-              <div className="text-xs text-gray-400">Vacation history & balances</div>
-            </Link>
-          </div>
-        </div>
-
+        
         {/* Quick Actions */}
         <div className="bg-[#2a2a2a] rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white mb-4">
