@@ -597,7 +597,7 @@ export default function PayrollExecutionPage() {
               </div>
               <div className="flex gap-3">
                 {/* Only show Add Compensation and View Runs buttons for authorized roles */}
-                {user && (user.role === 'Payroll Specialist' || user.role === 'HR Manager' || user.role === 'Payroll Manager') && (
+                {user && (user.role === 'Payroll Specialist' || user.role === 'HR Manager' || user.role === 'Payroll Manager' || user.role === 'Finance Staff') && (
                   <>
                     <button
                       onClick={() => router.push('/payroll/execution/review')}

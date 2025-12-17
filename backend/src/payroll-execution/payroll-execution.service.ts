@@ -1017,143 +1017,83 @@ export class PayrollExecutionService {
     // If payroll is explicitly marked as locked we still allow generation; keep
     // validation to prevent accidental generation for other statuses.
 
-    // Get all employee payroll details for this run
+    // Get all employee payroll details for this run (lean to work with plain objects)
     const employeeDetails = await this.employeePayrollDetailsModel
       .find({ payrollRunId: payrollRun._id })
       .populate('employeeId')
+      .lean()
       .exec();
 
     let generated = 0;
     let errors = 0;
     const errorsDetails: string[] = [];
 
-    // Get approved allowances and tax rules for payslip details
-    const approvedAllowances = await this.allowanceModel
-      .find({ status: ConfigStatus.APPROVED })
-      .exec();
-
-    const approvedTaxRules = await this.taxRulesModel
-      .find({ status: ConfigStatus.APPROVED })
-      .exec();
-
-    const approvedInsuranceBrackets = await this.insuranceBracketsModel
-      .find({ status: ConfigStatus.APPROVED })
-      .exec();
-
-    // Generate payslip for each employee
+    // Iterate and create payslips safely
     for (const detail of employeeDetails) {
       try {
-        // Check if payslip already exists
-        const existingPayslip = await this.paySlipModel
-          .findOne({
-            employeeId: detail.employeeId,
-            payrollRunId: payrollRun._id,
-          })
-          .exec();
+        const employeeId = (detail.employeeId && (detail.employeeId as any)._id) ? (detail.employeeId as any)._id : detail.employeeId;
 
-        if (existingPayslip) {
-          continue; // Skip if already generated
+        // Defensive: ensure we have an employeeId and payrollRunId
+        if (!employeeId || !payrollRun._id) {
+          errors++;
+          errorsDetails.push('Missing employeeId or payrollRunId for payroll detail: ' + JSON.stringify(detail._id));
+          continue;
         }
 
-        // Build earningsDetails but omit nested subdocuments unless we have real breakdowns
-        const earningsDetails: any = { baseSalary: detail.baseSalary };
+        // Skip if payslip already exists
+        const existingPayslip = await this.paySlipModel.findOne({ employeeId, payrollRunId: payrollRun._id }).lean().exec();
+        if (existingPayslip) continue;
 
-        if ((detail.allowances ?? 0) > 0) {
-          // We don't have per-allowance breakdown, so omit subdocument to avoid unique-index collisions
-          // totals are stored on the parent payslip fields
-        }
+        // Build a minimal, valid payslip payload compatible with schema
+        const totalGross = Number((detail.baseSalary || 0) + (detail.allowances || 0) + (detail.bonus || 0) + (detail.benefit || 0));
+        const totalDeductions = Number(detail.deductions || 0);
+        const netPay = Number(detail.netPay || 0);
 
-        if ((detail.bonus ?? 0) > 0) {
-          // Avoid creating signingBonus subdocument (positionName is unique on that schema)
-          // Instead, add the bonus amount to totals only
-        }
-
-        if ((detail.benefit ?? 0) > 0) {
-          // Same as bonus — skip creating subdocument
-        }
-
-        // Create deductionsDetails only when we have full breakdown; otherwise omit nested arrays
-        const deductionsDetails: any = {};
-
-        // Prepare payslip payload and clean empty nested fields to avoid unique-index null collisions
         const payslipPayload: any = {
-          employeeId: detail.employeeId,
+          employeeId: employeeId,
           payrollRunId: payrollRun._id,
-          earningsDetails,
-          deductionsDetails,
-          totalGrossSalary: detail.baseSalary + (detail.allowances || 0) + (detail.bonus || 0) + (detail.benefit || 0),
-          totaDeductions: detail.deductions,
-          netPay: detail.netPay,
+          totalGrossSalary: totalGross,
+          totaDeductions: totalDeductions,
+          netPay: netPay,
           paymentStatus: PaySlipPaymentStatus.PENDING,
         };
 
-        // Clean only specific nested arrays to avoid recursive traversal and circular references
-        // Remove empty arrays at top level
-        for (const k of Object.keys(payslipPayload)) {
-          if (Array.isArray(payslipPayload[k]) && payslipPayload[k].length === 0) {
-            delete payslipPayload[k];
-          }
+        // Attach earningsDetails only if we have useful breakdown
+        const earningsDetails: any = {};
+        if (typeof detail.baseSalary === 'number') earningsDetails.baseSalary = Number(detail.baseSalary);
+        // `earningsDetails.allowances` in the payslip schema is an embedded array.
+        // Only attach it when we have a breakdown array; otherwise keep the numeric
+        // allowance value on the parent payslip totals to avoid casting errors.
+        if (Array.isArray((detail as any).earningsBreakdown) && (detail as any).earningsBreakdown.length > 0) {
+          earningsDetails.allowances = (detail as any).earningsBreakdown;
         }
-
-        // Clean earningsDetails nested arrays if present
-        if (payslipPayload.earningsDetails && typeof payslipPayload.earningsDetails === 'object') {
-          const ed = payslipPayload.earningsDetails as any;
-          if (Array.isArray(ed.allowances) && ed.allowances.length === 0) delete ed.allowances;
-          if (Array.isArray(ed.bonuses) && ed.bonuses.length === 0) delete ed.bonuses;
-          if (Array.isArray(ed.benefits) && ed.benefits.length === 0) delete ed.benefits;
-          if (Array.isArray(ed.refunds) && ed.refunds.length === 0) delete ed.refunds;
-          // If earningsDetails became empty, remove it
-          if (Object.keys(ed).length === 0) delete payslipPayload.earningsDetails;
+        // Bonuses and benefits are embedded arrays in the schema; only include
+        // them when a breakdown is available as arrays.
+        if (Array.isArray((detail as any).bonusesBreakdown) && (detail as any).bonusesBreakdown.length > 0) {
+          earningsDetails.bonuses = (detail as any).bonusesBreakdown;
         }
-
-        // Clean deductionsDetails nested arrays if present
-        if (payslipPayload.deductionsDetails && typeof payslipPayload.deductionsDetails === 'object') {
-          const dd = payslipPayload.deductionsDetails as any;
-          if (Array.isArray(dd.taxes) && dd.taxes.length === 0) delete dd.taxes;
-          if (Array.isArray(dd.insurances) && dd.insurances.length === 0) delete dd.insurances;
-          if (dd.penalties === null || dd.penalties === undefined) delete dd.penalties;
-          if (Object.keys(dd).length === 0) delete payslipPayload.deductionsDetails;
+        if (Array.isArray((detail as any).benefitsBreakdown) && (detail as any).benefitsBreakdown.length > 0) {
+          earningsDetails.benefits = (detail as any).benefitsBreakdown;
         }
+        if (Object.keys(earningsDetails).length > 0) payslipPayload.earningsDetails = earningsDetails;
 
-        // If earningsDetails only contains baseSalary (no allowances/bonuses), omit it to avoid schema defaults
-        if (
-          payslipPayload.earningsDetails &&
-          Object.keys(payslipPayload.earningsDetails).length === 1 &&
-          Object.prototype.hasOwnProperty.call(payslipPayload.earningsDetails, 'baseSalary')
-        ) {
-          delete payslipPayload.earningsDetails;
-        }
+        // Attach deductionsDetails only if available
+        const deductionsDetails: any = {};
+        if (typeof detail.deductions === 'number' && detail.deductions > 0) deductionsDetails.totalDeductions = Number(detail.deductions);
+        if (Object.keys(deductionsDetails).length > 0) payslipPayload.deductionsDetails = deductionsDetails;
 
-        // Ensure numeric totals are normalized to avoid schema validation failures
-        payslipPayload.totalGrossSalary = Number(payslipPayload.totalGrossSalary) || 0;
-        payslipPayload.totaDeductions = Number(payslipPayload.totaDeductions) || 0;
-        payslipPayload.netPay = Number(payslipPayload.netPay) || 0;
-
-        const payslip = new this.paySlipModel(payslipPayload);
-
-        try {
-          await payslip.save();
-          generated++;
-        } catch (saveError: any) {
-          errors++;
-          const message = (saveError && saveError.message) ? saveError.message : String(saveError);
-          console.error('Payslip save payload:', JSON.stringify(payslipPayload));
-          console.error('Payslip save error:', message);
-          if (saveError && saveError.stack) console.error(saveError.stack);
-          errorsDetails.push(message);
-          // continue with next employee
-          continue;
-        }
-      } catch (error: any) {
+        // Create and save payslip
+        await this.paySlipModel.create(payslipPayload);
+        generated++;
+      } catch (err: any) {
         errors++;
-        const message = (error && error.message) ? error.message : String(error);
-        console.error(`Error generating payslip for employee ${JSON.stringify(detail.employeeId)}:`, message);
-        if (error && error.stack) console.error(error.stack);
+        const message = err?.message || String(err);
+        console.error('Error generating payslip for detail:', detail?._id, message);
         errorsDetails.push(message);
       }
     }
 
-    // Return basic stats and a short sample of error messages to aid debugging
+    // Return basic stats and sample errors to aid debugging
     return { generated, errors, errorsDetails: errorsDetails.slice(0, 20) } as any;
   }
 

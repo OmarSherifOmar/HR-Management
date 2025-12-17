@@ -409,16 +409,37 @@ export default function PayrollReviewPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-      const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/${runId}/pdf`, { method: 'GET' });
+
+      // First fetch payslips for the payroll run to get a payslip id
+      const listRes = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/run/${runId}`, { method: 'GET' });
+      if (!listRes.ok) {
+        const txt = await listRes.text();
+        throw new Error(txt || `Error ${listRes.status}`);
+      }
+
+      const payslips = await listRes.json();
+      if (!Array.isArray(payslips) || payslips.length === 0) {
+        throw new Error('No payslips found for this run');
+      }
+
+      if (payslips.length > 1) {
+        // Multiple payslips: prompt user to download per-employee from the run details page
+        throw new Error('Multiple payslips exist for this run. Open run details to download individual payslips.');
+      }
+
+      const payslipId = payslips[0]._id;
+
+      const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
+
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `payslip-${runId}.pdf`;
+      a.download = `payslip-${payslipId}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1073,13 +1094,7 @@ export default function PayrollReviewPage() {
                                     >
                                       <DollarSign size={18} />
                                     </button>
-                                    <button
-                                      onClick={() => downloadPayslipPDF(run._id)}
-                                      className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
-                                      title="Download Payslip PDF"
-                                    >
-                                      <Download size={18} />
-                                    </button>
+                                    {/* run-level download removed — download per-employee from run details/preview */}
                                   </>
                                 )}
                                   <button
@@ -1251,13 +1266,7 @@ export default function PayrollReviewPage() {
                                     >
                                       <DollarSign size={18} />
                                     </button>
-                                    <button
-                                      onClick={() => downloadPayslipPDF(run._id)}
-                                      className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#1a1a1a] rounded-lg transition-colors"
-                                      title="Download Payslip PDF"
-                                    >
-                                      <Download size={18} />
-                                    </button>
+                                    {/* run-level download removed — download per-employee from run details/preview */}
                                   </>
                                 )}
                               </div>
