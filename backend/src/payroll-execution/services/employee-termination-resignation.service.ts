@@ -54,25 +54,56 @@ export class EmployeeTerminationResignationService {
       }
     }
 
-    // 2. Find or create a dummy TerminationRequest (required by schema)
+    // 2. Find or create a TerminationRequest
     const contract = await this.terminationResignationModel.db.collection('contracts').findOne({
       employeeId: new Types.ObjectId(dto.employeeId)
     });
 
     let terminationId;
 
-    // Create a new TerminationRequest to satisfy the schema reference
-    const newTerminationRequest = await this.terminationResignationModel.db.collection('terminationrequests').insertOne({
-      employeeId: new Types.ObjectId(dto.employeeId),
-      contractId: contract ? contract._id : new Types.ObjectId(),
-      initiator: 'HR',
-      reason: 'Manual Payroll Entry',
-      status: 'Approved',
-      terminationDate: new Date(dto.paymentDate || Date.now()),
-      createdAt: new Date(),
-      updatedAt: new Date()
+    // Check for existing request
+    const existingTermination = await this.terminationResignationModel.db.collection('terminationrequests').findOne({
+      employeeId: new Types.ObjectId(dto.employeeId)
     });
-    terminationId = newTerminationRequest.insertedId;
+
+    if (existingTermination) {
+      // Use existing request
+      terminationId = existingTermination._id;
+
+      // Validate prerequisites if not overridden
+      if (!dto.overridePrerequisites) {
+        if (!['approved', 'completed'].includes(existingTermination.status.toLowerCase())) {
+          throw new BadRequestException('Termination/Resignation request is not yet approved or completed');
+        }
+
+        // Check Clearance Checklist
+        const clearance = await this.terminationResignationModel.db.collection('clearancechecklists').findOne({
+          employeeId: new Types.ObjectId(dto.employeeId)
+        });
+
+        if (!clearance) {
+          throw new BadRequestException('No clearance checklist found for this employee');
+        }
+
+        if (!clearance.allSignoffsCompleted || !clearance.allAssetsReturned) {
+          throw new BadRequestException('Employee clearance checklist is not fully completed (Sign-offs or Assets)');
+        }
+      }
+    } else {
+      // No existing request - Create a new one for Manual Entry
+      // We implicitly skip prerequisites checks here as we are auto-generating the approved request
+      const newTerminationRequest = await this.terminationResignationModel.db.collection('terminationrequests').insertOne({
+        employeeId: new Types.ObjectId(dto.employeeId),
+        contractId: contract ? contract._id : new Types.ObjectId(),
+        initiator: 'HR',
+        reason: 'Manual Payroll Entry',
+        status: 'Approved',
+        terminationDate: new Date(dto.paymentDate || Date.now()),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      terminationId = newTerminationRequest.insertedId;
+    }
 
     // 3. Create the EmployeeTerminationResignation record
     // We use collection.insertOne to bypass strict schema validation and save payrollRunId
