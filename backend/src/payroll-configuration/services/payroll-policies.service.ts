@@ -2,9 +2,10 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, isValidObjectId } from 'mongoose';
+import mongoose, { Model, isValidObjectId } from 'mongoose';
 import {
   payrollPolicies,
   payrollPoliciesDocument,
@@ -22,7 +23,7 @@ export class PayrollPoliciesService {
 
   async createPayrollPolicy(
     createPayrollPolicyDto: CreatePayrollPolicyDto,
-    // later: createdBy from auth
+    createdById: string,
   ): Promise<payrollPoliciesDocument> {
     const {
       policyName,
@@ -60,7 +61,7 @@ export class PayrollPoliciesService {
       },
       applicability,
       status: ConfigStatus.DRAFT,
-      // createdBy: userId
+      createdBy: createdById,
     });
 
     return doc.save();
@@ -156,5 +157,40 @@ export class PayrollPoliciesService {
     }
 
     return doc.save();
+  }
+
+  async approve(id: string, approverId: string) {
+    const rule = await this.payrollPoliciesModel.findById(id);
+    if (!rule) throw new NotFoundException('Payroll policy not found');
+    
+    if (rule.status === ConfigStatus.APPROVED || rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved/rejected payroll policies cannot be approved');
+    }
+    rule.status = ConfigStatus.APPROVED;
+    rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+    rule.approvedAt = new Date();
+
+    return rule.save();
+  }
+
+  async reject(id: string, approverId: string) {
+    const rule = await this.payrollPoliciesModel.findById(id);
+    if (!rule) throw new NotFoundException('Payroll policy not found');
+    if (rule.status === ConfigStatus.APPROVED || rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved/Rejected payroll policies cannot be rejected');
+    }
+
+    rule.status = ConfigStatus.REJECTED;
+    rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+    rule.approvedAt = new Date();
+
+    return rule.save();
+  }
+
+  async delete(id: string) {
+    const rule = await this.payrollPoliciesModel.findById(id);
+    if (!rule) throw new NotFoundException('Payroll policy not found');
+
+    return this.payrollPoliciesModel.deleteOne({ _id: id }).exec();
   }
 }

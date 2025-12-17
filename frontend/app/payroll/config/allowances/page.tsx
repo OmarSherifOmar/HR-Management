@@ -254,7 +254,7 @@ export default function AllowancesPage() {
   };
 
   const handleApprove = async (allowanceId: string) => {
-    const response = await http(`/configurations/allowance/${allowanceId}/approve`, {
+    const response = await http(`/payroll-configuration/allowances/${allowanceId}/approve`, {
       method: 'POST',
     });
 
@@ -267,7 +267,7 @@ export default function AllowancesPage() {
   };
 
   const handleReject = async (allowanceId: string) => {
-    const response = await http(`/configurations/allowance/${allowanceId}/reject`, {
+    const response = await http(`/payroll-configuration/allowances/${allowanceId}/reject`, {
       method: 'POST',
     });
 
@@ -280,7 +280,7 @@ export default function AllowancesPage() {
   };
 
   const handleDelete = async (allowanceId: string) => {
-    const response = await http(`/configurations/allowance/${allowanceId}`, {
+    const response = await http(`/payroll-configuration/allowances/${allowanceId}`, {
       method: 'DELETE',
     });
 

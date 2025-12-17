@@ -157,16 +157,16 @@ export default function TerminationBenefitsPage() {
 
   const handleApprove = async (benefitId: string) => {
     try {
-      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/terminationAndResignationBenefits/${benefitId}/approve`, {
+      const response = await authenticatedFetch(`${backendBaseUrl}/payroll-configuration/termination-benefits/${benefitId}/approve`, {
         method: 'POST',
       });
 
       if (response.ok) {
-        await fetchBenefits();
+        fetchBenefits();
         setSuccess('Termination benefit approved successfully');
       } else {
-        const errorText = await response.text();
-        setError(errorText || 'Failed to approve termination benefit');
+        const text = await response.text();
+        throw new Error(text || 'Failed to approve termination benefit');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to approve termination benefit');
@@ -175,16 +175,16 @@ export default function TerminationBenefitsPage() {
 
   const handleReject = async (benefitId: string) => {
     try {
-      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/terminationAndResignationBenefits/${benefitId}/reject`, {
+      const response = await authenticatedFetch(`${backendBaseUrl}/payroll-configuration/termination-benefits/${benefitId}/reject`, {
         method: 'POST',
       });
 
       if (response.ok) {
-        await fetchBenefits();
+        fetchBenefits();
         setSuccess('Termination benefit rejected successfully');
       } else {
-        const errorText = await response.text();
-        setError(errorText || 'Failed to reject termination benefit');
+        const text = await response.text();
+        throw new Error(text || 'Failed to reject termination benefit');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to reject termination benefit');
@@ -193,18 +193,17 @@ export default function TerminationBenefitsPage() {
 
   const handleDeleteBenefit = async (benefitId: string) => {
     try {
-      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/terminationAndResignationBenefits/${benefitId}`, {
+      const response = await authenticatedFetch(`${backendBaseUrl}/payroll-configuration/termination-benefits/${benefitId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        await fetchBenefits();
+        fetchBenefits();
         setSuccess('Termination benefit deleted successfully');
         setDeleteConfirm(null);
       } else {
-        const errorText = await response.text();
-        setError(errorText || 'Failed to delete termination benefit');
-        setDeleteConfirm(null);
+        const text = await response.text();
+        throw new Error(text || 'Failed to delete termination benefit');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to delete termination benefit');

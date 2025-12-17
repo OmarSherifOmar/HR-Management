@@ -7,6 +7,7 @@ import {
   Post,
   UseGuards,
   Req,
+  Delete,
 } from '@nestjs/common';
 import { PayGradesService } from '../services/pay-grades.service';
 import { CreatePayGradeDto } from '../dtos/create-pay-grade.dto';
@@ -32,11 +33,13 @@ export class PayGradesController {
     return this.payGradesService.createPayGrade(createPayGradeDto, createdById);
   }
 
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   @Get()
   async getAllPayGrades(): Promise<payGradeDocument[]> {
     return this.payGradesService.findAllPayGrades();
   }
 
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   @Get(':id')
   async getPayGradeById(@Param('id') id: string): Promise<payGradeDocument> {
     return this.payGradesService.findOnePayGrade(id);
@@ -49,5 +52,25 @@ export class PayGradesController {
     @Body() updatePayGradeDto: UpdatePayGradeDto,
   ): Promise<payGradeDocument> {
     return this.payGradesService.updatePayGrade(id, updatePayGradeDto);
+  }
+
+  @Post(':id/approve')
+  @Roles(Role.Payroll_MANAGER)
+  async approve(@Param('id') id: string, @Req() req: any) {
+    const approverId = req.user?._id;
+    return this.payGradesService.approve(id, approverId);
+  }
+
+  @Post(':id/reject')
+  @Roles(Role.Payroll_MANAGER)
+  async reject(@Param('id') id: string, @Req() req: any) {
+    const approverId = req.user?._id;
+    return this.payGradesService.reject(id, approverId);
+  }
+
+  @Delete(':id')
+  @Roles(Role.Payroll_MANAGER)
+  async delete(@Param('id') id: string) {
+    return this.payGradesService.delete(id);
   }
 }

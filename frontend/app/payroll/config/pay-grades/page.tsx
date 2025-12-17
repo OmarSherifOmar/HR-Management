@@ -264,7 +264,7 @@ export default function PayGradesPage() {
   };
 
   const handleApprove = async (payGradeId: string) => {
-    const response = await http(`/configurations/payGrade/${payGradeId}/approve`, {
+    const response = await http(`/payroll-configuration/pay-grades/${payGradeId}/approve`, {
       method: 'POST',
     });
 
@@ -277,7 +277,7 @@ export default function PayGradesPage() {
   };
 
   const handleReject = async (payGradeId: string) => {
-    const response = await http(`/configurations/payGrade/${payGradeId}/reject`, {
+    const response = await http(`/payroll-configuration/pay-grades/${payGradeId}/reject`, {
       method: 'POST',
     });
 
@@ -290,7 +290,7 @@ export default function PayGradesPage() {
   };
 
   const handleDelete = async (payGradeId: string) => {
-    const response = await http(`/configurations/payGrade/${payGradeId}`, {
+    const response = await http(`/payroll-configuration/pay-grades/${payGradeId}`, {
       method: 'DELETE',
     });
 

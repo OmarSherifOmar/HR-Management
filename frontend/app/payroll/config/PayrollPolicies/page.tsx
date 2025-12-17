@@ -204,57 +204,56 @@ export default function PayrollPoliciesPage() {
 
   const handleApprove = async (policyId: string) => {
     try {
-      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/payrollPolicies/${policyId}/approve`, {
+      const response = await authenticatedFetch(`${backendBaseUrl}/payroll-configuration/payroll-policies/${policyId}/approve`, {
         method: 'POST',
       });
 
       if (response.ok) {
         await fetchPolicies();
-        setSuccess('Policy approved successfully');
+        setSuccess('Payroll policy approved successfully');
       } else {
-        const errorText = await response.text();
-        setError(errorText || 'Failed to approve policy');
+        const text = await response.text();
+        throw new Error(text || 'Failed to approve payroll policy');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to approve policy');
+      setError(err.message || 'Failed to approve payroll policy');
     }
   };
 
   const handleReject = async (policyId: string) => {
     try {
-      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/payrollPolicies/${policyId}/reject`, {
+      const response = await authenticatedFetch(`${backendBaseUrl}/payroll-configuration/payroll-policies/${policyId}/reject`, {
         method: 'POST',
       });
 
       if (response.ok) {
         await fetchPolicies();
-        setSuccess('Policy rejected successfully');
+        setSuccess('Payroll policy rejected successfully');
       } else {
-        const errorText = await response.text();
-        setError(errorText || 'Failed to reject policy');
+        const text = await response.text();
+        throw new Error(text || 'Failed to reject payroll policy');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to reject policy');
+      setError(err.message || 'Failed to reject payroll policy');
     }
   };
 
   const handleDeletePolicy = async (policyId: string) => {
     try {
-      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/payrollPolicies/${policyId}`, {
+      const response = await authenticatedFetch(`${backendBaseUrl}/payroll-configuration/payroll-policies/${policyId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         await fetchPolicies();
-        setSuccess('Policy deleted successfully');
+        setSuccess('Payroll policy deleted successfully');
         setDeleteConfirm(null);
       } else {
-        const errorText = await response.text();
-        setError(errorText || 'Failed to delete policy');
-        setDeleteConfirm(null);
+        const text = await response.text();
+        throw new Error(text || 'Failed to delete payroll policy');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to delete policy');
+      setError(err.message || 'Failed to delete payroll policy');
       setDeleteConfirm(null);
     }
   };

@@ -284,7 +284,7 @@ export default function PayTypesPage() {
   };
 
   const handleApprove = async (payTypeId: string) => {
-    const response = await http(`/configurations/payType/${payTypeId}/approve`, {
+    const response = await http(`/payroll-configuration/pay-types/${payTypeId}/approve`, {
       method: 'POST',
     });
 
@@ -297,7 +297,7 @@ export default function PayTypesPage() {
   };
 
   const handleReject = async (payTypeId: string) => {
-    const response = await http(`/configurations/payType/${payTypeId}/reject`, {
+    const response = await http(`/payroll-configuration/pay-types/${payTypeId}/reject`, {
       method: 'POST',
     });
 
@@ -310,7 +310,7 @@ export default function PayTypesPage() {
   };
 
   const handleDelete = async (payTypeId: string) => {
-    const response = await http(`/configurations/payType/${payTypeId}`, {
+    const response = await http(`/payroll-configuration/pay-types/${payTypeId}`, {
       method: 'DELETE',
     });
 
