@@ -21,7 +21,7 @@ import {
   export class PayTypesController {
     constructor(private readonly payTypesService: PayTypesService) {}
   
-    @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+    @Roles(Role.PAYROLL_SPECIALIST)
     @Post()
     async createPayType(
       @Body() createPayTypeDto: CreatePayTypeDto,

@@ -21,7 +21,7 @@ import { Role } from '../../auth/decorators/roles.decorator';
 export class PayGradesController {
   constructor(private readonly payGradesService: PayGradesService) {}
 
-  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST)
   @Post()
   async createPayGrade(
     @Body() createPayGradeDto: CreatePayGradeDto,

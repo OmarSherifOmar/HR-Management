@@ -107,12 +107,30 @@ export default function PayGradesPage() {
   const [payGrades, setPayGrades] = useState<PayGrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPayGrade, setEditingPayGrade] = useState<PayGrade | null>(null);
   const [formData, setFormData] = useState<CreatePayGradeData>({ grade: '', baseSalary: 0, grossSalary: 0 });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Auto-clear success messages after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Auto-clear error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // Role-based permission checks
   const canCreate = () => {
@@ -200,6 +218,7 @@ export default function PayGradesPage() {
       setIsCreateModalOpen(false);
       setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
       fetchPayGrades();
+      setSuccess('Pay grade created successfully');
     } else {
       setFormError(response.error || 'Failed to create pay grade');
     }
@@ -237,6 +256,7 @@ export default function PayGradesPage() {
       setEditingPayGrade(null);
       setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
       fetchPayGrades();
+      setSuccess('Pay grade updated successfully');
     } else {
       setFormError(response.error || 'Failed to update pay grade');
     }
@@ -250,6 +270,7 @@ export default function PayGradesPage() {
 
     if (response.ok) {
       fetchPayGrades();
+      setSuccess('Pay grade approved successfully');
     } else {
       setError(response.error || 'Failed to approve pay grade');
     }
@@ -262,25 +283,33 @@ export default function PayGradesPage() {
 
     if (response.ok) {
       fetchPayGrades();
+      setSuccess('Pay grade rejected successfully');
     } else {
       setError(response.error || 'Failed to reject pay grade');
     }
   };
 
   const handleDelete = async (payGradeId: string) => {
-    if (!confirm('Are you sure you want to delete this pay grade? This action cannot be undone.')) {
-      return;
-    }
-
     const response = await http(`/configurations/payGrade/${payGradeId}`, {
       method: 'DELETE',
     });
 
     if (response.ok) {
       fetchPayGrades();
+      setSuccess('Pay grade deleted successfully');
+      setDeleteConfirm(null);
     } else {
       setError(response.error || 'Failed to delete pay grade');
+      setDeleteConfirm(null);
     }
+  };
+
+  const confirmDelete = (payGradeId: string) => {
+    setDeleteConfirm(payGradeId);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm(null);
   };
 
   const openCreateModal = () => {
@@ -363,10 +392,15 @@ export default function PayGradesPage() {
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error/Success Messages */}
         {error && (
           <div className="bg-red-600/20 border border-red-600 rounded-lg p-4">
             <p className="text-red-300">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-600/20 border border-green-600 rounded-lg p-4">
+            <p className="text-green-300">{success}</p>
           </div>
         )}
 
@@ -435,12 +469,31 @@ export default function PayGradesPage() {
                         )}
                         
                         {canDelete() && payGrade.status !== 'APPROVED' && (
-                          <button
-                            onClick={() => handleDelete(payGrade._id)}
-                            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
-                          >
-                            Delete
-                          </button>
+                          <>
+                            {deleteConfirm === payGrade._id ? (
+                              <>
+                                <button
+                                  onClick={() => handleDelete(payGrade._id)}
+                                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={cancelDelete}
+                                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => confirmDelete(payGrade._id)}
+                                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </>
                         )}
                         
                         {!canEdit(payGrade) && !canApproveReject() && !canDelete() && (

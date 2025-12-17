@@ -25,8 +25,52 @@ export default function TerminationBenefitsPage() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+
+  // Auto-clear success messages after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Auto-clear error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Role-based permission checks
+  const canCreate = () => {
+    return user?.role === 'Payroll Specialist';
+  };
+
+  const canEdit = (benefit: TerminationBenefit) => {
+    const isDraftStatus = benefit.status?.toUpperCase() === 'DRAFT' || benefit.status?.toLowerCase() === 'draft';
+    const canEditRole = user?.role === 'Payroll Specialist' || user?.role === 'Payroll Manager';
+    return isDraftStatus && canEditRole;
+  };
+
+  const canApproveReject = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canDelete = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canView = () => {
+    const allowedRoles = [
+      'Payroll Specialist', 
+      'Payroll Manager'
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
 
   const fetchBenefits = async () => {
     try {
@@ -111,83 +155,250 @@ export default function TerminationBenefitsPage() {
     setIsModalOpen(true);
   };
 
+  const handleApprove = async (benefitId: string) => {
+    try {
+      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/terminationAndResignationBenefits/${benefitId}/approve`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        await fetchBenefits();
+        setSuccess('Termination benefit approved successfully');
+      } else {
+        const errorText = await response.text();
+        setError(errorText || 'Failed to approve termination benefit');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve termination benefit');
+    }
+  };
+
+  const handleReject = async (benefitId: string) => {
+    try {
+      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/terminationAndResignationBenefits/${benefitId}/reject`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        await fetchBenefits();
+        setSuccess('Termination benefit rejected successfully');
+      } else {
+        const errorText = await response.text();
+        setError(errorText || 'Failed to reject termination benefit');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject termination benefit');
+    }
+  };
+
+  const handleDeleteBenefit = async (benefitId: string) => {
+    try {
+      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/terminationAndResignationBenefits/${benefitId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchBenefits();
+        setSuccess('Termination benefit deleted successfully');
+        setDeleteConfirm(null);
+      } else {
+        const errorText = await response.text();
+        setError(errorText || 'Failed to delete termination benefit');
+        setDeleteConfirm(null);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete termination benefit');
+      setDeleteConfirm(null);
+    }
+  };
+
+  const confirmDelete = (benefitId: string) => {
+    setDeleteConfirm(benefitId);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm(null);
+  };
+
+  const getStatusBadgeColor = (status?: string) => {
+    switch (status?.toUpperCase()) {
+      case 'DRAFT': return 'bg-yellow-600';
+      case 'APPROVED': return 'bg-green-600';
+      case 'REJECTED': return 'bg-red-600';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  // Check if user has permission to view this page
+  if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view termination benefit configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout
-      title="Termination Benefits"
-      description="Manage termination and resignation benefits."
+      title="Payroll Config — Termination Benefits"
+      description="Manage termination and resignation benefits"
     >
-      <div className="space-y-4">
-        <div className="bg-[#2a2a2a] rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">Existing Benefits</h2>
-            {!isLoading && user && (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Termination Benefits</h1>
+            <p className="text-gray-400">Configure termination and resignation benefits for employees</p>
+            <p className="text-sm text-yellow-400 mt-1">
+              Role: {user?.role} | {canCreate() ? 'Can create/edit' : 'View only'}
+              {canApproveReject() && ' | Can approve/reject'}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => fetchBenefits()}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Refresh
+            </button>
+            {canCreate() && (
               <button
-                type="button"
                 onClick={() => {
                   resetForm();
                   setIsModalOpen(true);
                 }}
-                className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-sm font-medium text-white"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                + New Benefit
+                + Create Benefit
               </button>
             )}
           </div>
+        </div>
 
-          {loading ? (
-            <p className="text-gray-300 text-sm">Loading...</p>
-          ) : benefits.length === 0 ? (
-            <p className="text-gray-400 text-sm">No termination benefits found yet. Use "+ New" to create one.</p>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {benefits.map((benefit) => (
-                <div
-                  key={benefit._id}
-                  className={`flex items-start justify-between gap-3 p-3 rounded-lg transition-colors ${
-                    editingId === benefit._id
-                      ? 'bg-[#0f172a] ring-1 ring-blue-500'
-                      : 'bg-[#1a1a1a] hover:bg-[#333333]'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <p className="text-base font-medium text-white">{benefit.name}</p>
-                    <p className="text-sm text-gray-300 mt-1">
-                      Amount: {benefit.amount}
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1 line-clamp-2">
-                      {benefit.terms}
-                    </p>
-                  </div>
-                  {benefit.status && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-600 text-white self-start">
-                      {benefit.status}
-                    </span>
-                  )}
-                  <div className="flex flex-col gap-2 self-start ml-3">
-                    <button
-                      type="button"
-                      className="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white"
-                      onClick={() => handleEdit(benefit)}
-                    >
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="bg-red-600/20 border border-red-600 rounded-lg p-4">
+            <p className="text-red-300">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-600/20 border border-green-600 rounded-lg p-4">
+            <p className="text-green-300">{success}</p>
+          </div>
+        )}
 
-          {error && (
-            <p className="mt-3 text-xs text-red-400">{error}</p>
-          )}
-          {success && (
-            <p className="mt-3 text-xs text-green-400">{success}</p>
-          )}
+        {/* Table */}
+        <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-[#333333]">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Terms</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                    Loading...
+                  </td>
+                </tr>
+              ) : benefits.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                    No termination benefits found
+                  </td>
+                </tr>
+              ) : (
+                benefits.map((benefit) => (
+                  <tr key={benefit._id} className="hover:bg-[#333333] transition-colors">
+                    <td className="px-6 py-4 text-white font-medium">{benefit.name}</td>
+                    <td className="px-6 py-4 text-white">${Number(benefit.amount).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-white max-w-xs truncate">{benefit.terms}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusBadgeColor(benefit.status)}`}>
+                        {benefit.status || 'DRAFT'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex space-x-2">
+                        {canEdit(benefit) && (
+                          <button
+                            onClick={() => handleEdit(benefit)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        
+                        {canApproveReject() && (benefit.status?.toUpperCase() === 'DRAFT' || benefit.status?.toLowerCase() === 'draft') && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(benefit._id!)}
+                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleReject(benefit._id!)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        
+                        {canDelete() && benefit.status !== 'APPROVED' && (
+                          <>
+                            {deleteConfirm === benefit._id ? (
+                              <>
+                                <button
+                                  onClick={() => handleDeleteBenefit(benefit._id!)}
+                                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={cancelDelete}
+                                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => confirmDelete(benefit._id!)}
+                                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </>
+                        )}
+                        
+                        {!canEdit(benefit) && !canApproveReject() && !canDelete() && (
+                          <span className="px-3 py-1 bg-gray-600 text-gray-400 text-sm rounded">
+                            View Only
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Modal for create/edit */}
-      {isModalOpen && (
+      {/* Modal */}
+      {isModalOpen && (canCreate() || editingId) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="w-full max-w-lg rounded-xl bg-[#111827] border border-gray-700 p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">

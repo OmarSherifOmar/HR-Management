@@ -22,7 +22,7 @@ export class TerminationBenefitsController {
   ) {}
 
   @Post()
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST)
   async createTerminationBenefit(
     @Body() createTerminationBenefitsDto: CreateTerminationBenefitsDto,
   ): Promise<terminationAndResignationBenefitsDocument> {
@@ -46,7 +46,7 @@ export class TerminationBenefitsController {
   }
 
   @Patch(':id')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async updateTerminationBenefit(
     @Param('id') id: string,
     @Body() updateTerminationBenefitsDto: UpdateTerminationBenefitsDto,

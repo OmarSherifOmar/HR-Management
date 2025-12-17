@@ -22,7 +22,7 @@ export class PayrollPoliciesController {
   ) {}
 
   @Post()
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST)
   async createPayrollPolicy(
     @Body() createPayrollPolicyDto: CreatePayrollPolicyDto,
   ): Promise<payrollPoliciesDocument> {
@@ -44,7 +44,7 @@ export class PayrollPoliciesController {
   }
 
   @Patch(':id')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async updatePayrollPolicy(
     @Param('id') id: string,
     @Body() updatePayrollPolicyDto: UpdatePayrollPolicyDto,

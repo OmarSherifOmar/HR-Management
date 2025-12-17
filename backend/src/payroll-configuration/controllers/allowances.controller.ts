@@ -21,7 +21,7 @@ import { Role } from '../../auth/decorators/roles.decorator';
 export class AllowancesController {
   constructor(private readonly allowancesService: AllowancesService) {}
 
-  @Roles(Role.PAYROLL_SPECIALIST, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST)
   @Post()
   async createAllowance(
     @Body() createAllowanceDto: CreateAllowanceDto,

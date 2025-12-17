@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useAuth, authenticatedFetch } from '../../../context/AuthContext';
 
@@ -35,6 +36,7 @@ const emptyPolicy: PayrollPolicy = {
 };
 
 export default function PayrollPoliciesPage() {
+  const router = useRouter();
   const { user, isLoading } = useAuth();
   const [policies, setPolicies] = useState<PayrollPolicy[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,8 +45,52 @@ export default function PayrollPoliciesPage() {
   const [form, setForm] = useState<PayrollPolicy>(emptyPolicy);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+
+  // Auto-clear success messages after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Auto-clear error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Role-based permission checks
+  const canCreate = () => {
+    return user?.role === 'Payroll Specialist';
+  };
+
+  const canEdit = (policy: PayrollPolicy) => {
+    const isDraftStatus = policy.status?.toUpperCase() === 'DRAFT' || policy.status?.toLowerCase() === 'draft';
+    const canEditRole = user?.role === 'Payroll Specialist' || user?.role === 'Payroll Manager';
+    return isDraftStatus && canEditRole;
+  };
+
+  const canApproveReject = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canDelete = () => {
+    return user?.role === 'Payroll Manager';
+  };
+
+  const canView = () => {
+    const allowedRoles = [
+      'Payroll Specialist', 
+      'Payroll Manager'
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
 
   const fetchPolicies = async () => {
     try {
@@ -156,88 +202,283 @@ export default function PayrollPoliciesPage() {
     setIsModalOpen(true);
   };
 
+  const handleApprove = async (policyId: string) => {
+    try {
+      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/payrollPolicies/${policyId}/approve`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        await fetchPolicies();
+        setSuccess('Policy approved successfully');
+      } else {
+        const errorText = await response.text();
+        setError(errorText || 'Failed to approve policy');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve policy');
+    }
+  };
+
+  const handleReject = async (policyId: string) => {
+    try {
+      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/payrollPolicies/${policyId}/reject`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        await fetchPolicies();
+        setSuccess('Policy rejected successfully');
+      } else {
+        const errorText = await response.text();
+        setError(errorText || 'Failed to reject policy');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject policy');
+    }
+  };
+
+  const handleDeletePolicy = async (policyId: string) => {
+    try {
+      const response = await authenticatedFetch(`${backendBaseUrl}/configurations/payrollPolicies/${policyId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchPolicies();
+        setSuccess('Policy deleted successfully');
+        setDeleteConfirm(null);
+      } else {
+        const errorText = await response.text();
+        setError(errorText || 'Failed to delete policy');
+        setDeleteConfirm(null);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete policy');
+      setDeleteConfirm(null);
+    }
+  };
+
+  const confirmDelete = (policyId: string) => {
+    setDeleteConfirm(policyId);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm(null);
+  };
+
+  const getStatusBadgeColor = (status?: string) => {
+    switch (status?.toUpperCase()) {
+      case 'DRAFT': return 'bg-yellow-600';
+      case 'APPROVED': return 'bg-green-600';
+      case 'REJECTED': return 'bg-red-600';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  // Check if user has permission to view this page
+  if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view payroll policy configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout
-      title="Payroll Policies"
+      title="Payroll Config — Policies"
       description="Define and manage payroll policies."
     >
-      <div className="space-y-4">
-        <div className="bg-[#2a2a2a] rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Existing Policies</h2>
-            {!isLoading && user && (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Payroll Policies</h1>
+            <p className="text-gray-400">Configure payroll policies for deductions, allowances, and benefits</p>
+            <p className="text-sm text-yellow-400 mt-1">
+              Role: {user?.role} | {canCreate() ? 'Can create/edit' : 'View only'}
+              {canApproveReject() && ' | Can approve/reject'}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => fetchPolicies()}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Refresh
+            </button>
+            {canCreate() && (
               <button
-                type="button"
                 onClick={() => {
                   resetForm();
                   setIsModalOpen(true);
                 }}
-                className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-sm font-medium text-white"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                + New Policy
+                + Create Policy
               </button>
             )}
           </div>
+        </div>
 
-          {loading ? (
-            <p className="text-gray-300 text-sm">Loading...</p>
-          ) : policies.length === 0 ? (
-            <p className="text-gray-400 text-sm">No payroll policies found yet. Use "+ New" to create one.</p>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {policies.map((policy) => (
-                <div
-                  key={policy._id}
-                  className={`flex items-start justify-between gap-3 p-3 rounded-lg transition-colors ${
-                    editingId === policy._id
-                      ? 'bg-[#0f172a] ring-1 ring-blue-500'
-                      : 'bg-[#1a1a1a] hover:bg-[#333333]'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <p className="text-base font-medium text-white">{policy.policyName}</p>
-                    <p className="text-sm text-gray-300 mt-1">
-                      Type: {policy.policyType} | Effective: {policy.effectiveDate}
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1 line-clamp-2">
-                      {policy.description}
-                    </p>
-                  </div>
-                  {policy.status && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-600 text-white self-start">
-                      {policy.status}
-                    </span>
-                  )}
-                  <div className="flex flex-col gap-2 self-start ml-3">
-                    <button
-                      type="button"
-                      className="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white"
-                      onClick={() => handleEdit(policy)}
-                    >
-                      Edit
-                    </button>
-                    <a
-                      href={`/payroll/config/PayrollPolicies/${policy._id}`}
-                      className="text-xs px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-white text-center"
-                    >
-                      View
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="bg-red-600/20 border border-red-600 rounded-lg p-4">
+            <p className="text-red-300">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-600/20 border border-green-600 rounded-lg p-4">
+            <p className="text-green-300">{success}</p>
+          </div>
+        )}
 
-          {error && (
-            <p className="mt-3 text-xs text-red-400">{error}</p>
-          )}
-          {success && (
-            <p className="mt-3 text-xs text-green-400">{success}</p>
-          )}
+        {/* Table */}
+        <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px]">
+              <thead className="bg-[#333333]">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Policy Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Description</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Effective Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rule %</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Fixed Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Applicability</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-400">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : policies.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-400">
+                      No policies found
+                    </td>
+                  </tr>
+                ) : (
+                  policies.map((policy) => (
+                    <tr key={policy._id} className="hover:bg-[#333333] transition-colors">
+                      <td className="px-4 py-4 text-white font-medium max-w-[150px] truncate">
+                        {policy.policyName}
+                      </td>
+                      <td className="px-4 py-4 text-white">
+                        <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
+                          {policy.policyType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-gray-300 max-w-[200px] truncate">
+                        {policy.description}
+                      </td>
+                      <td className="px-4 py-4 text-white">
+                        {new Date(policy.effectiveDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-4 text-white">
+                        {policy.ruleDefinition?.percentage || 0}%
+                      </td>
+                      <td className="px-4 py-4 text-white">
+                        ${Number(policy.ruleDefinition?.fixedAmount || 0).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4 text-white max-w-[120px] truncate">
+                        {policy.applicability}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusBadgeColor(policy.status)}`}>
+                          {policy.status || 'DRAFT'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex space-x-2 flex-wrap">
+                          <button
+                            onClick={() => router.push(`/payroll/config/PayrollPolicies/${policy._id}`)}
+                            className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors"
+                          >
+                            View
+                          </button>
+                          
+                          {canEdit(policy) && (
+                            <button
+                              onClick={() => handleEdit(policy)}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          
+                          {canApproveReject() && (policy.status?.toUpperCase() === 'DRAFT' || policy.status?.toLowerCase() === 'draft') && (
+                            <>
+                              <button
+                                onClick={() => handleApprove(policy._id!)}
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleReject(policy._id!)}
+                                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          
+                          {canDelete() && policy.status !== 'APPROVED' && (
+                            <>
+                              {deleteConfirm === policy._id ? (
+                                <>
+                                  <button
+                                    onClick={() => handleDeletePolicy(policy._id!)}
+                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={cancelDelete}
+                                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => confirmDelete(policy._id!)}
+                                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </>
+                          )}
+                          
+                          {!canEdit(policy) && !canApproveReject() && !canDelete() && (
+                            <span className="px-3 py-1 bg-gray-600 text-gray-400 text-sm rounded">
+                              View Only
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {isModalOpen && (
+      {/* Modal */}
+      {isModalOpen && (canCreate() || editingId) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="w-full max-w-2xl rounded-xl bg-[#111827] border border-gray-700 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">

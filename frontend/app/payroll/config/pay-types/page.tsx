@@ -104,12 +104,30 @@ export default function PayTypesPage() {
   const [payTypes, setPayTypes] = useState<PayType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPayType, setEditingPayType] = useState<PayType | null>(null);
   const [formData, setFormData] = useState<CreatePayTypeData>({ type: '', amount: 0 });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Auto-clear success messages after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Auto-clear error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const fetchPayTypes = async () => {
     setLoading(true);
@@ -164,6 +182,7 @@ export default function PayTypesPage() {
       setIsCreateModalOpen(false);
       setFormData({ type: '', amount: 0 });
       fetchPayTypes();
+      setSuccess('Pay type created successfully');
     } else {
       setFormError(response.error || 'Failed to create pay type');
     }
@@ -200,6 +219,7 @@ export default function PayTypesPage() {
       setEditingPayType(null);
       setFormData({ type: '', amount: 0 });
       fetchPayTypes();
+      setSuccess('Pay type updated successfully');
     } else {
       setFormError(response.error || 'Failed to update pay type');
     }
@@ -270,6 +290,7 @@ export default function PayTypesPage() {
 
     if (response.ok) {
       fetchPayTypes();
+      setSuccess('Pay type approved successfully');
     } else {
       setError(response.error || 'Failed to approve pay type');
     }
@@ -282,25 +303,33 @@ export default function PayTypesPage() {
 
     if (response.ok) {
       fetchPayTypes();
+      setSuccess('Pay type rejected successfully');
     } else {
       setError(response.error || 'Failed to reject pay type');
     }
   };
 
   const handleDelete = async (payTypeId: string) => {
-    if (!confirm('Are you sure you want to delete this pay type? This action cannot be undone.')) {
-      return;
-    }
-
     const response = await http(`/configurations/payType/${payTypeId}`, {
       method: 'DELETE',
     });
 
     if (response.ok) {
       fetchPayTypes();
+      setSuccess('Pay type deleted successfully');
+      setDeleteConfirm(null);
     } else {
       setError(response.error || 'Failed to delete pay type');
+      setDeleteConfirm(null);
     }
+  };
+
+  const confirmDelete = (payTypeId: string) => {
+    setDeleteConfirm(payTypeId);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm(null);
   };
 
   // Check if user has permission to view this page
@@ -349,10 +378,15 @@ export default function PayTypesPage() {
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error/Success Messages */}
         {error && (
           <div className="bg-red-600/20 border border-red-600 rounded-lg p-4">
             <p className="text-red-300">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-600/20 border border-green-600 rounded-lg p-4">
+            <p className="text-green-300">{success}</p>
           </div>
         )}
 
@@ -419,12 +453,31 @@ export default function PayTypesPage() {
                         )}
                         
                         {canDelete() && payType.status !== 'APPROVED' && (
-                          <button
-                            onClick={() => handleDelete(payType._id)}
-                            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
-                          >
-                            Delete
-                          </button>
+                          <>
+                            {deleteConfirm === payType._id ? (
+                              <>
+                                <button
+                                  onClick={() => handleDelete(payType._id)}
+                                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={cancelDelete}
+                                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => confirmDelete(payType._id)}
+                                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </>
                         )}
                         
                         {!canEdit(payType) && !canApproveReject() && !canDelete() && (
