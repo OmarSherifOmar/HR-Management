@@ -139,15 +139,15 @@ export default function PayslipDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#1a1a2e] p-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-white">
               Payslip for {payslip.month}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-white">
               Generated on {formatDate(payslip.generatedAt)}
             </p>
           </div>
@@ -325,11 +325,11 @@ export default function PayslipDetailPage() {
 
           {payslip.insurances.length > 0 && (
             <div className="mb-4">
-              <h3 className="font-semibold text-gray-700 mb-2">Insurance</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Insurance</h3>
               <div className="space-y-2">
                 {payslip.insurances.map((item: any, idx: number) => (
                   <div key={idx} className="flex justify-between text-sm">
-                    <span className="text-gray-600">
+                    <span className="text-gray-900">
                       {item.name || "Insurance"}
                     </span>
                     <span className="text-red-600 font-medium">
@@ -353,32 +353,30 @@ export default function PayslipDetailPage() {
 
         {/* Dispute Information */}
         {payslip.dispute && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg shadow p-6 mb-6">
+          <div className="bg-white rounded-lg  p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Dispute Information
             </h2>
-            <div className="space-y-2">
+            <div className="text-gray-900 space-y-2">
               <p>
-                <span className="font-semibold">Dispute ID:</span>{" "}
-                {payslip.dispute.disputeId}
-              </p>
-              <p>
-                <span className="font-semibold">Status:</span>{" "}
+                <span className="font-bold text-gray-900">Status:</span>{" "}
                 {payslip.dispute.status}
               </p>
               <p>
-                <span className="font-semibold">Description:</span>{" "}
+                <span className="font-bold text-gray-900">Description:</span>{" "}
                 {payslip.dispute.description}
               </p>
               {payslip.dispute.resolutionComment && (
                 <p>
-                  <span className="font-semibold">Resolution:</span>{" "}
+                  <span className="font-bold text-gray-900">Resolution:</span>{" "}
                   {payslip.dispute.resolutionComment}
                 </p>
               )}
               {payslip.dispute.rejectionReason && (
                 <p className="text-red-600">
-                  <span className="font-semibold">Rejection Reason:</span>{" "}
+                  <span className="font-bold text-gray-900">
+                    Rejection Reason:
+                  </span>{" "}
                   {payslip.dispute.rejectionReason}
                 </p>
               )}

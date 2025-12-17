@@ -87,7 +87,7 @@ export default function PayslipsPage() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       alert("Failed to download payslip");
     }
   };
