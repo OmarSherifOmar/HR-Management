@@ -1092,6 +1092,20 @@ export class PayrollExecutionService {
         errorsDetails.push(message);
       }
     }
+    // Mark all generated payslips as PAID
+        await this.paySlipModel.updateMany(
+       { 
+        payrollRunId: payrollRun._id, paymentStatus: PaySlipPaymentStatus.PENDING
+       },
+       {
+         $set: { paymentStatus: PaySlipPaymentStatus.PAID 
+       } 
+      },
+);
+
+          // Mark the payroll run as fully paid
+      payrollRun.paymentStatus = PayRollPaymentStatus.PAID;
+      await payrollRun.save();
 
     // Return basic stats and sample errors to aid debugging
     return { generated, errors, errorsDetails: errorsDetails.slice(0, 20) } as any;
@@ -1158,6 +1172,8 @@ export class PayrollExecutionService {
         doc.text(`Email: ${employee.workEmail}`);
       }
       doc.moveDown();
+
+
 
       // Earnings Section
       doc.fontSize(14).text('Earnings', { underline: true });
