@@ -4,6 +4,16 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../../context/AuthContext";
+import DashboardLayout from "../../../../components/DashboardLayout";
+import {
+  ArrowLeft,
+  FileText,
+  Calendar,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 
 interface Dispute {
   _id: string;
@@ -82,19 +92,19 @@ export default function DisputeDetailPage() {
       hasSpecialist &&
       (normalized === "UNDER REVIEW" || normalized === "UNDER_REVIEW")
     ) {
-      return "bg-blue-100 text-blue-800 border-blue-200";
+      return "bg-blue-500/20 text-blue-400";
     }
 
     switch (normalized) {
       case "APPROVED":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-500/20 text-green-400";
       case "REJECTED":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-500/20 text-red-400";
       case "UNDER REVIEW":
       case "UNDER_REVIEW":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-500/20 text-yellow-400";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-500/20 text-gray-400";
     }
   };
 
@@ -110,271 +120,280 @@ export default function DisputeDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dispute details...</p>
+      <DashboardLayout title="Dispute Details">
+        <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-400">Loading dispute details...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (error || !dispute) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-            <p className="text-red-600">{error || "Dispute not found"}</p>
-            <Link
-              href="/payroll/tracking/disputes"
-              className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Back to Disputes
-            </Link>
+      <DashboardLayout title="Dispute Details">
+        <div className="min-h-screen bg-[#1a1a1a] p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-red-500/10 rounded-lg p-6">
+              <h3 className="text-red-400 font-semibold mb-2">Error</h3>
+              <p className="text-red-300">{error || "Dispute not found"}</p>
+              <Link
+                href="/payroll/tracking/disputes"
+                className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Back to Disputes
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e] p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold white mb-2">Dispute Details</h1>
+    <DashboardLayout title="Dispute Details">
+      <div className="min-h-screen bg-[#1a1a1a] p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-6 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Dispute Details
+              </h1>
+            </div>
+            <Link
+              href="/payroll/tracking/disputes"
+              className="flex items-center gap-2 px-4 py-2 bg-[#2a2a2a] text-white rounded-lg hover:bg-[#333333] transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Disputes
+            </Link>
           </div>
-          <Link
-            href="/payroll/tracking/disputes"
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+
+          {/* Status Card */}
+          <div
+            className={`rounded-lg shadow p-6 mb-6 ${getStatusColor(
+              dispute.status,
+              !!dispute.payrollSpecialistId
+            )}`}
           >
-            ← Back to Disputes
-          </Link>
-        </div>
-
-        {/* Status Card */}
-        <div
-          className={`rounded-lg shadow p-6 mb-6 border-2 ${getStatusColor(
-            dispute.status,
-            !!dispute.payrollSpecialistId
-          )}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium mb-1">Current Status</p>
-              <p className="text-2xl font-bold">
-                {dispute.status.toLowerCase() === "under review" &&
-                dispute.payrollSpecialistId
-                  ? "Pending Payroll Manager Approval"
-                  : dispute.status.replace("_", " ")}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm mb-1">Last Updated</p>
-              <p className="text-sm font-medium">
-                {formatDate(dispute.updatedAt)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Dispute Information */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Dispute Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Related Payslip</p>
-              <Link
-                href={`/payroll/tracking/payslips/${dispute.payslipId}`}
-                className="text-lg font-semibold text-blue-600 hover:underline"
-              >
-                View Payslip →
-              </Link>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Submitted Date</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatDate(dispute.createdAt)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Dispute Reason
-          </h2>
-          <div className="bg-gray-50 rounded p-4">
-            <p className="text-gray-700 whitespace-pre-wrap">
-              {dispute.description}
-            </p>
-          </div>
-        </div>
-
-        {/* Resolution Details */}
-        {dispute.status === "APPROVED" && dispute.resolutionComment && (
-          <div className="bg-green-50 border border-green-200 rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-bold text-green-900 mb-4">
-              Resolution Details
-            </h2>
-            <p className="text-green-800 whitespace-pre-wrap">
-              {dispute.resolutionComment}
-            </p>
-          </div>
-        )}
-
-        {dispute.status === "REJECTED" && dispute.rejectionReason && (
-          <div className="bg-red-50 border border-red-200 rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-bold text-red-900 mb-4">
-              Rejection Details
-            </h2>
-            <p className="text-red-800 whitespace-pre-wrap">
-              {dispute.rejectionReason}
-            </p>
-          </div>
-        )}
-
-        {/* Timeline */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Timeline</h2>
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                1
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium mb-1 opacity-80">
+                  Current Status
+                </p>
+                <p className="text-2xl font-bold">
+                  {dispute.status.toLowerCase() === "under review" &&
+                  dispute.payrollSpecialistId
+                    ? "Pending Payroll Manager Approval"
+                    : dispute.status.replace("_", " ")}
+                </p>
               </div>
-              <div className="ml-4 flex-1">
-                <p className="font-semibold text-gray-900">Dispute Submitted</p>
-                <p className="text-sm text-gray-600">
+              <div className="text-right">
+                <p className="text-sm mb-1 opacity-80">Last Updated</p>
+                <p className="text-sm font-medium">
+                  {formatDate(dispute.updatedAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dispute Information */}
+          <div className="bg-[#2a2a2a] rounded-lg shadow p-6 mb-6">
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Dispute Information
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Related Payslip</p>
+                <Link
+                  href={`/payroll/tracking/payslips/${dispute.payslipId}`}
+                  className="text-lg font-semibold text-blue-400 hover:text-blue-300"
+                >
+                  View Payslip →
+                </Link>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Submitted Date</p>
+                <p className="text-lg font-semibold text-white">
                   {formatDate(dispute.createdAt)}
                 </p>
               </div>
             </div>
-
-            {dispute.payrollSpecialistId && (
-              <div className="flex items-start">
-                <div className="shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
-                  2
-                </div>
-                <div className="ml-4 flex-1">
-                  <p className="font-semibold text-gray-900">
-                    Specialist Reviewed
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Payroll specialist completed review
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {dispute.payrollManagerId && (
-              <div className="flex items-start">
-                <div className="shrink-0 w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                  3
-                </div>
-                <div className="ml-4 flex-1">
-                  <p className="font-semibold text-gray-900">
-                    Manager Decision
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Payroll manager completed review
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {["APPROVED", "REJECTED"].includes(dispute.status) && (
-              <div className="flex items-start">
-                <div
-                  className={`shrink-0 w-10 h-10 ${
-                    dispute.status === "APPROVED"
-                      ? "bg-green-500"
-                      : "bg-red-500"
-                  } rounded-full flex items-center justify-center text-white font-bold`}
-                >
-                  ✓
-                </div>
-                <div className="ml-4 flex-1">
-                  <p className="font-semibold text-gray-900">
-                    {dispute.status === "APPROVED"
-                      ? "Dispute Resolved"
-                      : "Dispute Rejected"}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatDate(dispute.updatedAt)}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
 
-        {/* Admin Actions */}
-        {isAdmin && dispute.status.toLowerCase() === "under review" && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Admin Actions
+          {/* Description */}
+          <div className="bg-[#2a2a2a] rounded-lg shadow p-6 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Dispute Reason
             </h2>
-            <div className="flex gap-3">
-              <Link
-                href={`/payroll/tracking/disputes/${dispute._id}/review`}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Review & Make Decision
-              </Link>
+            <div className="bg-[#1a1a1a] rounded-lg p-4">
+              <p className="text-gray-300 whitespace-pre-wrap">
+                {dispute.description}
+              </p>
             </div>
           </div>
-        )}
 
-        {/* Finance Staff Actions - Generate Refund for Approved Disputes */}
-        {isFinanceStaff && dispute.status === "APPROVED" && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Finance Actions
-            </h2>
-            <p className="text-gray-600 mb-4">
-              This dispute has been approved. Generate a refund to include it in
-              the next payroll cycle.
-            </p>
-            <Link
-              href={`/payroll/tracking/refunds?disputeId=${dispute.disputeId}`}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-block"
-            >
-              Generate Refund
-            </Link>
-          </div>
-        )}
+          {/* Resolution Details */}
+          {dispute.status === "APPROVED" && dispute.resolutionComment && (
+            <div className="bg-green-500/10 rounded-lg shadow p-6 mb-6">
+              <h2 className="text-xl font-bold text-green-400 mb-4">
+                Resolution Details
+              </h2>
+              <p className="text-green-300 whitespace-pre-wrap">
+                {dispute.resolutionComment}
+              </p>
+            </div>
+          )}
 
-        {/* Under Review Message */}
-        {!isAdmin && dispute.status.toLowerCase() === "under review" && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-semibold text-blue-900 mb-2">
-              Dispute Under Review
-            </h3>
-            <p className="text-sm text-blue-800">
-              Your dispute is currently being reviewed by the payroll team. You
-              will be notified once a decision has been made. Expected
-              processing time: 3-5 business days.
-            </p>
-          </div>
-        )}
+          {dispute.status === "REJECTED" && dispute.rejectionReason && (
+            <div className="bg-red-500/10 rounded-lg shadow p-6 mb-6">
+              <h2 className="text-xl font-bold text-red-400 mb-4">
+                Rejection Details
+              </h2>
+              <p className="text-red-300 whitespace-pre-wrap">
+                {dispute.rejectionReason}
+              </p>
+            </div>
+          )}
 
-        {/* Approved Next Steps */}
-        {dispute.status === "APPROVED" && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-            <h3 className="font-semibold text-green-900 mb-2">Next Steps</h3>
-            <p className="text-sm text-green-800">
-              Your dispute has been approved. Any adjustments will be processed
-              in the next payroll cycle. Check your next payslip for the
-              correction.
-            </p>
+          {/* Timeline */}
+          <div className="bg-[#2a2a2a] rounded-lg shadow p-6 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4">Timeline</h2>
+            <div className="space-y-4">
+              <div className="flex items-start">
+                <div className="shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                  1
+                </div>
+                <div className="ml-4 flex-1">
+                  <p className="font-semibold text-white">Dispute Submitted</p>
+                  <p className="text-sm text-gray-400">
+                    {formatDate(dispute.createdAt)}
+                  </p>
+                </div>
+              </div>
+
+              {dispute.payrollSpecialistId && (
+                <div className="flex items-start">
+                  <div className="shrink-0 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
+                    2
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="font-semibold text-white">
+                      Specialist Reviewed
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      Payroll specialist completed review
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {dispute.payrollManagerId && (
+                <div className="flex items-start">
+                  <div className="shrink-0 w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                    3
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="font-semibold text-white">Manager Decision</p>
+                    <p className="text-sm text-gray-400">
+                      Payroll manager completed review
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {["APPROVED", "REJECTED"].includes(dispute.status) && (
+                <div className="flex items-start">
+                  <div
+                    className={`shrink-0 w-10 h-10 ${
+                      dispute.status === "APPROVED"
+                        ? "bg-green-500"
+                        : "bg-red-500"
+                    } rounded-full flex items-center justify-center text-white font-bold`}
+                  >
+                    ✓
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="font-semibold text-white">
+                      {dispute.status === "APPROVED"
+                        ? "Dispute Resolved"
+                        : "Dispute Rejected"}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {formatDate(dispute.updatedAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Admin Actions */}
+          {isAdmin && dispute.status.toLowerCase() === "under review" && (
+            <div className="bg-[#2a2a2a] rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-white mb-4">
+                Admin Actions
+              </h2>
+              <div className="flex gap-3">
+                <Link
+                  href={`/payroll/tracking/disputes/${dispute._id}/review`}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Review & Make Decision
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Finance Staff Actions - Generate Refund for Approved Disputes */}
+          {isFinanceStaff && dispute.status === "APPROVED" && (
+            <div className="bg-[#2a2a2a] rounded-lg shadow p-6 mb-6">
+              <h2 className="text-xl font-bold text-white mb-4">
+                Finance Actions
+              </h2>
+              <p className="text-gray-400 mb-4">
+                This dispute has been approved. Generate a refund to include it
+                in the next payroll cycle.
+              </p>
+              <Link
+                href={`/payroll/tracking/refunds?disputeId=${dispute.disputeId}`}
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-block"
+              >
+                Generate Refund
+              </Link>
+            </div>
+          )}
+
+          {/* Under Review Message */}
+          {!isAdmin && dispute.status.toLowerCase() === "under review" && (
+            <div className="bg-blue-500/10 rounded-lg p-6">
+              <h3 className="font-semibold text-blue-400 mb-2">
+                Dispute Under Review
+              </h3>
+              <p className="text-sm text-blue-300">
+                Your dispute is currently being reviewed by the payroll team.
+                You will be notified once a decision has been made. Expected
+                processing time: 3-5 business days.
+              </p>
+            </div>
+          )}
+
+          {/* Approved Next Steps */}
+          {dispute.status === "APPROVED" && (
+            <div className="bg-green-500/10 rounded-lg p-6">
+              <h3 className="font-semibold text-green-400 mb-2">Next Steps</h3>
+              <p className="text-sm text-green-300">
+                Your dispute has been approved. Any adjustments will be
+                processed in the next payroll cycle. Check your next payslip for
+                the correction.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
