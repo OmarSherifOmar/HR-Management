@@ -200,20 +200,33 @@ export class AccrualSuspensionService {
     // Calculate service days
     const serviceDays = await this.calculateActualServiceDays(employeeId, periodStart, periodEnd);
 
-    // Calculate original accrual (full month)
-    const originalAccrual = policy.monthlyRate;
-
-    // Calculate adjusted accrual based on actual service days
-    const adjustedAccrual = (originalAccrual * serviceDays.serviceDaysPercentage) / 100;
-    const deductedAmount = originalAccrual - adjustedAccrual;
-
-    // Get or create entitlement
+    // Get entitlement to determine yearlyEntitlement for accurate accrual calculation
     let entitlement = await this.entitlementModel.findOne({
       employeeId: new Types.ObjectId(employeeId),
       leaveTypeId: new Types.ObjectId(leaveTypeId),
     });
 
+    // Calculate original accrual (full month) based on entitlement's yearlyEntitlement
+    // If no entitlement exists yet, fall back to policy's monthlyRate
+    const originalAccrual = entitlement?.yearlyEntitlement 
+      ? entitlement.yearlyEntitlement / 12 
+      : policy.monthlyRate;
+
+    // Calculate adjusted accrual based on actual service days
+    const adjustedAccrual = (originalAccrual * serviceDays.serviceDaysPercentage) / 100;
+    const deductedAmount = originalAccrual - adjustedAccrual;
+
+    // Check if automatic entitlement creation is disabled
+    const automaticEntitlementEnabled = process.env.AUTOMATIC_ENTITLEMENT_ENABLED !== 'false';
+    
+    // Create entitlement if it doesn't exist
     if (!entitlement) {
+      if (!automaticEntitlementEnabled) {
+        throw new BadRequestException(
+          'Automatic entitlement creation is disabled. Entitlement must be created manually through Personalized Entitlements.'
+        );
+      }
+      
       entitlement = new this.entitlementModel({
         employeeId: new Types.ObjectId(employeeId),
         leaveTypeId: new Types.ObjectId(leaveTypeId),
@@ -505,7 +518,18 @@ export class AccrualSuspensionService {
     }
 
     const serviceDays = await this.calculateActualServiceDays(employeeId, periodStart, periodEnd);
-    const originalAccrual = policy.monthlyRate;
+    
+    // Get entitlement to determine yearlyEntitlement for accurate accrual calculation
+    const entitlement = await this.entitlementModel.findOne({
+      employeeId: new Types.ObjectId(employeeId),
+      leaveTypeId: new Types.ObjectId(leaveTypeId),
+    });
+
+    // Calculate original accrual based on entitlement's yearlyEntitlement
+    // If no entitlement exists yet, fall back to policy's monthlyRate
+    const originalAccrual = entitlement?.yearlyEntitlement 
+      ? entitlement.yearlyEntitlement / 12 
+      : policy.monthlyRate;
     const adjustedAccrual = (originalAccrual * serviceDays.serviceDaysPercentage) / 100;
 
     return {

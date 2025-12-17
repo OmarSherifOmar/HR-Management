@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 
 /**
  * DTO for HR override decision
@@ -12,8 +12,4 @@ export class HROverrideDto {
   @IsOptional()
   @IsString()
   comments?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  allowNegativeBalance?: boolean = true;
 }

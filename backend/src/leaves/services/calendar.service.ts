@@ -72,22 +72,38 @@ export class CalendarService {
     }
 
     // Check for duplicate holiday by name or date range
-    const existingHoliday = await this.holidayModel.findOne({
-      $or: [
-        { name: holiday.name },
-        {
-          startDate: { $lte: new Date(endDate) },
-          $or: [
-            { endDate: { $gte: new Date(holiday.startDate) } },
-            { endDate: null, startDate: { $gte: new Date(holiday.startDate) } },
-          ],
-        },
-      ],
+    const existingHolidays = await this.holidayModel.find({
       _id: { $in: calendar.holidays },
     }).exec();
 
-    if (existingHoliday) {
-      throw new BadRequestException(`Holiday already exists: ${holiday.name}`);
+    // Check for duplicate name
+    const duplicateName = existingHolidays.find(h => h.name === holiday.name);
+    if (duplicateName) {
+      throw new BadRequestException(
+        `Holiday with the name "${holiday.name}" already exists in this calendar.`
+      );
+    }
+
+    // Check for overlapping dates
+    const overlapping = existingHolidays.find(h => {
+      const hStart = new Date(h.startDate);
+      const hEnd = h.endDate ? new Date(h.endDate) : hStart;
+      const newStart = new Date(holiday.startDate);
+      const newEnd = new Date(endDate);
+
+      // Check if dates overlap
+      return (newStart <= hEnd && newEnd >= hStart);
+    });
+
+    if (overlapping) {
+      const overlapStart = overlapping.startDate.toLocaleDateString();
+      const overlapEnd = overlapping.endDate 
+        ? overlapping.endDate.toLocaleDateString() 
+        : overlapStart;
+      throw new BadRequestException(
+        `Date range overlaps with existing holiday "${overlapping.name}" (${overlapStart}${overlapping.endDate ? ' - ' + overlapEnd : ''}). ` +
+        `Please choose different dates or delete the conflicting holiday first.`
+      );
     }
 
     // Create a new Holiday document
@@ -238,16 +254,44 @@ export class CalendarService {
     period: { from: Date; to: Date; reason: string },
   ): Promise<CalendarDocument> {
     if (new Date(period.from) > new Date(period.to)) {
-      throw new BadRequestException('from date must be before or equal to to date');
+      throw new BadRequestException('Start date must be before or equal to end date');
     }
 
     const calendar = await this.calendarModel.findOne({ year }).exec();
     if (!calendar) throw new NotFoundException(`Calendar for year ${year} not found`);
 
-    // Check for duplicate blocked period
-    const isDuplicate = this.isBlockedPeriodDuplicate(calendar.blockedPeriods, period);
-    if (isDuplicate) {
-      throw new BadRequestException(`Blocked period already exists: ${period.reason} (${period.from} - ${period.to})`);
+    // Check for exact duplicate (same dates or same reason)
+    const exactDuplicate = calendar.blockedPeriods.find(
+      bp => this.isSameDateRange(bp.from, bp.to, period.from, period.to) ||
+            bp.reason.toLowerCase() === period.reason.toLowerCase()
+    );
+
+    if (exactDuplicate) {
+      const dupFrom = new Date(exactDuplicate.from).toLocaleDateString();
+      const dupTo = new Date(exactDuplicate.to).toLocaleDateString();
+      throw new BadRequestException(
+        `Blocked period already exists: "${exactDuplicate.reason}" (${dupFrom} - ${dupTo}). ` +
+        `Please delete it first or choose a different date range and reason.`
+      );
+    }
+
+    // Check for overlapping dates
+    const overlapping = calendar.blockedPeriods.find(bp => {
+      const bpStart = new Date(bp.from);
+      const bpEnd = new Date(bp.to);
+      const newStart = new Date(period.from);
+      const newEnd = new Date(period.to);
+
+      return (newStart <= bpEnd && newEnd >= bpStart);
+    });
+
+    if (overlapping) {
+      const overlapFrom = new Date(overlapping.from).toLocaleDateString();
+      const overlapTo = new Date(overlapping.to).toLocaleDateString();
+      throw new BadRequestException(
+        `Date range overlaps with existing blocked period "${overlapping.reason}" (${overlapFrom} - ${overlapTo}). ` +
+        `Please choose different dates or delete the conflicting period first.`
+      );
     }
 
     calendar.blockedPeriods.push(period);

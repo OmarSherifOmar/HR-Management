@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { NotificationLog, NotificationLogDocument } from '../../time-management/models/notification-log.schema';
+import { Types } from 'mongoose';
+import { NotificationService as TimeManagementNotificationService } from '../../time-management/services/notification.service';
+import { NotificationLogDocument } from '../../time-management/models/notification-log.schema';
 
 /**
  * Notification Types for Leave Management
@@ -26,81 +26,83 @@ export enum LeaveNotificationType {
 }
 
 /**
- * Notification Service for Leave Management
+ * Leave Notification Service
  * 
- * Uses the NotificationLog schema from time-management to persist notifications.
- * Service and controller are in the leaves module to avoid merge conflicts.
+ * Handles all leave-related notification logic and message formatting.
+ * Delegates actual notification persistence to TimeManagementNotificationService.
  * 
  * REQ-019: Employee receives notifications on approval, rejection, return, modification
  * REQ-024: Manager receives notifications when requests are assigned or overdue
  * REQ-030: All stakeholders notified when request is finalized
  */
 @Injectable()
-export class NotificationService {
-  private readonly logger = new Logger(NotificationService.name);
+export class LeavesNotificationService {
+  private readonly logger = new Logger(LeavesNotificationService.name);
 
   constructor(
-    @InjectModel(NotificationLog.name) private notificationModel: Model<NotificationLogDocument>,
+    private readonly timeManagementNotificationService: TimeManagementNotificationService,
   ) {}
 
   /**
-   * Create and save a notification
+   * Send a single notification using time management service
    */
-  async send(
+  private async send(
     recipientId: string,
     type: LeaveNotificationType | string,
     message: string,
   ): Promise<NotificationLogDocument> {
-    const notification = new this.notificationModel({
-      to: new Types.ObjectId(recipientId),
+    const sent = await this.timeManagementNotificationService.send(
+      new Types.ObjectId(recipientId),
       type,
       message,
-    });
-
-    const saved = await notification.save();
-    this.logger.log(`[NOTIFICATION] ${type} sent to ${recipientId}: ${message}`);
-    
-    return saved;
-  }
-
-  /**
-   * Send multiple notifications at once
-   */
-  async sendBatch(
-    notifications: { recipientId: string; type: LeaveNotificationType | string; message: string }[],
-  ): Promise<NotificationLogDocument[]> {
-    const docs = notifications.map(n => ({
-      to: new Types.ObjectId(n.recipientId),
-      type: n.type,
-      message: n.message,
-    }));
-
-    const saved = await this.notificationModel.insertMany(docs);
-    this.logger.log(`[BATCH NOTIFICATION] Sent ${saved.length} notifications`);
-    
-    return saved;
+    );
+    this.logger.log(`[LEAVE_NOTIFICATION] ${type} sent to ${recipientId}`);
+    return sent;
   }
 
   /**
    * Get notifications for a user
+   * Delegates to time management notification service
    */
   async getNotificationsForUser(
     userId: string,
     options?: { limit?: number; skip?: number },
   ): Promise<NotificationLogDocument[]> {
-    return this.notificationModel
-      .find({ to: new Types.ObjectId(userId) })
-      .sort({ createdAt: -1 })
-      .skip(options?.skip || 0)
-      .limit(options?.limit || 50)
-      .exec();
+    return this.timeManagementNotificationService.getNotificationsForUser(
+      new Types.ObjectId(userId),
+      options,
+    );
   }
 
   /**
    * Get notification count for a user
+   * Delegates to time management notification service
    */
   async getNotificationCount(userId: string): Promise<number> {
-    return this.notificationModel.countDocuments({ to: new Types.ObjectId(userId) });
+    return this.timeManagementNotificationService.getNotificationCount(
+      new Types.ObjectId(userId),
+    );
+  }
+
+  /**
+   * Send multiple notifications at once
+   */
+  private async sendBatch(
+    notifications: { recipientId: string; type: LeaveNotificationType | string; message: string }[],
+  ): Promise<NotificationLogDocument[]> {
+    const results: NotificationLogDocument[] = [];
+    
+    for (const notification of notifications) {
+      const sent = await this.timeManagementNotificationService.send(
+        new Types.ObjectId(notification.recipientId),
+        notification.type,
+        notification.message,
+      );
+      results.push(sent);
+    }
+    
+    this.logger.log(`[LEAVE_BATCH_NOTIFICATION] Sent ${results.length} notifications`);
+    return results;
   }
 
   /**
@@ -113,26 +115,24 @@ export class NotificationService {
     title: string;
     message: string;
     data?: Record<string, any>;
-  }): Promise<NotificationLogDocument> {
+  }): Promise<NotificationLogDocument | null> {
     // For special recipient types like 'hr_manager', we'd need to resolve the actual ID
     // For now, log it and skip if it's a placeholder
     if (params.recipientId === 'hr_manager') {
       this.logger.log(`[NOTIFICATION] HR Manager notification (not sent - needs resolution): ${params.message}`);
       // In a real implementation, you'd resolve the HR manager ID here
-      // For now, we'll just log it
-      return null as any;
+      return null;
     }
 
-    const notification = new this.notificationModel({
-      to: new Types.ObjectId(params.recipientId),
-      type: params.type,
-      message: `[${params.title}] ${params.message}`,
-    });
-
-    const saved = await notification.save();
-    this.logger.log(`[NOTIFICATION] ${params.type} sent to ${params.recipientId}: ${params.title}`);
+    const formattedMessage = `[${params.title}] ${params.message}`;
+    const sent = await this.timeManagementNotificationService.send(
+      new Types.ObjectId(params.recipientId),
+      params.type,
+      formattedMessage,
+    );
     
-    return saved;
+    this.logger.log(`[NOTIFICATION] ${params.type} sent to ${params.recipientId}: ${params.title}`);
+    return sent;
   }
 
   // ==================== REQ-019: EMPLOYEE STATUS NOTIFICATIONS ====================

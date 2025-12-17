@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsBoolean } from 'class-validator';
 
 /**
  * DTO for manager approval/rejection decision
@@ -10,4 +10,8 @@ export class ManagerDecisionDto {
   @IsOptional()
   @IsString()
   comments?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  irregularPatternFlag?: boolean;
 }
