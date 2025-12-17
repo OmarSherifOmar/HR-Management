@@ -230,7 +230,7 @@ export default function BalanceAdjustmentsPage() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || user?.role !== 'HR Admin') {
     return null;
   }
 

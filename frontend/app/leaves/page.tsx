@@ -32,6 +32,7 @@ type LeaveRequest = {
 };
 
 export default function LeaveRequestsPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -41,8 +42,15 @@ export default function LeaveRequestsPage() {
   const [cancelError, setCancelError] = useState('');
 
   useEffect(() => {
-    fetchLeaveRequests();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (isLoggedIn) {
+      fetchLeaveRequests();
+    }
+  }, [isLoading, isLoggedIn, router]);
 
   const cancelLeaveRequest = async (requestId: string) => {
     try {
@@ -132,6 +140,18 @@ export default function LeaveRequestsPage() {
     return request.status === filter;
   });
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
   return (
     <>
       <DashboardLayout
@@ -220,7 +240,7 @@ export default function LeaveRequestsPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-white">
-                            {request.leaveTypeId.name}
+                            {request.leaveTypeId?.name || 'Leave Request'}
                           </h3>
                           <span
                             className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusBadge(

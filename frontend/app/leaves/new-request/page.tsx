@@ -1,7 +1,7 @@
 'use client';
 
 import DashboardLayout from '../../components/DashboardLayout';
-import { authenticatedFetch } from '../../context/AuthContext';
+import { authenticatedFetch, useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -25,6 +25,7 @@ interface LeaveType {
 }
 
 export default function NewLeaveRequestPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,8 +54,15 @@ export default function NewLeaveRequestPage() {
   const [selectedLeaveType, setSelectedLeaveType] = useState<LeaveType | null>(null);
 
   useEffect(() => {
-    fetchLeaveTypes();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (isLoggedIn) {
+      fetchLeaveTypes();
+    }
+  }, [isLoading, isLoggedIn, router]);
 
   const fetchLeaveTypes = async () => {
     try {
@@ -331,6 +339,18 @@ export default function NewLeaveRequestPage() {
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   return (
     <DashboardLayout

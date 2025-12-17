@@ -1,6 +1,8 @@
 'use client';
 
 import DashboardLayout from '../../components/DashboardLayout';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   Calendar,
@@ -26,13 +28,22 @@ interface LeaveBalance {
 }
 
 export default function MyBalancePage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchBalance();
-  }, []);
+    if (!isLoading && !isLoggedIn) {
+      router.replace('/');
+      return;
+    }
+
+    if (isLoggedIn) {
+      fetchBalance();
+    }
+  }, [isLoading, isLoggedIn, router]);
 
   const fetchBalance = async () => {
     try {
@@ -67,6 +78,18 @@ export default function MyBalancePage() {
       setLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   return (
     <DashboardLayout

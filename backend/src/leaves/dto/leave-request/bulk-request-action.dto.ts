@@ -47,12 +47,6 @@ export class BulkOverrideActionDto {
   @IsOptional()
   @IsString()
   comments?: string;
-
-  /**
-   * Whether to allow negative balance for approvals
-   */
-  @IsOptional()
-  allowNegativeBalance?: boolean;
 }
 
 /**
