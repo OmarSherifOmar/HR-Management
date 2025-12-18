@@ -32,7 +32,7 @@ export default function Home() {
   useEffect(() => {
     // Redirect to dashboard if already logged in
     if (!isLoading && isLoggedIn) {
-      router.push('/payroll');
+      router.push('/dashboard');
     }
   }, [isLoading, isLoggedIn, router]);
 
@@ -58,7 +58,7 @@ export default function Home() {
         if (data.user) {
           login(data.user);
         }
-        router.push('/payroll');
+        router.push('/dashboard');
       } else {
         setError(data.message || 'Invalid email or password');
       }
@@ -149,7 +149,7 @@ export default function Home() {
           <p className="text-gray-400 mb-6">Would you like to go to the dashboard?</p>
           <div className="space-y-3">
             <button
-              onClick={() => router.push('/payroll')}
+              onClick={() => router.push('/dashboard')}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all"
             >
               Go to Dashboard

@@ -94,7 +94,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
     {
       name: 'Dashboard',
       icon: <LayoutDashboard size={20} />,
-      href: '/payroll',
+      href: '/dashboard',
     },
     {
       name: 'Employees',
