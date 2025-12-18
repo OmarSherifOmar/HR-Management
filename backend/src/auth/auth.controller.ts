@@ -28,10 +28,12 @@ export class AuthController {
   @Public()
   @Post('login')
   async signIn(
+    
     @Body() signInDto: SignInDto, 
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response
   ) {
+    console.log('LOGIN ENDPOINT HIT', signInDto);
     try {
       // Check if user is already logged in
       const token = req.cookies?.token || req.headers['authorization']?.split(' ')[1];
@@ -44,13 +46,18 @@ export class AuthController {
             { statusCode: HttpStatus.BAD_REQUEST, message: 'You are already logged in' },
             HttpStatus.BAD_REQUEST
           );
-        } catch (verifyError) {
-          // Token is invalid or expired, allow login to proceed
-          if (verifyError instanceof HttpException) {
-            throw verifyError;
-          }
-          // Token verification failed, continue with login
-        }
+        } catch (error) {
+  console.error('LOGIN ERROR FULL:', error); // 👈 MUST ADD
+
+  if (error instanceof HttpException) {
+    throw error;
+  }
+
+  throw new HttpException(
+    { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'An error occurred during login' },
+    HttpStatus.INTERNAL_SERVER_ERROR,
+  );
+}
       }
 
       const result = await this.authService.signIn(signInDto.email, signInDto.password);

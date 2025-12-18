@@ -3,7 +3,6 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { EmployeeService } from '../employee-profile/employee-profile.service';
@@ -14,99 +13,125 @@ import { Types } from 'mongoose';
 
 export type SignInResult = {
   access_token: string;
-  payload: { sub: string; employeeNumber?: string; roles: string[]; username?: string };
+  payload: {
+    sub: string;
+    employeeNumber?: string;
+    roles: string[];
+    username?: string;
+  };
 };
-
 
 @Injectable()
 export class AuthService {
-  private readonly saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
   private readonly jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '1h';
 
-
   constructor(
-    private usersService: EmployeeService,
-    private jwtService: JwtService,
+    private readonly usersService: EmployeeService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterRequestDto) {
-    console.log("REGISTER DTO RECEIVED:", dto);
+  /* ========================= REGISTER ========================= */
 
-    // Check if user already exists
-    const existingUser = await this.usersService.findByEmail(dto.email);
+  async register(dto: RegisterRequestDto) {
+    console.log('REGISTER DTO RECEIVED:', dto);
+
+    let existingUser;
+    try {
+      existingUser = await this.usersService.findByEmail(dto.email);
+    } catch (e) {
+      console.error('EMAIL LOOKUP ERROR:', e);
+      throw new InternalServerErrorException('Email lookup failed');
+    }
+
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    let employee;
     try {
-      const [firstName, ...rest] = dto.name.split(" ");
-      const lastName = rest.join(" ") || "Unknown";
+      const [firstName, ...rest] = dto.name.split(' ');
+      const lastName = rest.join(' ') || 'Unknown';
 
-      const employeeNumber = "EMP-" + Date.now();
-      const nationalId = String(Math.floor(Math.random() * 1e14));
-      const dateOfHire = new Date();
-
-      // Create employee
-      employee = await this.usersService.create({
+      const employee = await this.usersService.create({
         firstName,
         lastName,
-        nationalId,
+        nationalId: String(Math.floor(Math.random() * 1e14)),
         password: dto.password,
         personalEmail: dto.email,
-        employeeNumber,
-        dateOfHire,
-        primaryPositionId: dto.primaryPositionId ? new Types.ObjectId(dto.primaryPositionId) : undefined,
-        supervisorPositionId: dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined,
+        employeeNumber: `EMP-${Date.now()}`,
+        dateOfHire: new Date(),
+        primaryPositionId: dto.primaryPositionId
+          ? new Types.ObjectId(dto.primaryPositionId)
+          : undefined,
+        supervisorPositionId: dto.supervisorPositionId
+          ? new Types.ObjectId(dto.supervisorPositionId)
+          : undefined,
       });
 
-      // Assign role
       await this.usersService.assignRole(employee._id, dto.role);
 
       return employee;
     } catch (err) {
-      console.error("REGISTRATION ERROR:", err);
-      
-      // Re-throw known exceptions
-      if (err instanceof ConflictException || err instanceof BadRequestException) {
-        throw err;
-      }
-      
-      throw new InternalServerErrorException("An error occurred during registration");
+      console.error('REGISTRATION ERROR:', err);
+      throw err instanceof ConflictException || err instanceof BadRequestException
+        ? err
+        : new InternalServerErrorException('Registration failed');
     }
   }
 
- async signIn(email: string, password: string): Promise<SignInResult> {
+  /* ========================= LOGIN ========================= */
+
+  async signIn(email: string, password: string): Promise<SignInResult> {
+  console.log('SIGNIN START');
+
   if (!email || !password) {
+    console.log('❌ Missing email or password');
     throw new BadRequestException('Email and password are required');
   }
 
-  const user = await this.usersService.findByEmail(email);
-  if (!user) {
+  let user;
+  try {
+    user = await this.usersService.findByEmail(email);
+    console.log('✅ USER FOUND:', !!user);
+  } catch (e) {
+    console.error('❌ FIND USER ERROR:', e);
+    throw new InternalServerErrorException('User lookup failed');
+  }
+
+  if (!user || !user.password) {
+    console.log('❌ USER OR PASSWORD MISSING');
     throw new UnauthorizedException('Invalid credentials');
   }
 
-  if (!user.password) {
-    throw new UnauthorizedException('No password set for this account');
+  console.log('🔐 PASSWORD HASH:', user.password);
+
+  let passwordValid = false;
+  try {
+    passwordValid = await bcrypt.compare(password, user.password);
+    console.log('✅ PASSWORD MATCH:', passwordValid);
+  } catch (e) {
+    console.error('❌ BCRYPT ERROR:', e);
+    throw new InternalServerErrorException('Password verification failed');
   }
 
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
+  if (!passwordValid) {
+    console.log('❌ PASSWORD INVALID');
     throw new UnauthorizedException('Invalid credentials');
   }
 
-  const sub = user._id.toString();
+  const sub = user._id?.toString();
+  console.log('🆔 USER ID:', sub);
 
   let roles: string[] = [];
-try {
-  const sysRole = await this.usersService.getSystemRoleForEmployee(sub);
-  if (sysRole && Array.isArray(sysRole.roles)) {
-    roles = sysRole.roles;
-  }
-} catch (err) {
-  console.error("ROLE FETCH ERROR:", err);
-}
+  try {
+    const sysRole = await this.usersService.getSystemRoleForEmployee(sub);
+    console.log('🎭 ROLE FETCH RESULT:', sysRole);
 
+    if (sysRole?.roles && Array.isArray(sysRole.roles)) {
+      roles = sysRole.roles;
+    }
+  } catch (e) {
+    console.error('⚠️ ROLE FETCH FAILED:', e);
+  }
 
   const username =
     user.fullName ||
@@ -114,20 +139,29 @@ try {
     user.workEmail ||
     user.personalEmail;
 
+  console.log('👤 USERNAME:', username);
+
   const payload = {
     sub,
     employeeNumber: user.employeeNumber,
-    roles,          
+    roles,
     username,
   };
 
-  const token = await this.jwtService.signAsync(payload, {
-    expiresIn: this.jwtExpiresIn as any,  
-  });
+  console.log('📦 JWT PAYLOAD:', payload);
+  console.log('🔑 JWT SECRET EXISTS:', !!process.env.JWT_SECRET);
 
-  return {
-    access_token: token,
-    payload,
-  };
-}
+  try {
+    const token = await this.jwtService.signAsync(payload);
+    console.log('✅ JWT SIGNED');
+
+    return {
+      access_token: token,
+      payload,
+    };
+  } catch (e) {
+    console.error('❌ JWT SIGN ERROR:', e);
+    throw new InternalServerErrorException('JWT signing failed');
+  }
+  }
 }
