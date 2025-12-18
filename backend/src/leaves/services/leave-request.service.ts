@@ -714,20 +714,38 @@ export class LeaveRequestService {
       throw new NotFoundException(`Manager with ID ${managerId} not found`);
     }
 
+    console.log('[Team Balances] Manager:', {
+      _id: manager._id,
+      name: `${manager.firstName} ${manager.lastName}`,
+      primaryPositionId: manager.primaryPositionId,
+    });
+
     // Build employee query: team members who have supervisorPositionId == manager.primaryPositionId
     const employeeModel = this.employeeService['employeeModel'];
-    const teamQuery: any = { isActive: true };
+    const teamQuery: any = { status: 'ACTIVE' };
     if (manager.primaryPositionId) {
-      teamQuery.supervisorPositionId = manager.primaryPositionId;
+      // Normalize primaryPositionId to ObjectId to ensure proper Mongo query matching
+      const normalizedPositionId = new Types.ObjectId(manager.primaryPositionId.toString());
+      teamQuery.supervisorPositionId = normalizedPositionId;
+      console.log('[Team Balances] Normalized manager primaryPositionId:', normalizedPositionId);
+    } else {
+      console.warn('[Team Balances] Manager has no primaryPositionId - will return no employees');
     }
     if (filters?.departmentId) {
       teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
     }
 
+    console.log('[Team Balances] Query for supervised employees:', teamQuery);
+
     const teamMembers = await employeeModel
       .find(teamQuery)
       .select('_id firstName lastName employeeNumber primaryDepartmentId')
       .exec();
+
+    console.log('[Team Balances] Found team members:', teamMembers.length);
+    teamMembers.forEach((member, idx) => {
+      console.log(`  ${idx + 1}. ${member.firstName} ${member.lastName} (${member._id})`);
+    });
 
     // Default date range for upcoming if not provided: today -> 90 days out
     const today = new Date();
