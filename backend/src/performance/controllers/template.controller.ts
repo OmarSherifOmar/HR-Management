@@ -37,7 +37,7 @@ export class TemplateController {
   }
 
   @Get(':id')
-  @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findById(@Param('id') id: string) {
     return this.templateService.findById(id);
   }
