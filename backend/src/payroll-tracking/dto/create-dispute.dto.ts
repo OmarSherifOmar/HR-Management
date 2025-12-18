@@ -3,16 +3,16 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateDisputeDto {
   @IsString()
+  @IsOptional()
+  employeeId?: string;
+
+  @IsString()
   @IsNotEmpty()
-  employeeId: string;
+  payslipId: string;
 
   @IsString()
   @IsOptional()
   claimId?: string;
-
-  @IsString()
-  @IsOptional()
-  refundId?: string;
 
   @Type(() => Number)
   @IsNumber()
@@ -20,8 +20,8 @@ export class CreateDisputeDto {
   amount?: number;
 
   @IsString()
-  @IsOptional()
-  reason?: string;
+  @IsNotEmpty()
+  reason: string;
 
   @IsString()
   @IsOptional()

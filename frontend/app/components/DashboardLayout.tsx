@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useState, useEffect, ReactNode } from 'react';
-import Link from 'next/link';
+import { useAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, ReactNode } from "react";
+import Link from "next/link";
 import {
   LayoutDashboard,
   Users,
@@ -13,8 +13,8 @@ import {
   TrendingUp,
   Target,
   Clock,
-  Bell
-} from 'lucide-react';
+  Bell,
+} from "lucide-react";
 
 type MenuItem = {
   name: string;
@@ -30,7 +30,11 @@ interface DashboardLayoutProps {
   description?: string;
 }
 
-export default function DashboardLayout({ children, title, description }: DashboardLayoutProps) {
+export default function DashboardLayout({
+  children,
+  title,
+  description,
+}: DashboardLayoutProps) {
   const { user, isLoggedIn, isLoading, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -39,7 +43,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
-      router.replace('/');
+      router.replace("/");
     }
   }, [isLoading, isLoggedIn, router]);
 
@@ -60,15 +64,15 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   const handleLogout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
+      await fetch("http://localhost:3000/auth/logout", {
+        method: "POST",
+        credentials: "include",
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       logout();
-      window.location.href = '/';
+      window.location.href = "/";
     }
   };
 
@@ -92,44 +96,58 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   const menuItems: MenuItem[] = [
     {
-      name: 'Dashboard',
+      name: "Dashboard",
       icon: <LayoutDashboard size={20} />,
-      href: '/dashboard',
+      href: "/dashboard",
     },
     {
-      name: 'Employees',
+      name: "Employees",
       icon: <Users size={20} />,
       subItems: [
-        { name: 'View All', href: '/dashboard/employees' },
-        { name: 'Add New', href: '/dashboard/employees/add' },
-        { name: 'Departments', href: '/dashboard/employees/departments' },
-        { name: 'Positions', href: '/dashboard/employees/positions' },
+        { name: "View All", href: "/dashboard/employees" },
+        { name: "Add New", href: "/dashboard/employees/add" },
+        { name: "Departments", href: "/dashboard/employees/departments" },
+        { name: "Positions", href: "/dashboard/employees/positions" },
       ],
     },
     {
-      name: 'Organization',
+      name: "Organization",
       icon: <Building2 size={20} />,
       subItems: [
-        { name: 'Structure', href: '/dashboard/organization' },
-        { name: 'Departments', href: '/dashboard/organization/departments' },
-        { name: 'Hierarchy', href: '/dashboard/organization/hierarchy' },
+        { name: "Structure", href: "/dashboard/organization" },
+        { name: "Departments", href: "/dashboard/organization/departments" },
+        { name: "Hierarchy", href: "/dashboard/organization/hierarchy" },
       ],
     },
     {
-      name: 'Leaves',
+      name: "Leaves",
       icon: <Calendar size={20} />,
       subItems: [
-        { name: 'Requests', href: '/leaves' },
-        { name: 'Approvals', href: '/dashboard/leaves/approvals' },
-        { name: 'My Balance', href: '/leaves/balance' },
-        ...(user?.role === 'HR Admin' ? [
-          { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
-          { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
-          { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
-          { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
-          { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
-          { name: 'Admin: Entitlements', href: '/dashboard/admin/entitlements' },
-        ] : []),
+        { name: "Requests", href: "/leaves" },
+        { name: "Approvals", href: "/dashboard/leaves/approvals" },
+        { name: "My Balance", href: "/leaves/balance" },
+        ...(user?.role === "HR Admin"
+          ? [
+              { name: "Admin: Policies", href: "/dashboard/admin/policies" },
+              {
+                name: "Admin: Leave Types",
+                href: "/dashboard/admin/leave-types",
+              },
+              {
+                name: "Admin: Eligibility Rules",
+                href: "/dashboard/admin/eligibility",
+              },
+              {
+                name: "Admin: Calendar & Blocked Days",
+                href: "/dashboard/admin/calendar",
+              },
+              { name: "Admin: Settings", href: "/dashboard/admin/settings" },
+              {
+                name: "Admin: Entitlements",
+                href: "/dashboard/admin/entitlements",
+              },
+            ]
+          : []),
       ],
     },
     // Conditionally include Payroll section based on user role
@@ -154,31 +172,31 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       ],
     }] : []),
     {
-      name: 'Performance',
+      name: "Performance",
       icon: <TrendingUp size={20} />,
       subItems: [
-        { name: 'Reviews', href: '/dashboard/performance' },
-        { name: 'Goals', href: '/dashboard/performance/goals' },
-        { name: 'Feedback', href: '/dashboard/performance/feedback' },
+        { name: "Reviews", href: "/dashboard/performance" },
+        { name: "Goals", href: "/dashboard/performance/goals" },
+        { name: "Feedback", href: "/dashboard/performance/feedback" },
       ],
     },
     {
-      name: 'Recruitment',
+      name: "Recruitment",
       icon: <Target size={20} />,
       subItems: [
-        { name: 'Job Postings', href: '/dashboard/recruitment' },
-        { name: 'Candidates', href: '/dashboard/recruitment/candidates' },
-        { name: 'Interviews', href: '/dashboard/recruitment/interviews' },
-        { name: 'Offers', href: '/dashboard/recruitment/offers' },
+        { name: "Job Postings", href: "/dashboard/recruitment" },
+        { name: "Candidates", href: "/dashboard/recruitment/candidates" },
+        { name: "Interviews", href: "/dashboard/recruitment/interviews" },
+        { name: "Offers", href: "/dashboard/recruitment/offers" },
       ],
     },
     {
-      name: 'Time Management',
+      name: "Time Management",
       icon: <Clock size={20} />,
       subItems: [
-        { name: 'Attendance', href: '/dashboard/time-management' },
-        { name: 'Schedules', href: '/dashboard/time-management/schedules' },
-        { name: 'Overtime', href: '/dashboard/time-management/overtime' },
+        { name: "Attendance", href: "/dashboard/time-management" },
+        { name: "Schedules", href: "/dashboard/time-management/schedules" },
+        { name: "Overtime", href: "/dashboard/time-management/overtime" },
       ],
     },
   ];
@@ -187,8 +205,14 @@ export default function DashboardLayout({ children, title, description }: Dashbo
     <div className="min-h-screen bg-[#1a1a1a]">
       {/* Sidebar */}
       <aside
+<<<<<<< HEAD
         className={`fixed left-0 top-0 h-full bg-[#1a1a1a] transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'
           }`}
+=======
+        className={`fixed left-0 top-0 h-full bg-[#1a1a1a] transition-all duration-300 z-40 ${
+          sidebarOpen ? "w-64" : "w-20"
+        }`}
+>>>>>>> origin/payroll-tracking-frontend
       >
         <div className="flex items-center justify-between p-4">
           {sidebarOpen && (
@@ -198,7 +222,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 text-gray-400 hover:text-white transition-colors"
           >
-            <span className="text-xl">{sidebarOpen ? '◀' : '▶'}</span>
+            <span className="text-xl">{sidebarOpen ? "◀" : "▶"}</span>
           </button>
         </div>
 
@@ -214,29 +238,49 @@ export default function DashboardLayout({ children, title, description }: Dashbo
               {item.href ? (
                 <Link
                   href={item.href}
+<<<<<<< HEAD
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${item.active
                     ? 'bg-[#2a2a2a] text-white'
                     : 'text-gray-400 hover:bg-[#2a2a2a] hover:text-white'
                     }`}
+=======
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                    item.active
+                      ? "bg-[#2a2a2a] text-white"
+                      : "text-gray-400 hover:bg-[#2a2a2a] hover:text-white"
+                  }`}
+>>>>>>> origin/payroll-tracking-frontend
                 >
                   {item.icon}
-                  {sidebarOpen && <span className="text-sm font-medium">{item.name}</span>}
+                  {sidebarOpen && (
+                    <span className="text-sm font-medium">{item.name}</span>
+                  )}
                 </Link>
               ) : (
                 <div className="flex items-center justify-between px-3 py-2.5 rounded-lg transition-all text-gray-400 hover:bg-[#2a2a2a] hover:text-white cursor-pointer">
                   <div className="flex items-center gap-3">
                     {item.icon}
-                    {sidebarOpen && <span className="text-sm font-medium">{item.name}</span>}
+                    {sidebarOpen && (
+                      <span className="text-sm font-medium">{item.name}</span>
+                    )}
                   </div>
-                  {sidebarOpen && item.subItems && <span className="text-xs">▶</span>}
+                  {sidebarOpen && item.subItems && (
+                    <span className="text-xs">▶</span>
+                  )}
                 </div>
               )}
 
               {/* Flyout Submenu */}
               {item.subItems && hoveredMenu === item.name && (
                 <div
+<<<<<<< HEAD
                   className={`absolute top-0 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 py-2 min-w-[200px] z-50 ${sidebarOpen ? 'left-full ml-2' : 'left-full ml-2'
                     }`}
+=======
+                  className={`absolute top-0 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 py-2 min-w-[200px] z-50 ${
+                    sidebarOpen ? "left-full ml-2" : "left-full ml-2"
+                  }`}
+>>>>>>> origin/payroll-tracking-frontend
                   onMouseEnter={() => handleMenuEnter(item.name)}
                   onMouseLeave={handleMenuLeave}
                 >
@@ -265,8 +309,14 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
       {/* Main Content */}
       <div
+<<<<<<< HEAD
         className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'
           }`}
+=======
+        className={`transition-all duration-300 ${
+          sidebarOpen ? "ml-64" : "ml-20"
+        }`}
+>>>>>>> origin/payroll-tracking-frontend
       >
         {/* Header */}
         <header className="bg-[#1a1a1a] border-b border-gray-800 sticky top-0 z-30">
@@ -286,12 +336,16 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                 </button>
                 <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-semibold">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
                   </span>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-white">{user?.name || 'User'}</p>
-                  <p className="text-xs text-gray-400">{user?.role || 'Team'}</p>
+                  <p className="text-sm font-medium text-white">
+                    {user?.name || "User"}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {user?.role || "Team"}
+                  </p>
                 </div>
               </div>
               <button
