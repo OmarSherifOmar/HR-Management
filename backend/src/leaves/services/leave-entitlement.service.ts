@@ -83,6 +83,21 @@ export class LeaveEntitlementService {
       );
     }
 
+    // Log policy values for debugging initial accrual issues
+    try {
+      console.log('[ENTITLEMENT_CREATE] Policy values:', {
+        policyId: policy._id?.toString?.() ?? null,
+        accrualMethod: policy.accrualMethod,
+        monthlyRate: policy.monthlyRate,
+        yearlyRate: policy.yearlyRate,
+        roundingRule: policy.roundingRule,
+        dtoYearlyEntitlement: createEntitlementDto.yearlyEntitlement ?? null,
+      });
+    } catch (e) {
+      // swallow logging errors to avoid blocking entitlement creation
+      console.error('[ENTITLEMENT_CREATE] Failed to log policy values', e?.message ?? e);
+    }
+
     // Validate minimum tenure requirement
     if (policy.eligibility?.minTenureMonths && policy.eligibility.minTenureMonths > 0) {
       const hireDate = employee.dateOfHire ? new Date(employee.dateOfHire) : null;
@@ -108,6 +123,13 @@ export class LeaveEntitlementService {
     const monthlyRate = policy.monthlyRate || 0;
     const fullYearly = policy.accrualMethod === AccrualMethod.MONTHLY ? monthlyRate * 12 : (policy.yearlyRate || 0);
     let yearlyEntitlement = createEntitlementDto.yearlyEntitlement ?? fullYearly;
+    console.log('[ENTITLEMENT_CREATE] Computed yearlyEntitlement:', { 
+      fullYearly, 
+      yearlyEntitlement, 
+      monthlyRate,
+      fromDTO: createEntitlementDto.yearlyEntitlement,
+      willUse: yearlyEntitlement 
+    });
     
     // Determine initial accrued based on accrual method
     // ALWAYS recalculate based on the yearlyEntitlement value
@@ -125,8 +147,14 @@ export class LeaveEntitlementService {
       // Yearly accrual: grant full entitlement upfront
       initialAccrued = yearlyEntitlement;
     } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
-      // Per term accrual: grant one term's worth immediately
-      initialAccrued = yearlyEntitlement / 4;
+      // Per term accrual: grant half of yearly entitlement at start
+      // The other half will be granted after 6 months
+      initialAccrued = yearlyEntitlement / 2;
+      console.log('[ENTITLEMENT_CREATE] PER_TERM calculation:', {
+        yearlyEntitlement,
+        halfCalculated: yearlyEntitlement / 2,
+        initialAccrued
+      });
     } else {
       // Default to yearly
       initialAccrued = yearlyEntitlement;
@@ -134,6 +162,11 @@ export class LeaveEntitlementService {
 
     // Apply rounding rule
     const roundedAccrual = this.applyRoundingRule(initialAccrued, policy.roundingRule);
+    console.log('[ENTITLEMENT_CREATE] After rounding:', {
+      initialAccrued,
+      roundingRule: policy.roundingRule,
+      roundedAccrual
+    });
 
     const remaining = roundedAccrual - (createEntitlementDto.taken ?? 0);
 
@@ -399,6 +432,57 @@ export class LeaveEntitlementService {
             }
 
             processed++;
+          }
+        } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
+          // Per-term accrual: Grant second half of yearly entitlement after 6 months
+          // Check if it's been 6 months since creation or last term accrual
+          const employee = await this.employeeService.findById(entitlement.employeeId.toString());
+          if (!employee) continue;
+
+          const hireDate = new Date(employee.dateOfHire);
+          const monthsSinceHire = this.calculateMonthsDifference(hireDate, now);
+          
+          // Grant second half at 6-month mark (July 1st if hired Jan-Jun, Jan 1st if hired Jul-Dec)
+          const currentMonth = now.getMonth() + 1; // 1-12
+          const shouldGrantSecondHalf = 
+            (currentMonth === 7 && monthsSinceHire >= 6 && monthsSinceHire < 12) || // Mid-year grant
+            (currentMonth === 1 && monthsSinceHire >= 6); // Year-end/start grant for those hired mid-year
+
+          if (shouldGrantSecondHalf) {
+            // Check if we haven't already granted the second half this period
+            const lastAccrual = entitlement.lastAccrualDate;
+            const alreadyGrantedThisPeriod = lastAccrual && 
+              lastAccrual.getFullYear() === now.getFullYear() && 
+              lastAccrual.getMonth() === now.getMonth();
+
+            if (!alreadyGrantedThisPeriod) {
+              const secondHalf = entitlement.yearlyEntitlement / 2;
+              entitlement.accruedActual += secondHalf;
+              entitlement.accruedRounded = this.applyRoundingRule(
+                entitlement.accruedActual,
+                policy.roundingRule,
+              );
+              entitlement.remaining = 
+                entitlement.yearlyEntitlement + 
+                entitlement.carryForward + 
+                entitlement.accruedRounded - 
+                entitlement.taken - 
+                entitlement.pending;
+              entitlement.lastAccrualDate = new Date();
+              await entitlement.save();
+
+              // Log the second half grant
+              await this.adjustmentModel.create({
+                employeeId: entitlement.employeeId,
+                leaveTypeId: entitlement.leaveTypeId,
+                adjustmentType: AdjustmentType.ADD,
+                amount: secondHalf,
+                reason: `[PER_TERM_ACCRUAL] Second half of yearly entitlement granted after 6 months. Month: ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+                hrUserId: new Types.ObjectId('000000000000000000000000'),
+              });
+
+              processed++;
+            }
           }
         }
       } catch (error) {
@@ -695,8 +779,10 @@ export class LeaveEntitlementService {
       case AccrualMethod.YEARLY:
         return policy.yearlyRate * Math.floor(tenureMonths / 12);
       case AccrualMethod.PER_TERM:
-        // Assuming term = 6 months
-        return policy.yearlyRate * Math.floor(tenureMonths / 6) * 0.5;
+        // Per term: Half at start, half after 6 months
+        // Grant one full yearly entitlement per complete 6-month period (up to 2 halves per year)
+        const completeSixMonthPeriods = Math.floor(tenureMonths / 6);
+        return policy.yearlyRate * Math.min(completeSixMonthPeriods, 2) * 0.5;
       default:
         return 0;
     }
@@ -781,5 +867,110 @@ export class LeaveEntitlementService {
     }
 
     return { updated };
+  }
+
+  /**
+   * Fix PER_TERM entitlements with incorrect initial accrual
+   * Recalculates and grants correct half (50%) of yearlyEntitlement
+   */
+  async fixPerTermEntitlements(): Promise<{ 
+    checked: number; 
+    fixed: number; 
+    details: Array<{ employeeId: string; leaveTypeId: string; before: number; after: number }> 
+  }> {
+    const entitlements = await this.entitlementModel.find().populate('leaveTypeId');
+    let checked = 0;
+    let fixed = 0;
+    const details: Array<{ employeeId: string; leaveTypeId: string; before: number; after: number }> = [];
+
+    for (const entitlement of entitlements) {
+      const policy = await this.leavePolicyModel.findOne({
+        leaveTypeId: entitlement.leaveTypeId,
+      });
+
+      if (!policy || policy.accrualMethod !== AccrualMethod.PER_TERM) {
+        continue;
+      }
+
+      checked++;
+
+      // Expected initial accrual: half of yearlyEntitlement
+      const expectedInitialAccrued = entitlement.yearlyEntitlement / 2;
+      
+      // Check if current accrued is incorrect (not equal to expected half)
+      // Allow small tolerance for floating point comparison
+      const tolerance = 0.01;
+      if (Math.abs(entitlement.accruedActual - expectedInitialAccrued) > tolerance) {
+        const beforeAccrued = entitlement.accruedActual;
+        
+        // Fix the accrual
+        entitlement.accruedActual = expectedInitialAccrued;
+        entitlement.accruedRounded = this.applyRoundingRule(expectedInitialAccrued, policy.roundingRule);
+        
+        // Recalculate remaining
+        entitlement.remaining = 
+          entitlement.yearlyEntitlement + 
+          entitlement.carryForward + 
+          entitlement.accruedRounded - 
+          entitlement.taken - 
+          entitlement.pending;
+
+        await entitlement.save();
+
+        details.push({
+          employeeId: entitlement.employeeId.toString(),
+          leaveTypeId: entitlement.leaveTypeId.toString(),
+          before: beforeAccrued,
+          after: entitlement.accruedActual,
+        });
+
+        fixed++;
+      }
+    }
+
+    return { checked, fixed, details };
+  }
+
+  /**
+   * Debug helper to show policy and entitlement details
+   */
+  async debugEntitlement(employeeId: string, leaveTypeId: string): Promise<any> {
+    const entitlement = await this.entitlementModel.findOne({
+      employeeId: new Types.ObjectId(employeeId),
+      leaveTypeId: new Types.ObjectId(leaveTypeId),
+    }).populate('leaveTypeId');
+
+    const policy = await this.leavePolicyModel.findOne({
+      leaveTypeId: new Types.ObjectId(leaveTypeId),
+    });
+
+    return {
+      entitlement: entitlement ? {
+        _id: entitlement._id,
+        yearlyEntitlement: entitlement.yearlyEntitlement,
+        accruedActual: entitlement.accruedActual,
+        accruedRounded: entitlement.accruedRounded,
+        carryForward: entitlement.carryForward,
+        taken: entitlement.taken,
+        pending: entitlement.pending,
+        remaining: entitlement.remaining,
+        lastAccrualDate: entitlement.lastAccrualDate,
+      } : null,
+      policy: policy ? {
+        _id: policy._id,
+        accrualMethod: policy.accrualMethod,
+        monthlyRate: policy.monthlyRate,
+        yearlyRate: policy.yearlyRate,
+        roundingRule: policy.roundingRule,
+        carryForwardAllowed: policy.carryForwardAllowed,
+        maxCarryForward: policy.maxCarryForward,
+      } : null,
+      calculation: policy && entitlement ? {
+        expectedInitialAccrued: entitlement.yearlyEntitlement / 2,
+        actualAccrued: entitlement.accruedActual,
+        difference: entitlement.accruedActual - (entitlement.yearlyEntitlement / 2),
+        isCorrect: Math.abs(entitlement.accruedActual - (entitlement.yearlyEntitlement / 2)) < 0.01,
+      } : null,
+    };
   }
 }
