@@ -1,5 +1,5 @@
 "use client";
-
+import { useAuth } from '../../../context/AuthContext';
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { Trash2, Edit, Check, X } from 'lucide-react';
@@ -84,6 +84,7 @@ interface UpdateTaxRuleData {
 }
 
 export default function TaxRulesPage() {
+   const { user } = useAuth();
   const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +163,7 @@ export default function TaxRulesPage() {
     if (formData.rate !== editingRule.rate) updateData.rate = formData.rate;
 
     const res = await http<TaxRule>(`/payroll-configuration/tax-rules/${editingRule._id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData),
     });
@@ -195,7 +196,24 @@ export default function TaxRulesPage() {
     if (res.ok) fetchTaxRules();
     else alert(res.error || 'Failed to delete');
   };
+const canView = () => {
+    const allowedRoles = [
+      'Legal & Policy Admin',
+      'Payroll Manager',
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
 
+     if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view pay grade configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
   return (
     <DashboardLayout title="Payroll Config — Tax Rules" description="Manage tax rules and rates used in payroll calculations">
       <div className="space-y-6">

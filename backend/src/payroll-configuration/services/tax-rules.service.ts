@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import mongoose from 'mongoose';
@@ -20,7 +20,7 @@ export class TaxRulesService {
       status: ConfigStatus.DRAFT,
       createdBy,
     });
-    return rule.save();
+    return rule.save();``
   }
 
   async findAll() {
@@ -33,18 +33,10 @@ export class TaxRulesService {
   async update(id: string, updateDto: UpdateTaxRuleDto) {
     const rule = await this.taxRulesModel.findById(id);
     if (!rule) throw new NotFoundException('Tax rule not found');
-
-    // Only apply provided fields, preserve existing values
-    const updateData: Partial<UpdateTaxRuleDto> = {};
-    if (updateDto.name !== undefined) updateData.name = updateDto.name;
-    if (updateDto.description !== undefined) updateData.description = updateDto.description;
-    if (updateDto.rate !== undefined) updateData.rate = updateDto.rate;
-
-    Object.assign(rule, updateData);
-
-    // keep it in draft if edited (legal flow logic)
-    rule.status = rule.status === ConfigStatus.APPROVED ? ConfigStatus.DRAFT : rule.status;
-
+    if (rule.status === ConfigStatus.APPROVED|| rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved tax rules cannot be modified');
+    }
+    Object.assign(rule, updateDto);
     return rule.save();
   }
 
@@ -61,7 +53,10 @@ export class TaxRulesService {
   async approve(id: string, approverId: string) {
     const rule = await this.taxRulesModel.findById(id);
     if (!rule) throw new NotFoundException('Tax rule not found');
-
+    
+    if (rule.status === ConfigStatus.APPROVED|| rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved/Rejected tax rules cannot be approved');
+    }
     rule.status = ConfigStatus.APPROVED;
     rule.approvedBy = new mongoose.Types.ObjectId(approverId);
     rule.approvedAt = new Date();
@@ -69,9 +64,12 @@ export class TaxRulesService {
     return rule.save();
   }
 
-  async reject(id: string, approverId: string) {
-    const rule = await this.taxRulesModel.findById(id);
-    if (!rule) throw new NotFoundException('Tax rule not found');
+async reject(id: string, approverId: string) {
+  const rule = await this.taxRulesModel.findById(id);
+  if (!rule) throw new NotFoundException('Tax rule not found');
+   if (rule.status === ConfigStatus.APPROVED|| rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved/Rejected tax rules cannot be rejected');
+    }
 
     rule.status = ConfigStatus.REJECTED;
     rule.approvedBy = new mongoose.Types.ObjectId(approverId);

@@ -4,6 +4,81 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useAuth, authenticatedFetch } from '../../../context/AuthContext';
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+interface ApiResponse<T = any> {
+  ok: boolean;
+  status: number;
+  data?: T;
+  error?: string;
+}
+
+async function http<T = any>(
+  path: string,
+  init?: RequestInit
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+    });
+
+    const status = response.status;
+    const ok = response.ok;
+
+    let data: T | undefined;
+    let error: string | undefined;
+
+    // Try to parse JSON response
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const json = await response.json();
+        if (ok) {
+          data = json;
+        } else {
+          error = json.message || json.error || `HTTP ${status}`;
+        }
+      } catch (parseError) {
+        error = `Failed to parse response: ${parseError}`;
+      }
+    } else {
+      // Handle non-JSON responses
+      try {
+        const text = await response.text();
+        if (ok) {
+          data = text as unknown as T;
+        } else {
+          error = text || `HTTP ${status}`;
+        }
+      } catch (textError) {
+        error = `Failed to read response: ${textError}`;
+      }
+    }
+
+    if (!ok && !error) {
+      error = `Request failed with status ${status}`;
+    }
+
+    return {
+      ok,
+      status,
+      data,
+      error,
+    };
+  } catch (networkError) {
+    return {
+      ok: false,
+      status: 0,
+      error: `Network error: ${networkError instanceof Error ? networkError.message : 'Unknown error'}`,
+    };
+  }
+}
+
+function isDraft(status?: string): boolean {
+  return status ? status.toUpperCase() === 'DRAFT' : false;
+}
+
 interface SigningBonus {
   _id?: string;
   positionName: string;
@@ -106,7 +181,44 @@ export default function SigningBonusesPage() {
     setEditingId(bonus._id || null);
     setIsModalOpen(true);
   };
+const handleApprove = async (id: string) => {
+    if (!confirm('Approve this Bounus?')) return;
+    const res = await http(`/payroll-configuration/signing-bonuses/${id}/approve`, { method: 'POST' });
+    if (res.ok) fetchBonuses();
+    else alert(res.error || 'Failed to approve');
+  };
 
+  const handleReject = async (id: string) => {
+    if (!confirm('Reject this bonus?')) return;
+    const res = await http(`/payroll-configuration/signing-bonuses/${id}/reject`, { method: 'POST' });
+    if (res.ok) fetchBonuses();
+    else alert(res.error || 'Failed to reject');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this Signing Bonus? This action cannot be undone.')) return;
+    const res = await http(`/payroll-configuration/signing-bonuses/${id}`, { method: 'DELETE' });
+    if (res.ok) fetchBonuses();
+    else alert(res.error || 'Failed to delete');
+  };
+  const canView = () => {
+      const allowedRoles = [
+        'Payroll Manager',
+        'Payroll Specialist'
+      ];
+      return allowedRoles.includes(user?.role || '');
+    };
+  
+       if (!canView()) {
+      return (
+        <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+          <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+            <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+            <p className="text-red-400">You don't have permission to view pay grade configurations.</p>
+          </div>
+        </DashboardLayout>
+      );
+    }
   return (
     <DashboardLayout
       title="Signing Bonuses"
@@ -156,15 +268,55 @@ export default function SigningBonusesPage() {
                       {bonus.status}
                     </span>
                   )}
-                  <div className="flex flex-col gap-2 self-start ml-3">
-                    <button
-                      type="button"
-                      className="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white"
-                      onClick={() => handleEdit(bonus)}
-                    >
-                      Edit
-                    </button>
-                  </div>
+                <div className="flex flex-col gap-2 self-start ml-3">
+
+                      {/* Edit */}
+                      <button
+                        type="button"
+                        disabled={!isDraft(bonus.status)}
+                        onClick={() => handleEdit(bonus)}
+                        className={`text-xs px-2 py-1 rounded text-white ${
+                          isDraft(bonus.status)
+                            ? 'bg-gray-700 hover:bg-gray-600'
+                            : 'bg-gray-600 opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        Edit
+                      </button>
+
+                      {/* Approve */}
+                      {isDraft(bonus.status) && (
+                        <button
+                          type="button"
+                          onClick={() => handleApprove(bonus._id!)}
+                          className="text-xs px-2 py-1 rounded bg-green-600 hover:bg-green-500 text-white"
+                        >
+                          Approve
+                        </button>
+                      )}
+
+                      {/* Reject */}
+                      {isDraft(bonus.status) && (
+                        <button
+                          type="button"
+                          onClick={() => handleReject(bonus._id!)}
+                          className="text-xs px-2 py-1 rounded bg-yellow-600 hover:bg-yellow-500 text-white"
+                        >
+                          Reject
+                        </button>
+                      )}
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(bonus._id!)}
+                        className="text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white"
+                      >
+                        Delete
+                      </button>
+
+                    </div>
+
                 </div>
               ))}
             </div>

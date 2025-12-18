@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Param, Req, UseGuards, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Param, Req, UseGuards, Delete, Patch } from '@nestjs/common';
 import { TaxRulesService } from '../services/tax-rules.service';
 import { CreateTaxRuleDto } from '../dtos/CreateTaxRuleDto';
 import { UpdateTaxRuleDto } from '../dtos/UpdateTaxRuleDto';
@@ -31,7 +31,7 @@ export class TaxRulesController {
     return this.taxRulesService.findById(id);
   }
 
-  @Put(':id')
+  @Patch(':id')
   @Roles(Role.LEGAL_POLICY_ADMIN, Role.Payroll_MANAGER)
   async update(
     @Param('id') id: string,

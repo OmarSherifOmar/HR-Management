@@ -1,5 +1,5 @@
 "use client";
-
+import { useAuth } from '../../../context/AuthContext';
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { Trash2, Edit, Check, X } from 'lucide-react';
@@ -90,6 +90,7 @@ interface UpdateInsuranceBracketData {
 }
 
 export default function InsuranceBracketsPage() {
+    const { user } = useAuth();
   const [brackets, setBrackets] = useState<InsuranceBracket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -209,7 +210,24 @@ export default function InsuranceBracketsPage() {
     if (res.ok) fetchBrackets();
     else alert(res.error || 'Failed to delete');
   };
+ const canView = () => {
+    const allowedRoles = [
+      'Payroll Specialist',
+      'HR Manager'
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
 
+     if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view pay grade configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
   return (
     <DashboardLayout title="Payroll Config — Insurance Brackets" description="Manage insurance brackets and contribution rates">
       <div className="space-y-6">

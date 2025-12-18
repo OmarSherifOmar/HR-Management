@@ -1,5 +1,5 @@
 "use client";
-
+import { useAuth } from '../../../context/AuthContext';
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { Download, RefreshCw } from 'lucide-react';
@@ -185,6 +185,7 @@ interface UpdateSettingsData {
 }
 
 export default function CompanyWideSettingsPage() {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<CompanyWideSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -289,6 +290,23 @@ export default function CompanyWideSettingsPage() {
     setCreatingBackup(false);
   };
 
+  const canView = () => {
+    const allowedRoles = [
+      'System Admin'
+    ];
+    return allowedRoles.includes(user?.role || '');
+  };
+
+     if (!canView()) {
+    return (
+      <DashboardLayout title="Access Denied" description="You don't have permission to view this page">
+        <div className="bg-red-600/20 border border-red-600 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-bold text-red-300 mb-2">Access Denied</h2>
+          <p className="text-red-400">You don't have permission to view pay grade configurations.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
   return (
     <DashboardLayout title="Payroll Config — Company-wide Settings" description="Manage global company settings and backups">
       <div className="space-y-8">
