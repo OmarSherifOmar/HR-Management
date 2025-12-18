@@ -10,7 +10,7 @@ import { Shift } from '../models/shift.schema';
 import { TimeException } from '../models/time-exception.schema';
 import { NotificationLog } from '../models/notification-log.schema';
 import { HolidayService } from './holiday.service';
-import { ShiftAssignmentService } from './ShiftAssignmentService';
+import { ShiftAssignmentService } from './shift-assignment.service';
 import { ShiftService } from './shift.service';
 import { CorrectionService } from './correction.service';
 import { AttendanceService } from './attendance.service';

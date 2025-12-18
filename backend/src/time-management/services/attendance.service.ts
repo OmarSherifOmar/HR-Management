@@ -7,7 +7,7 @@ import { PunchType, TimeExceptionType, PunchPolicy } from '../models/enums';
 import { TimeException, TimeExceptionDocument } from '../models/time-exception.schema';
 import { ShiftService } from './shift.service';
 import { HolidayService } from './holiday.service';
-import { ShiftAssignmentService } from './ShiftAssignmentService';
+import { ShiftAssignmentService } from './shift-assignment.service';
 import { startOfDay, endOfDay, buildDateFromShiftTime } from '../utils/time.utils';
 import { PolicyService } from './policy.service';
 
@@ -27,6 +27,30 @@ export class AttendanceService {
     private readonly policyService: PolicyService,
   ) {}
 
+
+  // Helper to transform record for frontend
+  private transformRecord(record: any) {
+    if (!record) return null;
+    const recordObj = record.toObject ? record.toObject() : record;
+    const punches = recordObj.punches || [];
+    
+    // Create a copy and sort punches by time
+    const sortedPunches = [...punches].sort((a: any, b: any) => new Date(a.time).getTime() - new Date(b.time).getTime());
+    
+    const inPunch = sortedPunches.find((p: any) => p.type === PunchType.IN);
+    // Create another copy for reverse to avoid mutating the sorted array
+    const outPunch = [...sortedPunches].reverse().find((p: any) => p.type === PunchType.OUT);
+    
+    const lastPunch = sortedPunches.length > 0 ? sortedPunches[sortedPunches.length - 1] : null;
+    const status = lastPunch ? lastPunch.type : 'OUT';
+
+    return {
+        ...recordObj,
+        clockInTime: inPunch ? inPunch.time : null,
+        clockOutTime: outPunch ? outPunch.time : null,
+        status,
+    };
+  }
 
   // Clock-in: enforces punch policy and computes lateness
   async clockIn(employeeIdRaw: string, time?: Date) {
@@ -51,8 +75,8 @@ export class AttendanceService {
       shiftDoc = await this.shiftService.getById(assignment.shiftId);
     }
 
-    // determine punch policy (safe fallback to FIRST_LAST)
-    const policy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.FIRST_LAST;
+    // determine punch policy (safe fallback to MULTIPLE for flexibility)
+    const policy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.MULTIPLE;
 
     // Enforce Phase-2 policies: MULTIPLE or FIRST_LAST (ONLY_FIRST treated like FIRST_LAST)
     if (policy === PunchPolicy.MULTIPLE) {
@@ -91,7 +115,7 @@ export class AttendanceService {
     }
 
     await record.save();
-    return record;
+    return this.transformRecord(record);
   }
 
   // Clock-out: requires an existing clock-in
@@ -115,7 +139,7 @@ export class AttendanceService {
     if (assignment) {
       shiftDoc = await this.shiftService.getById(assignment.shiftId);
     }
-    const outPolicy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.FIRST_LAST;
+    const outPolicy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.MULTIPLE;
 
     if (outPolicy === PunchPolicy.MULTIPLE) {
       // allow multiple OUTs
@@ -156,14 +180,26 @@ export class AttendanceService {
     }
 
     await record.save();
-    return record;
+    return this.transformRecord(record);
   }
 
   async getRecordForEmployeeByDate(employeeIdRaw: string, date: Date) {
     const employeeId = new Types.ObjectId(employeeIdRaw);
     const start = startOfDay(date);
     const end = endOfDay(date);
-    return this.attendanceModel.findOne({ employeeId, 'punches.time': { $gte: start, $lte: end } });
+    const record = await this.attendanceModel.findOne({ employeeId, 'punches.time': { $gte: start, $lte: end } });
+    return this.transformRecord(record);
+  }
+
+  // Get attendance history for an employee within a date range
+  async getHistoryForEmployee(employeeIdRaw: string, startDate: Date, endDate: Date) {
+    const employeeId = new Types.ObjectId(employeeIdRaw);
+    const start = startOfDay(startDate);
+    const end = endOfDay(endDate);
+    const records = await this.attendanceModel
+      .find({ employeeId, 'punches.time': { $gte: start, $lte: end } })
+      .sort({ date: -1 });
+    return records.map((r) => this.transformRecord(r));
   }
 
   // scheduled check for missed punches 

@@ -21,9 +21,11 @@ import { CorrectionService } from './services/correction.service';
 import { PolicyService } from './services/policy.service';
 import { HolidayService } from './services/holiday.service';
 import { NotificationService } from './services/notification.service';
-import { ShiftAssignmentService } from './services/ShiftAssignmentService';
+import { ShiftAssignmentService } from './services/shift-assignment.service';
 import { Shift, ShiftSchema } from './models/shift.schema';
 import { ShiftAssignment, ShiftAssignmentSchema } from './models/shift-assignment.schema';
+import { ReportsController } from './controllers/reports.controller';
+import { ReportsService } from './services/reports.service';
 
 
 @Module({
@@ -44,7 +46,7 @@ import { ShiftAssignment, ShiftAssignmentSchema } from './models/shift-assignmen
     ShiftAssignmentModule,
     ScheduleRuleModule,
   ],
-  controllers: [TimeManagementController, AttendanceController, CorrectnessController, HolidayController],
+  controllers: [TimeManagementController, AttendanceController, CorrectnessController, ReportsController],
   providers: [
     TimeManagementService,
     AttendanceService,
@@ -52,7 +54,7 @@ import { ShiftAssignment, ShiftAssignmentSchema } from './models/shift-assignmen
     PolicyService,
     HolidayService,
     NotificationService,
-    ShiftAssignmentService,
+    ReportsService,
   ],
   exports: [ShiftTypeModule, ShiftModule, ShiftAssignmentModule, ScheduleRuleModule],
 })
