@@ -69,6 +69,7 @@ export const FEATURE_PERMISSIONS: Record<PerformanceFeature, PerformanceSystemRo
     PerformanceSystemRole.HR_MANAGER,
     PerformanceSystemRole.HR_ADMIN,
     PerformanceSystemRole.HR_EMPLOYEE,
+    PerformanceSystemRole.DEPARTMENT_HEAD,
     PerformanceSystemRole.SYSTEM_ADMIN,
   ],
 
@@ -111,6 +112,7 @@ export const FEATURE_PERMISSIONS: Record<PerformanceFeature, PerformanceSystemRo
   [PerformanceFeature.BULK_ASSIGN]: [
     PerformanceSystemRole.HR_MANAGER,
     PerformanceSystemRole.HR_ADMIN,
+    PerformanceSystemRole.HR_EMPLOYEE,
     PerformanceSystemRole.SYSTEM_ADMIN,
   ],
   [PerformanceFeature.MANAGE_ASSIGNMENTS]: [
@@ -150,6 +152,7 @@ export const FEATURE_PERMISSIONS: Record<PerformanceFeature, PerformanceSystemRo
     PerformanceSystemRole.SYSTEM_ADMIN,
   ],
   [PerformanceFeature.PUBLISH_APPRAISALS]: [
+    PerformanceSystemRole.DEPARTMENT_HEAD,
     PerformanceSystemRole.HR_MANAGER,
     PerformanceSystemRole.HR_ADMIN,
     PerformanceSystemRole.HR_EMPLOYEE,
@@ -159,6 +162,7 @@ export const FEATURE_PERMISSIONS: Record<PerformanceFeature, PerformanceSystemRo
   // Dispute Management
   [PerformanceFeature.CREATE_DISPUTE]: [
     PerformanceSystemRole.DEPARTMENT_EMPLOYEE,
+    PerformanceSystemRole.DEPARTMENT_HEAD,
     PerformanceSystemRole.HR_MANAGER,
     PerformanceSystemRole.HR_ADMIN,
     PerformanceSystemRole.HR_EMPLOYEE,
@@ -171,6 +175,7 @@ export const FEATURE_PERMISSIONS: Record<PerformanceFeature, PerformanceSystemRo
   ],
   [PerformanceFeature.VIEW_DISPUTES]: [
     PerformanceSystemRole.DEPARTMENT_EMPLOYEE,
+    PerformanceSystemRole.DEPARTMENT_HEAD,
     PerformanceSystemRole.HR_MANAGER,
     PerformanceSystemRole.HR_ADMIN,
     PerformanceSystemRole.HR_EMPLOYEE,
@@ -193,6 +198,7 @@ export const FEATURE_PERMISSIONS: Record<PerformanceFeature, PerformanceSystemRo
     PerformanceSystemRole.DEPARTMENT_HEAD,
     PerformanceSystemRole.HR_MANAGER,
     PerformanceSystemRole.HR_ADMIN,
+    PerformanceSystemRole.HR_EMPLOYEE,
     PerformanceSystemRole.SYSTEM_ADMIN,
   ],
 };

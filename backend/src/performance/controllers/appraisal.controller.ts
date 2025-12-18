@@ -34,14 +34,14 @@ export class AppraisalController {
   }
 
   @Get('my-appraisals')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getMyAppraisals(@Req() req) {
     console.log('[AppraisalController] GET /my-appraisals for:', req.user?.employeeId);
     return this.appraisalService.getMyAppraisals(req.user?.employeeId);
   }
 
   @Get('employee/:employeeId')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getByEmployeeId(@Param('employeeId') employeeId: string) {
     console.log('[AppraisalController] GET /employee/:employeeId for:', employeeId);
     return this.appraisalService.getMyAppraisals(employeeId);
@@ -50,13 +50,13 @@ export class AppraisalController {
   // Parameterized routes come after static routes
 
   @Get(':recordId/employee/:employeeId')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async view(@Param('recordId') recordId: string, @Param('employeeId') employeeId: string) {
     return this.appraisalService.view({ appraisalRecordId: recordId, employeeId });
   }
 
   @Put(':recordId/employee/:employeeId/acknowledge')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async acknowledge(
     @Param('recordId') recordId: string,
     @Param('employeeId') employeeId: string,
@@ -66,13 +66,13 @@ export class AppraisalController {
   }
 
   @Put(':id/acknowledge')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async acknowledgeAppraisal(@Param('id') id: string, @Body() body: { comment?: string }, @Req() req) {
     return this.appraisalService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
   }
 
   @Put(':id/employee/me/acknowledge')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async acknowledgeAppraisalMe(@Param('id') id: string, @Body() body: { comment?: string }, @Req() req) {
     return this.appraisalService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
   }

@@ -37,7 +37,7 @@ export class DisputeController {
   
   // Get disputes raised by current user
   @Get('employee/me')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findByEmployeeMe(@Req() req) {
     console.log('[DisputeController] GET /employee/me for:', req.user?.employeeId);
     return this.disputeService.findByEmployee(req.user?.employeeId);
@@ -109,7 +109,7 @@ export class DisputeController {
   }
 
   @Get(':id')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findById(@Param('id') id: string) {
     return this.disputeService.findById(id);
   }

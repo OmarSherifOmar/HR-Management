@@ -9,7 +9,7 @@ export class ReportingController {
   constructor(private readonly reportingService: ReportingService) {}
 
   @Get('history/:employeeId')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getHistory(@Param('employeeId') employeeId: string) {
     console.log('[ReportingController] GET /history/:employeeId for:', employeeId);
     return this.reportingService.getHistory(employeeId);
@@ -23,7 +23,7 @@ export class ReportingController {
   }
 
   @Get('multi-cycle-trend/:employeeId')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getMultiCycleTrend(
     @Param('employeeId') employeeId: string,
     @Query('limit') limit?: string
