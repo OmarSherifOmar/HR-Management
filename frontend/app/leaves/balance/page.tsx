@@ -120,7 +120,7 @@ export default function MyBalancePage() {
         <div className="grid gap-6">
           {balances.map((balance, index) => (
             <div
-              key={balance.leaveType.id || `balance-${index}`}
+              key={`${balance.leaveType.id ?? balance.leaveType.code}-${index}`}
               className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors"
             >
               {/* Header */}

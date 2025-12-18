@@ -49,6 +49,7 @@ export interface ServiceDaysCalculation {
   totalCalendarDays: number;
   unpaidLeaveDays: number;
   suspensionDays: number;
+  extendedLeaveDays: number;
   actualServiceDays: number;
   serviceDaysPercentage: number;
 }
@@ -68,7 +69,7 @@ export class AccrualSuspensionService {
 
   /**
    * Calculate actual service days for an employee in a given period
-   * Excludes unpaid leave days and suspension periods
+   * Excludes unpaid leave days, suspension periods, and extended leave (>30 days, non-maternity)
    */
   async calculateActualServiceDays(
     employeeId: string,
@@ -84,8 +85,11 @@ export class AccrualSuspensionService {
     // Get suspension days from employee status (if any)
     const suspensionDays = await this.getSuspensionDays(employeeId, periodStart, periodEnd);
 
+    // Get extended leave days (>30 days, non-maternity)
+    const extendedLeaveDays = await this.getExtendedLeaveDays(employeeId, periodStart, periodEnd);
+
     // Calculate actual service days
-    const actualServiceDays = Math.max(0, totalCalendarDays - unpaidLeaveDays - suspensionDays);
+    const actualServiceDays = Math.max(0, totalCalendarDays - unpaidLeaveDays - suspensionDays - extendedLeaveDays);
     const serviceDaysPercentage = totalCalendarDays > 0 
       ? (actualServiceDays / totalCalendarDays) * 100 
       : 0;
@@ -97,6 +101,7 @@ export class AccrualSuspensionService {
       totalCalendarDays,
       unpaidLeaveDays,
       suspensionDays,
+      extendedLeaveDays,
       actualServiceDays,
       serviceDaysPercentage,
     };
@@ -173,6 +178,71 @@ export class AccrualSuspensionService {
     // Note: For full historical tracking, you would need a status history table
     // For now, we only check current status
     return 0;
+  }
+
+  /**
+   * Get extended leave days (>30 days) for an employee in a given period
+   * Excludes maternity leave which is identified by code 'MATERNITY' or name containing 'maternity'
+   * 
+   * Business Rule: If an employee takes vacation/leave for more than 30 calendar days 
+   * (excluding maternity leave), accrual calculation should stop during that extended leave period.
+   * 
+   * Note: We use CALENDAR DAYS (not business days) to determine if leave exceeds 30 days.
+   * This is calculated from dates.from to dates.to, inclusive of all days including weekends.
+   */
+  async getExtendedLeaveDays(
+    employeeId: string,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<number> {
+    // Find all leave types except maternity leave
+    const leaveTypes = await this.leaveTypeModel.find({
+      paid: true, // Only consider paid leaves (unpaid already handled separately)
+      $and: [
+        // Exclude maternity leave by code or name
+        { code: { $not: /maternity/i } },
+        { name: { $not: /maternity/i } },
+      ],
+    }).select('_id').exec();
+
+    const leaveTypeIds = leaveTypes.map(lt => lt._id);
+
+    if (leaveTypeIds.length === 0) {
+      return 0;
+    }
+
+    // Find all approved leaves that overlap with the period
+    // We'll filter by calendar days duration in the loop below
+    const approvedLeaves = await this.leaveRequestModel.find({
+      employeeId: new Types.ObjectId(employeeId),
+      leaveTypeId: { $in: leaveTypeIds },
+      status: LeaveStatus.APPROVED,
+      $or: [
+        // Leave starts within period
+        { 'dates.from': { $gte: periodStart, $lte: periodEnd } },
+        // Leave ends within period
+        { 'dates.to': { $gte: periodStart, $lte: periodEnd } },
+        // Leave spans the entire period
+        { 'dates.from': { $lte: periodStart }, 'dates.to': { $gte: periodEnd } },
+      ],
+    }).exec();
+
+    let totalExtendedLeaveDays = 0;
+    for (const leave of approvedLeaves) {
+      // Calculate TOTAL CALENDAR DAYS of the leave (not just business days)
+      const totalLeaveDays = this.calculateCalendarDays(leave.dates.from, leave.dates.to);
+      
+      // Only count as "extended leave" if the total leave duration exceeds 30 calendar days
+      if (totalLeaveDays > 30) {
+        // Calculate overlapping days with the accrual period
+        const overlapStart = new Date(Math.max(leave.dates.from.getTime(), periodStart.getTime()));
+        const overlapEnd = new Date(Math.min(leave.dates.to.getTime(), periodEnd.getTime()));
+        const overlapDays = this.calculateCalendarDays(overlapStart, overlapEnd);
+        totalExtendedLeaveDays += overlapDays;
+      }
+    }
+
+    return totalExtendedLeaveDays;
   }
 
   // ==================== ADJUST ACCRUAL FOR SUSPENSION ====================
@@ -255,7 +325,8 @@ export class AccrualSuspensionService {
       amount: adjustedAccrual,
       reason: `[ACCRUAL_WITH_SUSPENSION] Period: ${periodStart.toISOString().split('T')[0]} to ${periodEnd.toISOString().split('T')[0]}. ` +
         `Total days: ${serviceDays.totalCalendarDays}, Unpaid leave: ${serviceDays.unpaidLeaveDays}, ` +
-        `Suspension: ${serviceDays.suspensionDays}, Actual service: ${serviceDays.actualServiceDays} (${serviceDays.serviceDaysPercentage.toFixed(1)}%). ` +
+        `Suspension: ${serviceDays.suspensionDays}, Extended leave (>30d): ${serviceDays.extendedLeaveDays}, ` +
+        `Actual service: ${serviceDays.actualServiceDays} (${serviceDays.serviceDaysPercentage.toFixed(1)}%). ` +
         `Original: ${originalAccrual}, Adjusted: ${adjustedAccrual.toFixed(2)}, Deducted: ${deductedAmount.toFixed(2)}`,
       hrUserId: new Types.ObjectId(hrUserId),
     });
