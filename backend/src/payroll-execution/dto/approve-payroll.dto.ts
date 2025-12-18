@@ -5,10 +5,6 @@ export class ApprovePayrollDto {
   @IsString()
   payrollRunId: string;
 
-  @IsNotEmpty()
-  @IsString()
-  payrollSpecialistId: string;
-
   @IsOptional()
   @IsString()
   comment?: string;
