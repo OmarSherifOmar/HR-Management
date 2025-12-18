@@ -223,9 +223,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         ...(hasPermission('manage_calendar') || user?.role === 'HR Admin' ? [
           { name: 'Admin: Calendar & Blocked Days', href: '/leaves/admin/calendar' },
         ] : []),
-        ...(user?.role === 'HR Admin' ? [
-          { name: 'Admin: Settings', href: '/leaves/admin/settings' },
-        ] : []),
       ],
     },
     {
