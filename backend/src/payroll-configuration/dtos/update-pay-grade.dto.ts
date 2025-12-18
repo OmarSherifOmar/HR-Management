@@ -10,9 +10,4 @@ export class UpdatePayGradeDto {
   @IsNumber()
   @Min(6000)
   baseSalary?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(6000)
-  grossSalary?: number;
 }

@@ -2,9 +2,10 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, isValidObjectId } from 'mongoose';
+import mongoose, { Model, isValidObjectId } from 'mongoose';
 import {
   terminationAndResignationBenefits,
   terminationAndResignationBenefitsDocument,
@@ -22,7 +23,7 @@ export class TerminationBenefitsService {
 
   async createTerminationBenefit(
     createTerminationBenefitsDto: CreateTerminationBenefitsDto,
-    // later: createdBy from auth
+    createdById: string,
   ): Promise<terminationAndResignationBenefitsDocument> {
     const { name, amount, terms } = createTerminationBenefitsDto;
 
@@ -41,7 +42,7 @@ export class TerminationBenefitsService {
       amount,
       terms,
       status: ConfigStatus.DRAFT,
-      // createdBy: userId
+      createdBy: createdById,
     });
 
     return doc.save();
@@ -105,5 +106,40 @@ export class TerminationBenefitsService {
     }
 
     return doc.save();
+  }
+
+  async approve(id: string, approverId: string) {
+    const rule = await this.terminationBenefitsModel.findById(id);
+    if (!rule) throw new NotFoundException('Termination benefit not found');
+    
+    if (rule.status === ConfigStatus.APPROVED || rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved/rejected termination benefits cannot be approved');
+    }
+    rule.status = ConfigStatus.APPROVED;
+    rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+    rule.approvedAt = new Date();
+
+    return rule.save();
+  }
+
+  async reject(id: string, approverId: string) {
+    const rule = await this.terminationBenefitsModel.findById(id);
+    if (!rule) throw new NotFoundException('Termination benefit not found');
+    if (rule.status === ConfigStatus.APPROVED || rule.status === ConfigStatus.REJECTED) {
+      throw new ForbiddenException('Approved/Rejected termination benefits cannot be rejected');
+    }
+
+    rule.status = ConfigStatus.REJECTED;
+    rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+    rule.approvedAt = new Date();
+
+    return rule.save();
+  }
+
+  async delete(id: string) {
+    const rule = await this.terminationBenefitsModel.findById(id);
+    if (!rule) throw new NotFoundException('Termination benefit not found');
+
+    return this.terminationBenefitsModel.deleteOne({ _id: id }).exec();
   }
 }

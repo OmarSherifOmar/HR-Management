@@ -1,5 +1,5 @@
 
-import { Controller, Post, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, UseGuards, Req } from '@nestjs/common';
 import { BackupService } from '../services/backup.service';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/decorators/roles.decorator';
@@ -13,8 +13,9 @@ export class BackupController {
   constructor(private readonly backupService: BackupService) {}
 
   @Post()
-  async createBackup() {
-    return this.backupService.createBackup();
+  async createBackup(@Req() req: any) {
+    const adminName = req.user?.fullName || 'Unknown';
+    return this.backupService.createBackup(adminName);
   }
 
   @Get()

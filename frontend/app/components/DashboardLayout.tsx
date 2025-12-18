@@ -84,6 +84,12 @@ export default function DashboardLayout({ children, title, description }: Dashbo
     return null;
   }
 
+  // Role-based permission checks
+  const canViewPayroll = () => {
+    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal & Policy Admin', 'HR Manager', 'System Admin'];
+    return payrollRoles.includes(user?.role || '');
+  };
+
   const menuItems: MenuItem[] = [
     {
       name: 'Dashboard',
@@ -126,16 +132,22 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         ] : []),
       ],
     },
-    {
+    // Conditionally include Payroll section based on user role
+    ...(canViewPayroll() ? [{
       name: 'Payroll',
       icon: <DollarSign size={20} />,
       subItems: [
-        { name: 'Run Payroll', href: '/dashboard/payroll' },
-        { name: 'Configuration', href: '/dashboard/payroll/configuration' },
-        { name: 'History', href: '/dashboard/payroll/history' },
-        { name: 'Reports', href: '/dashboard/payroll/reports' },
+        { name: 'Payroll Policies', href: '/payroll/config/PayrollPolicies' },
+        { name: 'Pay Grades', href: '/payroll/config/pay-grades' },
+        { name: 'Pay Types', href: '/payroll/config/pay-types' },
+        { name: 'Allowances', href: '/payroll/config/allowances' },
+        { name: 'Signing Bonuses', href: '/payroll/config/SigningBonuses' },
+        { name: 'Termination Benefits', href: '/payroll/config/TerminationBenefits' },
+        { name: 'Tax Rules', href: '/payroll/config/Tax-Rule' },
+        { name: 'Insurance Brackets', href: '/payroll/config/Insurance-Bracket' },
+        { name: 'Company Wide Settings', href: '/payroll/config/Company-wide-settings' },
       ],
-    },
+    }] : []),
     {
       name: 'Performance',
       icon: <TrendingUp size={20} />,
