@@ -8,9 +8,5 @@ export class RejectPayrollDto {
   @IsNotEmpty()
   @IsString()
   rejectionReason: string;
-
-  @IsNotEmpty()
-  @IsString()
-  payrollSpecialistId: string;
 }
 
