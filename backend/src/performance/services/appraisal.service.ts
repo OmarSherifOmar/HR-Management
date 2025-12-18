@@ -221,50 +221,38 @@ export class AppraisalService {
       }
     }
 
-    if (dto.employeeIds?.length) {
-      for (const empId of dto.employeeIds) {
-        try {
-          await this.notificationModel.create({
-            to: new Types.ObjectId(empId),
-            type: `APPRAISAL_${dto.reminderType}`,
-            message,
-          });
-          employeesNotified.push(empId);
-        } catch (err) {
-          failedNotifications.push(`Error for employee ${empId}: ${err}`);
-        }
-      }
+    // Query pending assignments for reminders based on type
+    const query: any = { cycleId: new Types.ObjectId(dto.cycleId) };
+
+    switch (dto.reminderType) {
+      case 'PENDING_ASSIGNMENT':
+        query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
+        break;
+      case 'OVERDUE_ASSIGNMENT':
+        query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
+        break;
+      case 'CYCLE_ENDING_SOON':
+        query.status = { $ne: AppraisalAssignmentStatus.ACKNOWLEDGED };
+        break;
     }
 
-    if (!dto.departmentIds?.length && !dto.employeeIds?.length) {
-      const query: any = { cycleId: new Types.ObjectId(dto.cycleId) };
+    if (dto.departmentIds?.length) {
+      query.departmentId = { $in: dto.departmentIds.map(id => new Types.ObjectId(id)) };
+    }
 
-      switch (dto.reminderType) {
-        case 'PENDING_SUBMISSION':
-          query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
-          break;
-        case 'PENDING_ACKNOWLEDGEMENT':
-          query.status = AppraisalAssignmentStatus.PUBLISHED;
-          break;
-        case 'OVERDUE':
-          query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
-          query.dueDate = { $lt: new Date() };
-          break;
-        case 'CYCLE_ENDING_SOON':
-          query.status = { $ne: AppraisalAssignmentStatus.ACKNOWLEDGED };
-          break;
-      }
+    const assignments = await this.assignmentModel.find(query).lean().exec() as any[];
+    const uniqueManagerIds = [...new Set(assignments.map(a => a.managerProfileId?.toString()).filter(Boolean))];
 
-      const assignments = await this.assignmentModel.find(query).lean().exec() as any[];
-
-      for (const assignment of assignments) {
-        try {
-          const targetId = dto.reminderType === 'PENDING_SUBMISSION' ? assignment.managerProfileId : assignment.employeeProfileId;
-          await this.notificationModel.create({ to: targetId, type: `APPRAISAL_${dto.reminderType}`, message });
-          employeesNotified.push(targetId.toString());
-        } catch {
-          failedNotifications.push(assignment.employeeProfileId?.toString() || 'unknown');
-        }
+    for (const managerId of uniqueManagerIds) {
+      try {
+        await this.notificationModel.create({
+          to: new Types.ObjectId(managerId),
+          type: `APPRAISAL_${dto.reminderType}`,
+          message,
+        });
+        employeesNotified.push(managerId);
+      } catch (err) {
+        failedNotifications.push(`Error notifying manager ${managerId}: ${err}`);
       }
     }
 
@@ -274,12 +262,17 @@ export class AppraisalService {
   async getMyAppraisals(employeeId?: string) {
     if (!employeeId) throw new BadRequestException('Employee ID is required');
 
+    console.log('[getMyAppraisals] Fetching appraisals for employee:', employeeId);
+
     const records = await this.recordModel.find({
       employeeProfileId: new Types.ObjectId(employeeId),
     }).populate('cycleId').populate('managerProfileId').lean().exec() as any[];
 
+    console.log('[getMyAppraisals] Found records:', records.length);
+
     return records.map(record => ({
       _id: record._id.toString(),
+      id: record._id.toString(),
       cycleId: record.cycleId?._id?.toString() || record.cycleId?.toString(),
       cycleName: record.cycleId?.name || 'Unknown Cycle',
       managerId: record.managerProfileId?._id?.toString() || record.managerProfileId?.toString(),
@@ -294,6 +287,7 @@ export class AppraisalService {
       acknowledgedAt: record.employeeAcknowledgedAt,
       status: record.status,
       totalScore: record.totalScore,
+      overallRatingLabel: record.overallRatingLabel,
       strengths: record.strengths,
       improvementAreas: record.improvementAreas,
     }));

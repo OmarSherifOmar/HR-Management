@@ -6,12 +6,25 @@ import StatusBadge from './Shared/StatusBadge';
 
 interface Dispute {
   id: string;
+  _id?: string;
   employeeId: string;
+  employeeName?: string;
   cycleId: string;
-  status: 'PENDING' | 'RESOLVED' | 'REJECTED';
+  cycleName?: string;
+  appraisalId?: string;
+  appraisalRecord?: {
+    id: string;
+    totalScore: number;
+    overallRatingLabel: string;
+    status: string;
+    publishedAt?: string;
+  };
+  status: 'OPEN' | 'UNDER_REVIEW' | 'ADJUSTED' | 'REJECTED';
   reason: string;
-  resolution?: string;
+  details?: string;
+  resolutionSummary?: string;
   createdAt: string;
+  submittedAt?: string;
   resolvedAt?: string;
 }
 
@@ -22,41 +35,99 @@ interface DisputeManagementProps {
 }
 
 export default function DisputeManagement({ userRole, employeeId, onNotify }: DisputeManagementProps) {
+  console.log('[DisputeManagement] Component mounted with - userRole:', userRole, 'employeeId:', employeeId);
+  
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [formData, setFormData] = useState({
-    cycleId: '',
+    appraisalRecordId: '',
     reason: '',
+    details: '',
   });
   const [resolutionData, setResolutionData] = useState({
     resolution: '',
   });
+  const [myAppraisals, setMyAppraisals] = useState<any[]>([]);
 
-  const isEmployee = userRole === 'department employee';
-  const isHRManager = ['HR Manager', 'HR Admin', 'System Admin'].includes(userRole || '');
-  const canCreateDispute = ['department employee', 'HR Manager', 'HR Admin', 'HR Employee', 'System Admin'].includes(
-    userRole || ''
-  );
+  // Normalize role for checking
+  const normalizedRole = (userRole || '').toUpperCase().replace(/\s+/g, '_');
+  const isEmployee = normalizedRole === 'DEPARTMENT_EMPLOYEE';
+  const isDepartmentHead = normalizedRole === 'DEPARTMENT_HEAD';
+  const isHRRole = ['HR_MANAGER', 'HR_ADMIN', 'HR_EMPLOYEE', 'SYSTEM_ADMIN'].includes(normalizedRole);
+  // Any authenticated employee can create disputes
+  const canCreateDispute = !!employeeId;
+  
+  console.log('[DisputeManagement] Role info - raw userRole:', userRole, 'normalized:', normalizedRole, 'isEmployee:', isEmployee, 'isHRRole:', isHRRole, 'canCreateDispute:', canCreateDispute);
 
   useEffect(() => {
+    console.log('[DisputeManagement] useEffect - canCreateDispute:', canCreateDispute, 'employeeId:', employeeId);
     fetchDisputes();
+    if (canCreateDispute && employeeId) {
+      fetchMyAppraisals();
+    }
   }, []);
+
+  const fetchMyAppraisals = async () => {
+    try {
+      console.log('[fetchMyAppraisals] Fetching appraisals for employeeId:', employeeId);
+      
+      // Use my-appraisals endpoint which uses session
+      const response = await fetch(
+        'http://localhost:3000/api/performance/appraisals/my-appraisals',
+        { credentials: 'include' }
+      );
+      
+      console.log('[fetchMyAppraisals] Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[fetchMyAppraisals] Raw data:', data);
+        
+        // Filter to only show published appraisals that can be disputed
+        const publishedAppraisals = (Array.isArray(data) ? data : [])
+          .filter((a: any) => a.status === 'HR_PUBLISHED');
+        setMyAppraisals(publishedAppraisals);
+        console.log('[fetchMyAppraisals] Published appraisals:', publishedAppraisals.length);
+      } else {
+        console.error('[fetchMyAppraisals] Error response:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching appraisals:', error);
+    }
+  };
 
   const fetchDisputes = async () => {
     setLoading(true);
     try {
-      let url = 'http://localhost:3000/api/performance/disputes';
+      let url: string;
 
-      // Employees can view their own disputes
-      if (isEmployee) {
+      console.log('[fetchDisputes] userRole:', userRole, 'normalizedRole:', normalizedRole, 'isHRRole:', isHRRole, 'isDepartmentHead:', isDepartmentHead);
+
+      if (isHRRole) {
+        // HR can see all disputes
+        url = 'http://localhost:3000/api/performance/disputes';
+        console.log('[fetchDisputes] HR role - fetching all disputes');
+      } else if (isDepartmentHead && employeeId) {
+        // Managers see disputes from their team
+        url = `http://localhost:3000/api/performance/disputes/manager/${employeeId}`;
+        console.log('[fetchDisputes] Department Head - fetching team disputes');
+      } else if (employeeId) {
+        // Employees see their own disputes
         url = 'http://localhost:3000/api/performance/disputes/employee/me';
+        console.log('[fetchDisputes] Employee - fetching own disputes');
+      } else {
+        setDisputes([]);
+        setLoading(false);
+        return;
       }
 
       const response = await fetch(url, {
         credentials: 'include',
       });
+
+      console.log('[fetchDisputes] Response status:', response.status);
 
       if (response.status === 403) {
         onNotify?.('Access denied to disputes', 'error');
@@ -65,6 +136,7 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
 
       if (!response.ok) throw new Error('Failed to fetch disputes');
       const data = await response.json();
+      console.log('[fetchDisputes] Got disputes:', data?.length || 0);
       setDisputes(Array.isArray(data) ? data : []);
     } catch (error) {
       onNotify?.('Error loading disputes', 'error');
@@ -76,28 +148,54 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.appraisalRecordId) {
+      onNotify?.('Please select an appraisal', 'error');
+      return;
+    }
+    if (!formData.reason.trim()) {
+      onNotify?.('Please provide a reason', 'error');
+      return;
+    }
     try {
-      const url = 'http://localhost:3000/api/performance/disputes/employee/me';
+      console.log('[handleSubmit] Submitting dispute:', formData);
+      const url = `http://localhost:3000/api/performance/disputes/employee/${employeeId}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          appraisalRecordId: formData.appraisalRecordId,
+          reason: formData.reason,
+          details: formData.details || undefined,
+        }),
       });
+
+      console.log('[handleSubmit] Response status:', response.status);
 
       if (response.status === 403) {
         onNotify?.('You do not have permission to create disputes', 'error');
         return;
       }
 
-      if (!response.ok) throw new Error('Failed to create dispute');
+      if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[handleSubmit] Validation error:', errorData);
+        onNotify?.(errorData.message || 'Invalid request', 'error');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[handleSubmit] Error:', errorData);
+        throw new Error(errorData.message || 'Failed to create dispute');
+      }
 
       onNotify?.('Dispute created successfully', 'success');
       setShowForm(false);
-      setFormData({ cycleId: '', reason: '' });
+      setFormData({ appraisalRecordId: '', reason: '', details: '' });
       fetchDisputes();
-    } catch (error) {
-      onNotify?.('Error creating dispute', 'error');
+    } catch (error: any) {
+      onNotify?.(error.message || 'Error creating dispute', 'error');
       console.error(error);
     }
   };
@@ -133,11 +231,13 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'RESOLVED':
+      case 'ADJUSTED':
         return <CheckCircle size={16} className="text-green-400" />;
       case 'REJECTED':
         return <Trash2 size={16} className="text-red-400" />;
-      default:
+      case 'UNDER_REVIEW':
+        return <AlertCircle size={16} className="text-blue-400" />;
+      default: // OPEN
         return <AlertCircle size={16} className="text-yellow-400" />;
     }
   };
@@ -146,11 +246,18 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
     return <div className="text-center text-gray-400">Loading disputes...</div>;
   }
 
+  console.log('[DisputeManagement] render - canCreateDispute:', canCreateDispute, 'employeeId:', employeeId, 'disputes:', disputes.length);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white">Dispute Management</h2>
-        {isEmployee && (
+        {/* Debug info */}
+        <div className="text-xs text-gray-500">
+          canCreateDispute: {String(canCreateDispute)}, employeeId: {employeeId || 'MISSING'}
+        </div>
+        {/* Button - always show for authenticated users */}
+        {employeeId && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -161,30 +268,61 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
         )}
       </div>
 
-      {showForm && isEmployee && (
+      {showForm && canCreateDispute && (
         <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-700 bg-gray-800/50 p-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300">Cycle ID</label>
-            <input
-              type="text"
-              value={formData.cycleId}
-              onChange={(e) => setFormData({ ...formData, cycleId: e.target.value })}
-              required
-              className="mt-1 w-full rounded bg-gray-700/50 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Appraisal cycle ID"
-            />
+            <label className="block text-sm font-medium text-gray-300">Select Appraisal to Dispute</label>
+            <p className="mt-1 text-xs text-gray-400">Choose from your published appraisals (within 7 days of publication)</p>
+            {myAppraisals.length > 0 ? (
+              <select
+                value={formData.appraisalRecordId}
+                onChange={(e) => setFormData({ ...formData, appraisalRecordId: e.target.value })}
+                required
+                className="mt-2 w-full rounded bg-gray-700/50 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select an appraisal...</option>
+                {myAppraisals.map((appraisal) => (
+                  <option key={appraisal._id || appraisal.id} value={appraisal._id || appraisal.id}>
+                    {appraisal.cycleName || 'Cycle'} - Score: {appraisal.totalScore || 'N/A'} - {appraisal.overallRatingLabel || 'Unrated'}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="mt-2">
+                <p className="text-sm text-yellow-400">No published appraisals available to dispute.</p>
+                <input
+                  type="text"
+                  value={formData.appraisalRecordId}
+                  onChange={(e) => setFormData({ ...formData, appraisalRecordId: e.target.value })}
+                  required
+                  className="mt-2 w-full rounded bg-gray-700/50 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter Appraisal Record ID manually"
+                />
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">Reason for Dispute (Within 7 Days)</label>
+            <label className="block text-sm font-medium text-gray-300">Reason for Dispute</label>
             <p className="mt-1 text-xs text-gray-400">Explain your concern about the appraisal rating</p>
             <textarea
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               required
-              rows={4}
+              rows={3}
               className="mt-2 w-full rounded bg-gray-700/50 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Provide detailed reasoning for your dispute..."
+              placeholder="Briefly explain why you are disputing this appraisal..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Additional Details (Optional)</label>
+            <textarea
+              value={formData.details}
+              onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+              rows={3}
+              className="mt-2 w-full rounded bg-gray-700/50 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Provide any additional context or evidence..."
             />
           </div>
 
@@ -210,12 +348,14 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
         {disputes.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-600 py-12">
             <AlertCircle className="mb-3 h-8 w-8 text-gray-500" />
-            <p className="text-sm text-gray-400">{isHRManager ? 'No disputes to resolve' : 'No disputes filed'}</p>
+            <p className="text-sm text-gray-400">
+              {isHRRole || isDepartmentHead ? 'No disputes to review' : 'No disputes filed'}
+            </p>
           </div>
         ) : (
           disputes.map((dispute) => (
             <div
-              key={dispute.id}
+              key={dispute.id || dispute._id}
               className="flex flex-col gap-4 rounded-lg border border-gray-700 bg-gray-800/30 p-4 hover:border-gray-600 transition-colors"
             >
               <div className="flex items-start justify-between">
@@ -224,33 +364,57 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
                     {getStatusIcon(dispute.status)}
                     <div>
                       <h3 className="font-semibold text-white">
-                        {isHRManager ? `Employee: ${dispute.employeeId}` : 'Your Dispute'}
+                        {(isHRRole || isDepartmentHead) ? `Employee: ${dispute.employeeName || dispute.employeeId}` : 'Your Dispute'}
                       </h3>
-                      <p className="text-xs text-gray-400">Cycle: {dispute.cycleId}</p>
+                      <p className="text-xs text-gray-400">Cycle: {dispute.cycleName || dispute.cycleId}</p>
                     </div>
                   </div>
                 </div>
                 <StatusBadge status={dispute.status} />
               </div>
 
-              <div className="rounded bg-gray-700/20 p-3">
-                <p className="text-xs font-medium text-gray-400">Reason for Dispute:</p>
-                <p className="mt-2 text-sm text-gray-300">{dispute.reason}</p>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Filed: {new Date(dispute.createdAt).toLocaleDateString()}</span>
-                {dispute.resolvedAt && <span>Resolved: {new Date(dispute.resolvedAt).toLocaleDateString()}</span>}
-              </div>
-
-              {dispute.resolution && (
-                <div className="rounded bg-blue-500/10 border border-blue-500/30 p-3">
-                  <p className="text-xs font-medium text-blue-300">HR Resolution:</p>
-                  <p className="mt-2 text-sm text-blue-100">{dispute.resolution}</p>
+              {/* Appraisal Record Info */}
+              {dispute.appraisalRecord && (
+                <div className="rounded bg-purple-500/10 border border-purple-500/30 p-3">
+                  <p className="text-xs font-medium text-purple-300">Disputed Appraisal:</p>
+                  <div className="mt-2 flex flex-wrap gap-4 text-sm">
+                    <span className="text-gray-300">
+                      Score: <span className="font-semibold text-white">{dispute.appraisalRecord.totalScore || 'N/A'}</span>
+                    </span>
+                    <span className="text-gray-300">
+                      Rating: <span className="font-semibold text-white">{dispute.appraisalRecord.overallRatingLabel || 'Unrated'}</span>
+                    </span>
+                    <span className="text-gray-300">
+                      Status: <span className="font-semibold text-white">{dispute.appraisalRecord.status}</span>
+                    </span>
+                  </div>
                 </div>
               )}
 
-              {isHRManager && dispute.status === 'PENDING' && (
+              <div className="rounded bg-gray-700/20 p-3">
+                <p className="text-xs font-medium text-gray-400">Reason for Dispute:</p>
+                <p className="mt-2 text-sm text-gray-300">{dispute.reason}</p>
+                {dispute.details && (
+                  <>
+                    <p className="mt-3 text-xs font-medium text-gray-400">Additional Details:</p>
+                    <p className="mt-1 text-sm text-gray-300">{dispute.details}</p>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Filed: {dispute.createdAt ? new Date(dispute.createdAt).toLocaleDateString() : 'N/A'}</span>
+                {dispute.resolvedAt && <span>Resolved: {new Date(dispute.resolvedAt).toLocaleDateString()}</span>}
+              </div>
+
+              {dispute.resolutionSummary && (
+                <div className="rounded bg-blue-500/10 border border-blue-500/30 p-3">
+                  <p className="text-xs font-medium text-blue-300">HR Resolution:</p>
+                  <p className="mt-2 text-sm text-blue-100">{dispute.resolutionSummary}</p>
+                </div>
+              )}
+
+              {isHRRole && (dispute.status === 'OPEN' || dispute.status === 'UNDER_REVIEW') && (
                 <button
                   onClick={() => {
                     setSelectedDispute(dispute);
