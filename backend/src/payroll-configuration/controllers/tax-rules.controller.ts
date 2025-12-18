@@ -32,7 +32,7 @@ export class TaxRulesController {
   }
 
   @Patch(':id')
-  @Roles(Role.LEGAL_POLICY_ADMIN, Role.Payroll_MANAGER)
+  @Roles( Role.Payroll_MANAGER)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateTaxRuleDto,

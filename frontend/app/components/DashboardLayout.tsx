@@ -86,7 +86,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   // Role-based permission checks
   const canViewPayroll = () => {
-    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal Policy Admin', 'HR Manager', 'System Admin'];
+    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal & Policy Admin', 'HR Manager', 'System Admin'];
     return payrollRoles.includes(user?.role || '');
   };
 
