@@ -165,10 +165,10 @@ export default function DashboardLayout({
         { name: 'Tax Rules', href: '/payroll/config/Tax-Rule' },
         { name: 'Insurance Brackets', href: '/payroll/config/Insurance-Bracket' },
         { name: 'Company Wide Settings', href: '/payroll/config/Company-wide-settings' },
-        { name: 'Run Payroll', href: '/payroll/execution' },
         { name: 'Configuration', href: '/dashboard/payroll/configuration' },
         { name: 'History', href: '/dashboard/payroll/history' },
         { name: 'Reports', href: '/dashboard/payroll/reports' },
+        { name: "Tracking", href: "/payroll/tracking" }
       ],
     }] : []),
     {
@@ -205,14 +205,8 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-[#1a1a1a]">
       {/* Sidebar */}
       <aside
-<<<<<<< HEAD
         className={`fixed left-0 top-0 h-full bg-[#1a1a1a] transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'
           }`}
-=======
-        className={`fixed left-0 top-0 h-full bg-[#1a1a1a] transition-all duration-300 z-40 ${
-          sidebarOpen ? "w-64" : "w-20"
-        }`}
->>>>>>> origin/payroll-tracking-frontend
       >
         <div className="flex items-center justify-between p-4">
           {sidebarOpen && (
@@ -238,18 +232,10 @@ export default function DashboardLayout({
               {item.href ? (
                 <Link
                   href={item.href}
-<<<<<<< HEAD
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${item.active
                     ? 'bg-[#2a2a2a] text-white'
                     : 'text-gray-400 hover:bg-[#2a2a2a] hover:text-white'
                     }`}
-=======
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                    item.active
-                      ? "bg-[#2a2a2a] text-white"
-                      : "text-gray-400 hover:bg-[#2a2a2a] hover:text-white"
-                  }`}
->>>>>>> origin/payroll-tracking-frontend
                 >
                   {item.icon}
                   {sidebarOpen && (
@@ -273,14 +259,8 @@ export default function DashboardLayout({
               {/* Flyout Submenu */}
               {item.subItems && hoveredMenu === item.name && (
                 <div
-<<<<<<< HEAD
                   className={`absolute top-0 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 py-2 min-w-[200px] z-50 ${sidebarOpen ? 'left-full ml-2' : 'left-full ml-2'
                     }`}
-=======
-                  className={`absolute top-0 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 py-2 min-w-[200px] z-50 ${
-                    sidebarOpen ? "left-full ml-2" : "left-full ml-2"
-                  }`}
->>>>>>> origin/payroll-tracking-frontend
                   onMouseEnter={() => handleMenuEnter(item.name)}
                   onMouseLeave={handleMenuLeave}
                 >
@@ -309,14 +289,8 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <div
-<<<<<<< HEAD
         className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'
           }`}
-=======
-        className={`transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-20"
-        }`}
->>>>>>> origin/payroll-tracking-frontend
       >
         {/* Header */}
         <header className="bg-[#1a1a1a] border-b border-gray-800 sticky top-0 z-30">
