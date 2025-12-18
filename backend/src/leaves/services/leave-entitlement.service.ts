@@ -424,7 +424,8 @@ export class LeaveEntitlementService {
                 adjustmentType: AdjustmentType.DEDUCT,
                 amount: deductedAmount,
                 reason: `[AUTO_ACCRUAL_SUSPENSION] Month: ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}. ` +
-                  `Unpaid leave: ${serviceDays.unpaidLeaveDays} days, Suspension: ${serviceDays.suspensionDays} days. ` +
+                  `Unpaid leave: ${serviceDays.unpaidLeaveDays} days, Suspension: ${serviceDays.suspensionDays} days, ` +
+                  `Extended leave (>30d): ${serviceDays.extendedLeaveDays} days. ` +
                   `Service days: ${serviceDays.actualServiceDays}/${serviceDays.totalCalendarDays} (${serviceDays.serviceDaysPercentage.toFixed(1)}%). ` +
                   `Accrued: ${adjustedAccrual.toFixed(2)} instead of ${originalAccrual}`,
                 hrUserId: new Types.ObjectId('000000000000000000000000'), // System user
