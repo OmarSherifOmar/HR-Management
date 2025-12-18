@@ -12,6 +12,11 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [duration, setDuration] = useState('0h 0m');
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [monthlySummary, setMonthlySummary] = useState<any | null>(null);
+  const [monthlyLoading, setMonthlyLoading] = useState(false);
+  const [monthlyError, setMonthlyError] = useState<string | null>(null);
 
   // Helper to derive status and latest times from record
   const getRecordStatus = (record: any) => {
@@ -49,6 +54,7 @@ export default function AttendancePage() {
 
   useEffect(() => {
     fetchTodayAttendance();
+    fetchHistory();
   }, []);
 
   useEffect(() => {
@@ -127,6 +133,8 @@ export default function AttendancePage() {
       if (response.ok) {
         const data = await response.json();
         setAttendanceRecord(data);
+        // refresh history so today row is up to date
+        fetchHistory();
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to clock in');
@@ -148,6 +156,8 @@ export default function AttendancePage() {
       if (response.ok) {
         const data = await response.json();
         setAttendanceRecord(data);
+        // refresh history so today row is up to date
+        fetchHistory();
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to clock out');
@@ -173,6 +183,71 @@ export default function AttendancePage() {
       minute: '2-digit',
       hour12: true,
     });
+  };
+
+  const formatMinutes = (minutes?: number) => {
+    if (!minutes || minutes <= 0) return '0h 0m';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  };
+
+  const fetchMonthlySummary = async () => {
+    try {
+      setMonthlyLoading(true);
+      setMonthlyError(null);
+      const response = await fetch(`${API_BASE_URL}/attendance/monthly-summary`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMonthlySummary(data);
+      } else {
+        setMonthlySummary(null);
+        setMonthlyError('Failed to load monthly summary');
+      }
+    } catch (err) {
+      console.error('Error fetching monthly summary:', err);
+      setMonthlySummary(null);
+      setMonthlyError('Error loading monthly summary');
+    } finally {
+      setMonthlyLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'summary' && !monthlySummary && !monthlyLoading) {
+      fetchMonthlySummary();
+    }
+  }, [activeTab]);
+
+  const fetchHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const end = new Date();
+      const start = new Date(end);
+      start.setDate(end.getDate() - 29); // last 30 days
+
+      const startStr = start.toISOString().slice(0, 10);
+      const endStr = end.toISOString().slice(0, 10);
+
+      const response = await fetch(
+        `${API_BASE_URL}/attendance/history?start=${startStr}&end=${endStr}`,
+        { credentials: 'include' }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(Array.isArray(data) ? data : []);
+      } else {
+        setHistory([]);
+      }
+    } catch (err) {
+      console.error('Error fetching attendance history:', err);
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   return (
@@ -289,10 +364,65 @@ export default function AttendancePage() {
       {/* Tab Content Placeholder */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[200px]">
         {activeTab === 'history' && (
-          <div className="text-center text-gray-500 py-12">
-            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>Attendance history will appear here</p>
-          </div>
+        <div>
+          {historyLoading ? (
+            <div className="text-center text-gray-500 py-12">
+              <p>Loading attendance history...</p>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="text-center text-gray-500 py-12">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p>No attendance records found for the last 30 days.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Clock In</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Clock Out</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Status</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Duration</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {history.map((rec) => {
+                    const date = rec.date ? new Date(rec.date) : null;
+                    const clockInTime = rec.clockInTime ? new Date(rec.clockInTime) : null;
+                    const clockOutTime = rec.clockOutTime ? new Date(rec.clockOutTime) : null;
+                    const statusLabel = rec.status === 'IN' ? 'In Progress' : 'Completed';
+                    return (
+                      <tr key={rec._id || `${rec.employeeId}-${rec.date}`}>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-900 dark:text-gray-100">
+                          {date ? date.toLocaleDateString() : '—'}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">
+                          {clockInTime ? formatTime(clockInTime) : '—'}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">
+                          {clockOutTime ? formatTime(clockOutTime) : '—'}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5
+                            ${rec.status === 'IN'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
+                            }`}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">
+                          {formatMinutes(rec.totalWorkMinutes)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
         )}
         {activeTab === 'corrections' && (
           <div className="text-center text-gray-500 py-12">
@@ -301,9 +431,67 @@ export default function AttendancePage() {
           </div>
         )}
         {activeTab === 'summary' && (
-          <div className="text-center text-gray-500 py-12">
-            <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>Monthly summary visualization</p>
+          <div>
+            {monthlyLoading ? (
+              <div className="text-center text-gray-500 py-12">
+                <p>Loading monthly summary...</p>
+              </div>
+            ) : monthlyError ? (
+              <div className="text-center text-red-500 py-12">
+                {monthlyError}
+              </div>
+            ) : !monthlySummary ? (
+              <div className="text-center text-gray-500 py-12">
+                <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>No attendance data for this month yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Days Worked</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {monthlySummary.totalDaysWorked}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">In the selected month</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Time</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {formatMinutes(monthlySummary.totalWorkMinutes)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Total recorded work this month</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Average / Day</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {formatMinutes(monthlySummary.averageWorkMinutes)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Average worked per working day</p>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Overtime</p>
+                  <p className="text-2xl font-semibold text-green-600 dark:text-green-400">
+                    {monthlySummary.totalOvertimeMinutes} min
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Based on policy calculations</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Late Arrivals</p>
+                  <p className="text-2xl font-semibold text-amber-600 dark:text-amber-400">
+                    {monthlySummary.lateCount}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Days with recorded lateness</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Missed Punches</p>
+                  <p className="text-2xl font-semibold text-red-600 dark:text-red-400">
+                    {monthlySummary.missedPunchCount + monthlySummary.earlyLeaveCount}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Missing clock-outs or early leaves</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

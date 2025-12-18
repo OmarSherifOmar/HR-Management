@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, NotFoundException, UseGuards, Query } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AttendanceCorrectionRequest, AttendanceCorrectionRequestDocument } from '../models/attendance-correction-request.schema';
@@ -38,8 +38,7 @@ export class CorrectnessController {
 
 	@Get('mine/:employeeId')
 	async mine(@Param('employeeId') employeeIdParam: string) {
-		const employeeId = new Types.ObjectId(employeeIdParam);
-		return this.correctionModel.find({ employeeId });
+		return this.correctionService.getRequestsForEmployee(employeeIdParam);
 	}
 
 	@Get('pending')
@@ -48,6 +47,15 @@ export class CorrectnessController {
 		return this.correctionModel.find({
 			status: { $in: [CorrectionRequestStatus.SUBMITTED, CorrectionRequestStatus.IN_REVIEW] }
 		});
+	}
+
+	// List all correction requests for HR Admin, optionally filtered by status
+	@Get()
+	@Roles(Role.HR_ADMIN)
+	async listAll(@Query('status') status?: CorrectionRequestStatus) {
+		const query: any = {};
+		if (status) query.status = status;
+		return this.correctionModel.find(query).sort({ _id: -1 });
 	}
 
 	@Post(':id/review')
@@ -70,26 +78,26 @@ export class CorrectnessController {
   }
 
   	@Post(':id/approve')
-	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
+	@Roles(Role.HR_ADMIN)
 	async approve(@Param('id') requestId: string, @Body() body: ApproveCorrectionDto) {
 		return this.policyService.correctionRequestApproval(requestId, body.approvedBy);
   }
 
 	@Post(':id/reject')
-	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
+	@Roles(Role.HR_ADMIN)
 	async reject(@Param('id') requestId: string, @Body() body: RejectCorrectionDto) {
 		return this.policyService.rejectCorrectionRequest(requestId, body.approvedBy, body.reason);
   }
 
   	@Post('exceptions/escalate')
-	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+	@Roles(Role.HR_ADMIN, Role.SYSTEM_ADMIN)
 	async escalate(@Body() body: EscalateExceptionsDto) {
 		const cutoff = new Date(body.cutoffDate);
 		return this.policyService.escalatePendingExceptions(cutoff);
   }
 
 	@Post('review-and-correct')
-	@Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.DEPARTMENT_HEAD)
+	@Roles(Role.HR_ADMIN)
 	async reviewAndCorrect(@Body() body: ReviewAndCorrectDto) {
 		return this.correctionService.reviewAndCorrectAttendance(
 			body.attendanceRecordId,

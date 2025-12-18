@@ -191,6 +191,17 @@ export class AttendanceService {
     return this.transformRecord(record);
   }
 
+  // Get attendance history for an employee within a date range
+  async getHistoryForEmployee(employeeIdRaw: string, startDate: Date, endDate: Date) {
+    const employeeId = new Types.ObjectId(employeeIdRaw);
+    const start = startOfDay(startDate);
+    const end = endOfDay(endDate);
+    const records = await this.attendanceModel
+      .find({ employeeId, 'punches.time': { $gte: start, $lte: end } })
+      .sort({ date: -1 });
+    return records.map((r) => this.transformRecord(r));
+  }
+
   // scheduled check for missed punches 
   async flagMissedPunchesForDay(date: Date) {
     const start = startOfDay(date);

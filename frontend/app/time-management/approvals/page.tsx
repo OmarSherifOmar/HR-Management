@@ -11,7 +11,6 @@ import {
   Calendar,
   MessageSquare,
   Search,
-  Filter,
   ArrowUpRight
 } from 'lucide-react';
 
@@ -24,6 +23,12 @@ export default function ApprovalsPage() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [employeeCache, setEmployeeCache] = useState<Record<string, any>>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState({
+    pending: 0,
+    approvedToday: 0,
+    rejectedToday: 0,
+    escalated: 0,
+  });
 
   const fetchEmployee = async (id: string) => {
     if (employeeCache[id]) return;
@@ -38,11 +43,17 @@ export default function ApprovalsPage() {
     }
   };
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (tab: 'pending' | 'approved' | 'rejected') => {
     setLoading(true);
     try {
-      // Fetch pending corrections
-      const response = await fetch(`${API_BASE_URL}/corrections/pending`, {
+      let url = `${API_BASE_URL}/corrections/pending`;
+      if (tab === 'approved') {
+        url = `${API_BASE_URL}/corrections?status=APPROVED`;
+      } else if (tab === 'rejected') {
+        url = `${API_BASE_URL}/corrections?status=REJECTED`;
+      }
+
+      const response = await fetch(url, {
         credentials: 'include',
       });
       
@@ -61,9 +72,49 @@ export default function ApprovalsPage() {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/corrections`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) return;
+
+      const all = await response.json();
+      const today = new Date();
+      const isToday = (value: string) => {
+        const d = new Date(value);
+        return (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
+        );
+      };
+
+      const pendingCount = all.filter(
+        (item: any) => item.status === 'SUBMITTED' || item.status === 'IN_REVIEW'
+      ).length;
+
+      const approvedToday = all.filter(
+        (item: any) => item.status === 'APPROVED' && isToday(item.reviewedAt || item.updatedAt || item.createdAt)
+      ).length;
+
+      const rejectedToday = all.filter(
+        (item: any) => item.status === 'REJECTED' && isToday(item.reviewedAt || item.updatedAt || item.createdAt)
+      ).length;
+
+      const escalated = all.filter((item: any) => item.status === 'ESCALATED').length;
+
+      setStats({ pending: pendingCount, approvedToday, rejectedToday, escalated });
+    } catch (error) {
+      console.error('Failed to fetch stats', error);
+    }
+  };
+
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    fetchRequests(activeTab as 'pending' | 'approved' | 'rejected');
+    fetchStats();
+  }, [activeTab]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     try {
@@ -86,6 +137,8 @@ export default function ApprovalsPage() {
         // Remove from list
         setRequests(prev => prev.filter(r => r._id !== id));
         setSelectedRequest(null);
+        fetchStats();
+        fetchRequests(activeTab as 'pending' | 'approved' | 'rejected');
       } else {
         alert('Failed to process request');
       }
@@ -107,29 +160,29 @@ export default function ApprovalsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <p className="text-gray-400 text-sm">Pending Approvals</p>
-          <h3 className="text-4xl font-light text-yellow-500 mt-2">{requests.length}</h3>
+          <h3 className="text-4xl font-light text-yellow-500 mt-2">{stats.pending}</h3>
         </div>
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <p className="text-gray-400 text-sm">Approved Today</p>
-          <h3 className="text-4xl font-light text-green-500 mt-2">0</h3>
+          <h3 className="text-4xl font-light text-green-500 mt-2">{stats.approvedToday}</h3>
         </div>
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <p className="text-gray-400 text-sm">Rejected Today</p>
-          <h3 className="text-4xl font-light text-red-500 mt-2">0</h3>
+          <h3 className="text-4xl font-light text-red-500 mt-2">{stats.rejectedToday}</h3>
         </div>
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <p className="text-gray-400 text-sm">Escalated</p>
-          <h3 className="text-4xl font-light text-orange-500 mt-2">0</h3>
+          <h3 className="text-4xl font-light text-orange-500 mt-2">{stats.escalated}</h3>
         </div>
       </div>
 
       {/* Alert Banner */}
-      {requests.length > 0 && (
+      {stats.pending > 0 && (
         <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-6 h-6 text-red-500" />
             <div>
-              <p className="text-red-400 font-medium">{requests.length} pending requests require action before payroll cutoff</p>
+              <p className="text-red-400 font-medium">{stats.pending} pending requests require action before payroll cutoff</p>
               <p className="text-red-500/60 text-sm">All time corrections and overtime approvals must be completed by end of month</p>
             </div>
           </div>
@@ -146,7 +199,7 @@ export default function ApprovalsPage() {
             onClick={() => setActiveTab('pending')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'pending' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
           >
-            Pending ({requests.length})
+            Pending ({stats.pending})
           </button>
           <button 
             onClick={() => setActiveTab('approved')}
@@ -173,14 +226,6 @@ export default function ApprovalsPage() {
               className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-gray-600"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700">
-            <Filter className="w-4 h-4" />
-            Filter by Type
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700">
-            <Filter className="w-4 h-4" />
-            Filter by Department
-          </button>
         </div>
       </div>
 
@@ -189,7 +234,11 @@ export default function ApprovalsPage() {
         {loading ? (
           <div className="p-12 text-center text-gray-500">Loading requests...</div>
         ) : filteredRequests.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">No pending requests found</div>
+          <div className="p-12 text-center text-gray-500">
+            {activeTab === 'pending' && 'No pending requests found'}
+            {activeTab === 'approved' && 'No approved requests found'}
+            {activeTab === 'rejected' && 'No rejected requests found'}
+          </div>
         ) : (
           <div className="divide-y divide-gray-700">
             {filteredRequests.map((req) => {
@@ -234,20 +283,22 @@ export default function ApprovalsPage() {
 
                     <div className="flex flex-col items-end gap-2">
                       <span className="text-gray-500 text-xs">Submitted: {new Date(req.createdAt).toLocaleString()}</span>
-                      <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleAction(req._id, 'reject')}
-                          className="px-3 py-1.5 border border-red-900/50 text-red-400 rounded hover:bg-red-900/20 text-sm"
-                        >
-                          Reject
-                        </button>
-                        <button 
-                          onClick={() => handleAction(req._id, 'approve')}
-                          className="px-3 py-1.5 bg-green-900/30 text-green-400 border border-green-900/50 rounded hover:bg-green-900/40 text-sm"
-                        >
-                          Approve
-                        </button>
-                      </div>
+                        {activeTab === 'pending' && (
+                          <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => handleAction(req._id, 'reject')}
+                              className="px-3 py-1.5 border border-red-900/50 text-red-400 rounded hover:bg-red-900/20 text-sm"
+                            >
+                              Reject
+                            </button>
+                            <button 
+                              onClick={() => handleAction(req._id, 'approve')}
+                              className="px-3 py-1.5 bg-green-900/30 text-green-400 border border-green-900/50 rounded hover:bg-green-900/40 text-sm"
+                            >
+                              Approve
+                            </button>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>
