@@ -5,6 +5,36 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useAuth, authenticatedFetch } from '../../../context/AuthContext';
 
+// Reusable error parsing helper function
+async function parseError(res: Response): Promise<string> {
+  try {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const json = await res.json();
+        return json.message || json.error || `HTTP ${res.status}`;
+      } catch (parseError) {
+        // JSON parsing failed, fall back to text
+        try {
+          const text = await res.text();
+          return text || `HTTP ${res.status}`;
+        } catch (textError) {
+          return `HTTP ${res.status}`;
+        }
+      }
+    } else {
+      try {
+        const text = await res.text();
+        return text || `HTTP ${res.status}`;
+      } catch (textError) {
+        return `HTTP ${res.status}`;
+      }
+    }
+  } catch (error) {
+    return `HTTP ${res.status}`;
+  }
+}
+
 interface RuleDefinition {
   percentage: number | '';
   fixedAmount: number | '';
@@ -46,6 +76,7 @@ export default function PayrollPoliciesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
@@ -101,8 +132,8 @@ export default function PayrollPoliciesPage() {
       );
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Failed to load payroll policies');
+        const errorMessage = await parseError(res);
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();
@@ -132,12 +163,12 @@ export default function PayrollPoliciesPage() {
     setForm(emptyPolicy);
     setEditingId(null);
     setIsModalOpen(false);
+    setFormError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setFormError(null);
 
     try {
       const method = editingId ? 'PATCH' : 'POST';
@@ -167,8 +198,9 @@ export default function PayrollPoliciesPage() {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Failed to save payroll policy');
+        const errorMessage = await parseError(res);
+        setFormError(errorMessage);
+        return;
       }
 
       await fetchPolicies();
@@ -177,7 +209,7 @@ export default function PayrollPoliciesPage() {
         editingId ? 'Payroll policy updated successfully' : 'Payroll policy created successfully',
       );
     } catch (err: any) {
-      setError(err.message || 'Error saving payroll policy');
+      setFormError(err.message || 'Error saving payroll policy');
     }
   };
 
@@ -212,8 +244,8 @@ export default function PayrollPoliciesPage() {
         await fetchPolicies();
         setSuccess('Payroll policy approved successfully');
       } else {
-        const text = await response.text();
-        throw new Error(text || 'Failed to approve payroll policy');
+        const errorMessage = await parseError(response);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to approve payroll policy');
@@ -230,8 +262,8 @@ export default function PayrollPoliciesPage() {
         await fetchPolicies();
         setSuccess('Payroll policy rejected successfully');
       } else {
-        const text = await response.text();
-        throw new Error(text || 'Failed to reject payroll policy');
+        const errorMessage = await parseError(response);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to reject payroll policy');
@@ -249,8 +281,8 @@ export default function PayrollPoliciesPage() {
         setSuccess('Payroll policy deleted successfully');
         setDeleteConfirm(null);
       } else {
-        const text = await response.text();
-        throw new Error(text || 'Failed to delete payroll policy');
+        const errorMessage = await parseError(response);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to delete payroll policy');
@@ -492,6 +524,12 @@ export default function PayrollPoliciesPage() {
                 ✕
               </button>
             </div>
+
+            {formError && (
+              <div className="bg-red-600/20 border border-red-600 rounded p-3 mb-4">
+                <p className="text-red-300 text-sm">{formError}</p>
+              </div>
+            )}
 
             {isLoading ? (
               <p className="text-gray-300 text-sm">Checking authentication...</p>
