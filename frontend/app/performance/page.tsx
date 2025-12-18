@@ -29,9 +29,16 @@ export default function PerformanceManagementPage() {
 
         if (response.ok) {
           const userData = await response.json();
+          console.log('[PerformanceManagementPage] Full user data from /auth/me:', userData);
+          console.log('[PerformanceManagementPage] userData keys:', Object.keys(userData));
+          
+          // Try different field names
+          const employeeIdValue = userData.employeeId || userData.id || userData._id || userData.userId;
+          console.log('[PerformanceManagementPage] Extracted employeeId:', employeeIdValue);
+          
           setUser({
-            id: userData.id || userData.employeeId,
-            employeeId: userData.employeeId,
+            id: employeeIdValue,
+            employeeId: employeeIdValue,
             role: userData.role,
           });
         } else {
@@ -81,7 +88,11 @@ export default function PerformanceManagementPage() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="mx-auto max-w-7xl">
-        <PerformanceManagement userRole={user.role} employeeId={user.id} />
+        {/* Debug: Show if employeeId is passed */}
+        <div className="mb-4 text-xs text-gray-500">
+          Debug: user.id={user?.id}, user.employeeId={user?.employeeId}, user.role={user?.role}
+        </div>
+        <PerformanceManagement userRole={user.role} employeeId={user.employeeId || user.id} />
       </div>
     </div>
   );

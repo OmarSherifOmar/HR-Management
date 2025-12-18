@@ -13,21 +13,7 @@ import { SystemRole } from '../../employee-profile/enums/employee-profile.enums'
 export class AppraisalController {
   constructor(private readonly appraisalService: AppraisalService) {}
 
-  @Get(':recordId/employee/:employeeId')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
-  async view(@Param('recordId') recordId: string, @Param('employeeId') employeeId: string) {
-    return this.appraisalService.view({ appraisalRecordId: recordId, employeeId });
-  }
-
-  @Put(':recordId/employee/:employeeId/acknowledge')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
-  async acknowledge(
-    @Param('recordId') recordId: string,
-    @Param('employeeId') employeeId: string,
-    @Body('comment') comment?: string,
-  ) {
-    return this.appraisalService.acknowledge({ appraisalRecordId: recordId, employeeId, comment });
-  }
+  // IMPORTANT: Static routes must come before parameterized routes
 
   @Post('progress')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
@@ -50,7 +36,33 @@ export class AppraisalController {
   @Get('my-appraisals')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async getMyAppraisals(@Req() req) {
+    console.log('[AppraisalController] GET /my-appraisals for:', req.user?.employeeId);
     return this.appraisalService.getMyAppraisals(req.user?.employeeId);
+  }
+
+  @Get('employee/:employeeId')
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  async getByEmployeeId(@Param('employeeId') employeeId: string) {
+    console.log('[AppraisalController] GET /employee/:employeeId for:', employeeId);
+    return this.appraisalService.getMyAppraisals(employeeId);
+  }
+
+  // Parameterized routes come after static routes
+
+  @Get(':recordId/employee/:employeeId')
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  async view(@Param('recordId') recordId: string, @Param('employeeId') employeeId: string) {
+    return this.appraisalService.view({ appraisalRecordId: recordId, employeeId });
+  }
+
+  @Put(':recordId/employee/:employeeId/acknowledge')
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  async acknowledge(
+    @Param('recordId') recordId: string,
+    @Param('employeeId') employeeId: string,
+    @Body('comment') comment?: string,
+  ) {
+    return this.appraisalService.acknowledge({ appraisalRecordId: recordId, employeeId, comment });
   }
 
   @Put(':id/acknowledge')
@@ -60,8 +72,9 @@ export class AppraisalController {
   }
 
   @Put(':id/employee/me/acknowledge')
-  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role .SYSTEM_ADMIN)
+  @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async acknowledgeAppraisalMe(@Param('id') id: string, @Body() body: { comment?: string }, @Req() req) {
     return this.appraisalService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
   }
 }
+    

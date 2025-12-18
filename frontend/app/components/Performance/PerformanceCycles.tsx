@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Play, Square, Edit } from 'lucide-react';
+import { Plus, Play, Square, Edit, Archive } from 'lucide-react';
+import { ArchiveConfirmModal } from './ArchiveConfirmModal';
 
 interface Template {
   _id?: string;
@@ -39,6 +40,8 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archivingCycleId, setArchivingCycleId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -254,6 +257,43 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
     } catch (error) {
       onNotify?.('Error closing cycle', 'error');
       console.error(error);
+    }
+  };
+
+  const handleArchiveCycle = (cycleId: string) => {
+    setArchivingCycleId(cycleId);
+    setShowArchiveModal(true);
+  };
+
+  const confirmArchiveCycle = async () => {
+    if (!archivingCycleId) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/performance/assignments/cycles/${archivingCycleId}/archive-all`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to archive cycle');
+      }
+
+      const data = await response.json();
+      onNotify?.(
+        `Cycle archived successfully! Archived ${data.archivedAssignments} assignments and ${data.archivedRecords} records.`,
+        'success'
+      );
+      setShowArchiveModal(false);
+      setArchivingCycleId(null);
+      fetchCycles();
+    } catch (error: any) {
+      onNotify?.(error.message || 'Error archiving cycle', 'error');
+      console.error('[PerformanceCycles] Error archiving cycle:', error);
     }
   };
 
@@ -507,12 +547,34 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
                       Close
                     </button>
                   )}
+                  {(cycle.status === 'CLOSED' || cycle.status === 'PLANNED') && (
+                    <button
+                      onClick={() => handleArchiveCycle(cycle.id || cycle._id || '')}
+                      className="flex items-center gap-1 rounded bg-orange-600/20 px-3 py-2 text-xs font-medium text-orange-400 hover:bg-orange-600/30"
+                    >
+                      <Archive size={14} />
+                      Archive All
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           ))
         )}
       </div>
+
+      {/* Archive Confirm Modal */}
+      <ArchiveConfirmModal
+        isOpen={showArchiveModal && !!archivingCycleId}
+        title="Archive Entire Cycle"
+        message={`Are you sure you want to archive this cycle and ALL its assignments and appraisal records? This action will archive everything related to this cycle and cannot be undone.`}
+        isLoading={false}
+        onConfirm={confirmArchiveCycle}
+        onCancel={() => {
+          setShowArchiveModal(false);
+          setArchivingCycleId(null);
+        }}
+      />
     </div>
   );
 }
