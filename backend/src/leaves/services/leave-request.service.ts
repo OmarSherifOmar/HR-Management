@@ -98,16 +98,8 @@ export class LeaveRequestService {
       throw new BadRequestException('Start date cannot be after end date');
     }
 
-    // 5. Check if dates fall within blocked periods
-    const blockedDates = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
-    if (blockedDates.length > 0) {
-      const blockedDatesList = blockedDates.map(bd => 
-        `${bd.date.toLocaleDateString()} (${bd.reason})`
-      ).join(', ');
-      throw new BadRequestException(
-        `Cannot submit leave request for blocked dates: ${blockedDatesList}`,
-      );
-    }
+    // 5. Get holidays in the range (for duration calculation, but don't block the request)
+    const holidays = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
 
     // 6. Check retroactive submission limit
     const daysDiff = Math.floor((today.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -127,8 +119,8 @@ export class LeaveRequestService {
       }
     }
 
-    // 8. Calculate duration in business days
-    const durationDays = this.calculateBusinessDays(fromDate, toDate);
+    // 8. Calculate duration in business days (excluding weekends and holidays)
+    const durationDays = this.calculateBusinessDaysExcludingHolidays(fromDate, toDate, holidays);
     if (durationDays < 0.5) {
       throw new BadRequestException('Leave duration must be at least half a day');
     }
@@ -396,16 +388,8 @@ export class LeaveRequestService {
         throw new BadRequestException('Start date cannot be after end date');
       }
 
-      // Check if dates fall within blocked periods
-      const blockedDates = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
-      if (blockedDates.length > 0) {
-        const blockedDatesList = blockedDates.map(bd => 
-          `${bd.date.toLocaleDateString()} (${bd.reason})`
-        ).join(', ');
-        throw new BadRequestException(
-          `Cannot modify leave request to include blocked dates: ${blockedDatesList}`,
-        );
-      }
+      // Get holidays in the range (for duration calculation)
+      const holidays = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
 
       // Check for overlapping leaves (excluding this request)
       const overlapping = await this.checkOverlappingLeaves(
@@ -422,8 +406,8 @@ export class LeaveRequestService {
 
       leaveRequest.dates = { from: fromDate, to: toDate };
 
-      // Recalculate duration based on new dates
-      newDuration = this.calculateBusinessDays(fromDate, toDate);
+      // Recalculate duration based on new dates (excluding holidays)
+      newDuration = this.calculateBusinessDaysExcludingHolidays(fromDate, toDate, holidays);
       if (newDuration < 0.5) {
         throw new BadRequestException('Leave duration must be at least half a day');
       }
@@ -1695,6 +1679,43 @@ export class LeaveRequestService {
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         count++;
       }
+      current.setDate(current.getDate() + 1);
+    }
+
+    return count;
+  }
+
+  /**
+   * Calculate business days between two dates, excluding weekends AND holidays
+   * This is used to determine how many days to deduct from leave balance
+   * Holidays within the leave period are not deducted from the employee's balance
+   */
+  private calculateBusinessDaysExcludingHolidays(
+    fromDate: Date,
+    toDate: Date,
+    holidays: Array<{ date: Date; reason: string }>,
+  ): number {
+    let count = 0;
+    const current = new Date(fromDate);
+    
+    // Create a set of holiday dates for quick lookup (normalize to date string)
+    const holidayDates = new Set(
+      holidays.map(h => {
+        const d = new Date(h.date);
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString().split('T')[0];
+      })
+    );
+
+    while (current <= toDate) {
+      const dayOfWeek = current.getDay();
+      const currentDateStr = current.toISOString().split('T')[0];
+      
+      // Count only if it's a weekday AND not a holiday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDates.has(currentDateStr)) {
+        count++;
+      }
+      
       current.setDate(current.getDate() + 1);
     }
 
