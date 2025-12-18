@@ -10,6 +10,11 @@ import AppraisalForm from './AppraisalForm';
 import DisputeManagement from './DisputeManagement';
 import PerformanceReporting from './PerformanceReporting';
 import HRDashboard from './HRDashboard';
+import EmployeeAppraisals from './EmployeeAppraisals';
+import EmployeeDisputes from './EmployeeDisputes';
+import HRDisputeResolution from './HRDisputeResolution';
+import DepartmentProgressTracker from './DepartmentProgressTracker';
+import SendReminder from './SendReminder';
 
 interface Tab {
   id: string;
@@ -54,6 +59,18 @@ export default function PerformanceManagement({ userRole, employeeId }: Performa
       component: PerformanceAssignments,
     },
     {
+      id: 'my-appraisals',
+      label: 'My Appraisals',
+      feature: PerformanceFeature.VIEW_MY_APPRAISALS,
+      component: EmployeeAppraisals,
+    },
+    {
+      id: 'my-disputes',
+      label: 'My Disputes',
+      feature: PerformanceFeature.VIEW_DISPUTES,
+      component: EmployeeDisputes,
+    },
+    {
       id: 'appraisals',
       label: 'Appraisals',
       feature: PerformanceFeature.VIEW_MY_APPRAISALS,
@@ -66,10 +83,28 @@ export default function PerformanceManagement({ userRole, employeeId }: Performa
       component: DisputeManagement,
     },
     {
+      id: 'resolve-disputes',
+      label: 'Resolve Disputes',
+      feature: PerformanceFeature.VIEW_DISPUTES,
+      component: HRDisputeResolution,
+    },
+    {
       id: 'reporting',
       label: 'Reporting',
       feature: PerformanceFeature.VIEW_REPORTS,
       component: PerformanceReporting,
+    },
+    {
+      id: 'department-progress',
+      label: 'Department Progress',
+      feature: PerformanceFeature.VIEW_ASSIGNMENTS,
+      component: DepartmentProgressTracker,
+    },
+    {
+      id: 'send-reminder',
+      label: 'Send Reminders',
+      feature: PerformanceFeature.VIEW_ASSIGNMENTS,
+      component: SendReminder,
     },
   ];
 
