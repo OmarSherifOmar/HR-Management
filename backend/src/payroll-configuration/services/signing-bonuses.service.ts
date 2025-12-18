@@ -2,9 +2,10 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, isValidObjectId } from 'mongoose';
+import mongoose, { Model, isValidObjectId } from 'mongoose';
 import {
   signingBonus,
   signingBonusDocument,
@@ -93,4 +94,38 @@ export class SigningBonusesService {
 
     return doc.save();
   }
+   async approve(id: string, approverId: string) {
+      const rule = await this.signingBonusModel.findById(id);
+      if (!rule) throw new NotFoundException('Signing bonus not found');
+      
+      if (rule.status === ConfigStatus.APPROVED|| rule.status === ConfigStatus.REJECTED) {
+        throw new ForbiddenException('Approved/Rejected signing bonuses cannot be approved');
+      }
+      rule.status = ConfigStatus.APPROVED;
+      rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+      rule.approvedAt = new Date();
+  
+      return rule.save();
+    }
+  
+  async reject(id: string, approverId: string) {
+    const rule = await this.signingBonusModel.findById(id);
+    if (!rule) throw new NotFoundException('Signing bonus not found');
+     if (rule.status === ConfigStatus.APPROVED|| rule.status === ConfigStatus.REJECTED) {
+        throw new ForbiddenException('Approved/Rejected signing bonuses cannot be rejected');
+      }
+  
+      rule.status = ConfigStatus.REJECTED;
+      rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+      rule.approvedAt = new Date();
+  
+      return rule.save();
+    }
+  
+    async delete(id: string) {
+      const rule = await this.signingBonusModel.findById(id);
+      if (!rule) throw new NotFoundException('Signing bonus not found');
+  
+      return this.signingBonusModel.deleteOne({ _id: id }).exec();
+    }
 }

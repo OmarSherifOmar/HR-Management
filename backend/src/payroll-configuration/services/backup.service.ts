@@ -11,9 +11,10 @@ export class BackupService {
   private readonly logger = new Logger(BackupService.name);
   constructor(@InjectConnection() private readonly connection: Connection) {}
 
-  async createBackup(): Promise<{ dir: string; files: string[] }> {
+  async createBackup(adminName: string = 'Unkn'): Promise<{ dir: string; files: string[] }> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.resolve(process.cwd(), 'backups', timestamp);
+    const backupDirName = `${timestamp}_${adminName.replace(/\s+/g, '_')}`;
+    const backupDir = path.resolve(process.cwd(), 'backups', backupDirName);
     await fs.promises.mkdir(backupDir, { recursive: true });
 
     // Get list of collections

@@ -15,8 +15,7 @@ export class insuranceBrackets {
   status: ConfigStatus;// draft, approved, rejected
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
   createdBy?: mongoose.Types.ObjectId;
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
-  updatedBy?: mongoose.Types.ObjectId;
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
   approvedBy?: mongoose.Types.ObjectId;
   @Prop({})
@@ -31,8 +30,8 @@ export class insuranceBrackets {
   @Prop({ required: true,min:0,max:100 })
   employeeRate: number;    // percentage
 
-  @Prop({ required: true ,min:0,max:100})
-  employerRate: number;    // percentage
+  @Prop({ required: true,min:0,max:100 })
+  employerRate: number;
 
 }
 

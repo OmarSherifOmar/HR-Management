@@ -51,8 +51,8 @@ export class InsuranceBracketsController {
     @Body() dto: UpdateInsuranceBracketDto,
     @Req() req: any,
   ) {
-    const updatedBy = req.user?._id;
-    return this.insuranceBracketsService.update(id, dto, updatedBy);
+
+    return this.insuranceBracketsService.update(id, dto);
   }
 
   @Post(':id/approve')
