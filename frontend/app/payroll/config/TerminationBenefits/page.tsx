@@ -4,6 +4,36 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useAuth, authenticatedFetch } from '../../../context/AuthContext';
 
+// Reusable error parsing helper function
+async function parseError(res: Response): Promise<string> {
+  try {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const json = await res.json();
+        return json.message || json.error || `HTTP ${res.status}`;
+      } catch (parseError) {
+        // JSON parsing failed, fall back to text
+        try {
+          const text = await res.text();
+          return text || `HTTP ${res.status}`;
+        } catch (textError) {
+          return `HTTP ${res.status}`;
+        }
+      }
+    } else {
+      try {
+        const text = await res.text();
+        return text || `HTTP ${res.status}`;
+      } catch (textError) {
+        return `HTTP ${res.status}`;
+      }
+    }
+  } catch (error) {
+    return `HTTP ${res.status}`;
+  }
+}
+
 interface TerminationBenefit {
   _id?: string;
   name: string;
@@ -26,6 +56,7 @@ export default function TerminationBenefitsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
@@ -81,8 +112,8 @@ export default function TerminationBenefitsPage() {
       );
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Failed to load termination benefits');
+        const errorMessage = await parseError(res);
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();
@@ -103,12 +134,12 @@ export default function TerminationBenefitsPage() {
     setForm({ name: '', amount: 0, terms: '' });
     setEditingId(null);
     setIsModalOpen(false);
+    setFormError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setFormError(null);
 
     try {
       const method = editingId ? 'PATCH' : 'POST';
@@ -129,8 +160,9 @@ export default function TerminationBenefitsPage() {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Failed to save termination benefit');
+        const errorMessage = await parseError(res);
+        setFormError(errorMessage);
+        return;
       }
 
       await fetchBenefits();
@@ -139,7 +171,7 @@ export default function TerminationBenefitsPage() {
         editingId ? 'Termination benefit updated successfully' : 'Termination benefit created successfully',
       );
     } catch (err: any) {
-      setError(err.message || 'Error saving termination benefit');
+      setFormError(err.message || 'Error saving termination benefit');
     }
   };
 
@@ -165,8 +197,8 @@ export default function TerminationBenefitsPage() {
         fetchBenefits();
         setSuccess('Termination benefit approved successfully');
       } else {
-        const text = await response.text();
-        throw new Error(text || 'Failed to approve termination benefit');
+        const errorMessage = await parseError(response);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to approve termination benefit');
@@ -183,8 +215,8 @@ export default function TerminationBenefitsPage() {
         fetchBenefits();
         setSuccess('Termination benefit rejected successfully');
       } else {
-        const text = await response.text();
-        throw new Error(text || 'Failed to reject termination benefit');
+        const errorMessage = await parseError(response);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to reject termination benefit');
@@ -202,8 +234,8 @@ export default function TerminationBenefitsPage() {
         setSuccess('Termination benefit deleted successfully');
         setDeleteConfirm(null);
       } else {
-        const text = await response.text();
-        throw new Error(text || 'Failed to delete termination benefit');
+        const errorMessage = await parseError(response);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to delete termination benefit');
@@ -469,6 +501,12 @@ export default function TerminationBenefitsPage() {
                     className="w-full rounded-md bg-[#1a1a1a] border border-gray-600 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
+
+                {formError && (
+                  <div className="bg-red-600/20 border border-red-600 rounded-lg p-4">
+                    <p className="text-red-300">{formError}</p>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-end gap-3 mt-4">
                   <button

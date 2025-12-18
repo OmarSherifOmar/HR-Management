@@ -86,7 +86,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   // Role-based permission checks
   const canViewPayroll = () => {
-    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal Policy Admin', 'HR Manager'];
+    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal Policy Admin', 'HR Manager', 'System Admin'];
     return payrollRoles.includes(user?.role || '');
   };
 
@@ -137,16 +137,15 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: 'Payroll',
       icon: <DollarSign size={20} />,
       subItems: [
-        { name: 'Run Payroll', href: '/dashboard/payroll' },
-        { name: 'Configuration', href: '/dashboard/payroll/configuration' },
-        { name: 'Termination Benefits', href: '/payroll/config/TerminationBenefits' },
-        { name: 'Signing Bonuses', href: '/payroll/config/SigningBonuses' },
         { name: 'Payroll Policies', href: '/payroll/config/PayrollPolicies' },
-        { name: 'Allowances', href: '/payroll/config/allowances' },
         { name: 'Pay Grades', href: '/payroll/config/pay-grades' },
         { name: 'Pay Types', href: '/payroll/config/pay-types' },
-        { name: 'History', href: '/dashboard/payroll/history' },
-        { name: 'Reports', href: '/dashboard/payroll/reports' },
+        { name: 'Allowances', href: '/payroll/config/allowances' },
+        { name: 'Signing Bonuses', href: '/payroll/config/SigningBonuses' },
+        { name: 'Termination Benefits', href: '/payroll/config/TerminationBenefits' },
+        { name: 'Tax Rules', href: '/payroll/config/Tax-Rule' },
+        { name: 'Insurance Brackets', href: '/payroll/config/Insurance-Bracket' },
+        { name: 'Company Wide Settings', href: '/payroll/config/Company-wide-settings' },
       ],
     }] : []),
     {
