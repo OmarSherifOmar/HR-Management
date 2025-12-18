@@ -65,7 +65,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         credentials: 'include',
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      // Handle logout error silently
     } finally {
       logout();
       window.location.href = '/';
@@ -104,9 +104,10 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: 'Organization',
       icon: <Building2 size={20} />,
       subItems: [
-        { name: 'Structure', href: '/dashboard/organization' },
+        { name: 'Overview', href: '/dashboard/organization' },
         { name: 'Departments', href: '/dashboard/organization/departments' },
-        { name: 'Hierarchy', href: '/dashboard/organization/hierarchy' },
+        { name: 'Positions', href: '/dashboard/organization/positions' },
+        { name: 'Change Requests', href: '/dashboard/organization/requests' },
       ],
     },
     {
