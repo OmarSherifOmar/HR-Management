@@ -93,13 +93,11 @@ interface PayGrade {
 interface CreatePayGradeData {
   grade: string;
   baseSalary: number;
-  grossSalary: number;
 }
 
 interface UpdatePayGradeData {
   grade?: string;
   baseSalary?: number;
-  grossSalary?: number;
 }
 
 export default function PayGradesPage() {
@@ -111,7 +109,7 @@ export default function PayGradesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPayGrade, setEditingPayGrade] = useState<PayGrade | null>(null);
-  const [formData, setFormData] = useState<CreatePayGradeData>({ grade: '', baseSalary: 0, grossSalary: 0 });
+  const [formData, setFormData] = useState<CreatePayGradeData>({ grade: '', baseSalary: 0 });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -186,12 +184,6 @@ export default function PayGradesPage() {
     if (typeof data.baseSalary !== 'number' || data.baseSalary < 6000) {
       return 'Base salary must be at least 6000';
     }
-    if (typeof data.grossSalary !== 'number' || data.grossSalary < 6000) {
-      return 'Gross salary must be at least 6000';
-    }
-    if (data.grossSalary < data.baseSalary) {
-      return 'Gross salary must be >= base salary';
-    }
     return null;
   };
 
@@ -216,7 +208,7 @@ export default function PayGradesPage() {
 
     if (response.ok) {
       setIsCreateModalOpen(false);
-      setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
+      setFormData({ grade: '', baseSalary: 0 });
       fetchPayGrades();
       setSuccess('Pay grade created successfully');
     } else {
@@ -241,7 +233,6 @@ export default function PayGradesPage() {
     const updateData: UpdatePayGradeData = {};
     if (formData.grade !== editingPayGrade.grade) updateData.grade = formData.grade;
     if (formData.baseSalary !== editingPayGrade.baseSalary) updateData.baseSalary = formData.baseSalary;
-    if (formData.grossSalary !== editingPayGrade.grossSalary) updateData.grossSalary = formData.grossSalary;
 
     const response = await http<PayGrade>(`/payroll-configuration/pay-grades/${editingPayGrade._id}`, {
       method: 'PATCH',
@@ -254,7 +245,7 @@ export default function PayGradesPage() {
     if (response.ok) {
       setIsEditModalOpen(false);
       setEditingPayGrade(null);
-      setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
+      setFormData({ grade: '', baseSalary: 0 });
       fetchPayGrades();
       setSuccess('Pay grade updated successfully');
     } else {
@@ -313,7 +304,7 @@ export default function PayGradesPage() {
   };
 
   const openCreateModal = () => {
-    setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
+    setFormData({ grade: '', baseSalary: 0 });
     setFormError(null);
     setIsCreateModalOpen(true);
   };
@@ -321,8 +312,7 @@ export default function PayGradesPage() {
   const openEditModal = (payGrade: PayGrade) => {
     setFormData({ 
       grade: payGrade.grade, 
-      baseSalary: payGrade.baseSalary, 
-      grossSalary: payGrade.grossSalary 
+      baseSalary: payGrade.baseSalary
     });
     setFormError(null);
     setEditingPayGrade(payGrade);
@@ -333,7 +323,7 @@ export default function PayGradesPage() {
     setIsCreateModalOpen(false);
     setIsEditModalOpen(false);
     setEditingPayGrade(null);
-    setFormData({ grade: '', baseSalary: 0, grossSalary: 0 });
+    setFormData({ grade: '', baseSalary: 0 });
     setFormError(null);
   };
 
@@ -554,24 +544,7 @@ export default function PayGradesPage() {
                   required
                 />
                 <p className="text-xs text-gray-400 mt-1">Minimum base salary: 6000</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Gross Salary *
-                </label>
-                <input
-                  type="number"
-                  value={formData.grossSalary}
-                  onChange={(e) => setFormData(prev => ({ ...prev, grossSalary: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  inputMode="decimal"
-                  min="6000"
-                  step="0.01"
-                  placeholder="6000.00"
-                  required
-                />
-                <p className="text-xs text-gray-400 mt-1">Minimum gross salary: 6000, must be ≥ base salary</p>
+                <p className="text-xs text-blue-400 mt-1">Gross salary will be calculated automatically (Base + Approved Allowances)</p>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
@@ -639,24 +612,7 @@ export default function PayGradesPage() {
                   required
                 />
                 <p className="text-xs text-gray-400 mt-1">Minimum base salary: 6000</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Gross Salary *
-                </label>
-                <input
-                  type="number"
-                  value={formData.grossSalary}
-                  onChange={(e) => setFormData(prev => ({ ...prev, grossSalary: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  inputMode="decimal"
-                  min="6000"
-                  step="0.01"
-                  placeholder="6000.00"
-                  required
-                />
-                <p className="text-xs text-gray-400 mt-1">Minimum gross salary: 6000, must be ≥ base salary</p>
+                <p className="text-xs text-blue-400 mt-1">Gross salary will be recalculated automatically (Base + Approved Allowances)</p>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">

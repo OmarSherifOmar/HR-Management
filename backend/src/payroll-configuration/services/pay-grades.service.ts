@@ -10,30 +10,36 @@ import { payGrade, payGradeDocument } from '../models/payGrades.schema';
 import { CreatePayGradeDto } from '../dtos/create-pay-grade.dto';
 import { UpdatePayGradeDto } from '../dtos/update-pay-grade.dto';
 import { ConfigStatus } from '../enums/payroll-configuration-enums';
+import { AllowancesService } from './allowances.service';
 
 @Injectable()
 export class PayGradesService {
   constructor(
     @InjectModel(payGrade.name)
     private readonly payGradeModel: Model<payGradeDocument>,
+    private readonly allowancesService: AllowancesService,
   ) {}
+
+  private async calculateTotalApprovedAllowances(): Promise<number> {
+    const allAllowances = await this.allowancesService.findAllAllowances();
+    const approvedAllowances = allAllowances.filter(allowance => allowance.status === ConfigStatus.APPROVED);
+    return approvedAllowances.reduce((total, allowance) => total + (allowance.amount || 0), 0);
+  }
 
   async createPayGrade(
     createPayGradeDto: CreatePayGradeDto,
     createdById: string,
   ): Promise<payGradeDocument> {
-    const { grade, baseSalary, grossSalary } = createPayGradeDto;
+    const { grade, baseSalary } = createPayGradeDto;
 
     const existing = await this.payGradeModel.findOne({ grade }).exec();
     if (existing) {
       throw new BadRequestException('Pay grade with this name already exists');
     }
 
-    if (grossSalary < baseSalary) {
-      throw new BadRequestException(
-        'Gross salary must be greater than or equal to base salary',
-      );
-    }
+    // Calculate gross salary automatically
+    const totalApprovedAllowances = await this.calculateTotalApprovedAllowances();
+    const grossSalary = baseSalary + totalApprovedAllowances;
 
     const doc = new this.payGradeModel({
       grade,
@@ -87,16 +93,10 @@ export class PayGradesService {
     if (updatePayGradeDto.baseSalary !== undefined) {
       doc.baseSalary = updatePayGradeDto.baseSalary;
     }
-    if (updatePayGradeDto.grossSalary !== undefined) {
-      doc.grossSalary = updatePayGradeDto.grossSalary;
-    }
 
-    // After applying changes, re-validate the gross >= base rule
-    if (doc.grossSalary < doc.baseSalary) {
-      throw new BadRequestException(
-        'Gross salary must be greater than or equal to base salary',
-      );
-    }
+    // Recalculate gross salary automatically when base salary changes
+    const totalApprovedAllowances = await this.calculateTotalApprovedAllowances();
+    doc.grossSalary = doc.baseSalary + totalApprovedAllowances;
 
     return doc.save();
   }

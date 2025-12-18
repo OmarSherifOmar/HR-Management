@@ -84,6 +84,12 @@ export default function DashboardLayout({ children, title, description }: Dashbo
     return null;
   }
 
+  // Role-based permission checks
+  const canViewPayroll = () => {
+    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal Policy Admin', 'HR Manager'];
+    return payrollRoles.includes(user?.role || '');
+  };
+
   const menuItems: MenuItem[] = [
     {
       name: 'Dashboard',
@@ -126,7 +132,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         ] : []),
       ],
     },
-    {
+    // Conditionally include Payroll section based on user role
+    ...(canViewPayroll() ? [{
       name: 'Payroll',
       icon: <DollarSign size={20} />,
       subItems: [
@@ -141,7 +148,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: 'History', href: '/dashboard/payroll/history' },
         { name: 'Reports', href: '/dashboard/payroll/reports' },
       ],
-    },
+    }] : []),
     {
       name: 'Performance',
       icon: <TrendingUp size={20} />,
