@@ -9,9 +9,12 @@ export default function TimeManagementPoliciesPage() {
   const [activeTab, setActiveTab] = useState("overtime");
 
   const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
+    // Default away from the Next dev port so calls hit the backend instead of the frontend app
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
     withCredentials: true,
   });
+
+  const CORRECTIONS_BASE = "/time-management/corrections";
 
   type Punch = { type: "IN" | "OUT"; time: string };
 
@@ -244,7 +247,7 @@ export default function TimeManagementPoliciesPage() {
         return;
       }
       const res = await api.get<CorrectionRequest[]>(
-        `/corrections/mine/${employeeId}`
+        `${CORRECTIONS_BASE}/mine/${employeeId}`
       );
       setCorrectionRequests(Array.isArray(res.data) ? res.data : []);
     } catch (err: unknown) {
@@ -327,7 +330,7 @@ export default function TimeManagementPoliciesPage() {
       return;
     }
     try {
-      await api.post("/corrections/submit", {
+      await api.post(`${CORRECTIONS_BASE}/submit`, {
         employeeId,
         date: correctionDate,
         punches: correctionPunches,
@@ -348,7 +351,7 @@ export default function TimeManagementPoliciesPage() {
 
   const handleApproveException = async (id: string) => {
     try {
-      await api.post(`/corrections/${id}/approve`, { approvedBy: "HR123" });
+      await api.post(`${CORRECTIONS_BASE}/${id}/approve`, { approvedBy: "HR123" });
       fetchExceptions();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -359,7 +362,7 @@ export default function TimeManagementPoliciesPage() {
   const handleRejectException = async (id: string) => {
     const reason = prompt("Enter rejection reason:") || "No reason provided";
     try {
-      await api.post(`/corrections/${id}/reject`, {
+      await api.post(`${CORRECTIONS_BASE}/${id}/reject`, {
         approvedBy: "HR123",
         reason,
       });
@@ -372,7 +375,7 @@ export default function TimeManagementPoliciesPage() {
 
   const handleEscalateExceptions = async () => {
     try {
-      await api.post("/corrections/exceptions/escalate", {
+      await api.post(`${CORRECTIONS_BASE}/exceptions/escalate`, {
         cutoffDate: new Date().toISOString(),
       });
       fetchExceptions();

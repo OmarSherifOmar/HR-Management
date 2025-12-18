@@ -46,7 +46,7 @@ import { ReportsService } from './services/reports.service';
     ShiftAssignmentModule,
     ScheduleRuleModule,
   ],
-  controllers: [TimeManagementController, AttendanceController, CorrectnessController, ReportsController],
+  controllers: [TimeManagementController, AttendanceController, CorrectnessController, ReportsController, HolidayController],
   providers: [
     TimeManagementService,
     AttendanceService,

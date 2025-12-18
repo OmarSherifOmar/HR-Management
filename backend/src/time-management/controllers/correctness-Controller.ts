@@ -22,7 +22,7 @@ type ReviewAndCorrectDto = {
 	reason: string;
 };
 
-@Controller('corrections')
+@Controller(['corrections', 'time-management/corrections', 'policy/corrections', 'time-management/policy/corrections'])
 @UseGuards(AuthGuard, authorizationGuard)
 export class CorrectnessController {
 	constructor(

@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Clock, LogOut, LogIn, AlertCircle, Calendar, FileText, BarChart3, ArrowRight } from 'lucide-react';
+import { Clock, LogOut, LogIn, AlertCircle, Calendar, FileText, BarChart3, ArrowRight, Plus, Trash2 } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Default away from the Next dev port so calls hit the backend instead of the frontend app
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const CORRECTIONS_BASE = `${API_BASE_URL}/time-management/corrections`;
 
 export default function AttendancePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -17,6 +19,14 @@ export default function AttendancePage() {
   const [monthlySummary, setMonthlySummary] = useState<any | null>(null);
   const [monthlyLoading, setMonthlyLoading] = useState(false);
   const [monthlyError, setMonthlyError] = useState<string | null>(null);
+  const [correctionEmployeeId, setCorrectionEmployeeId] = useState('');
+  const [correctionDate, setCorrectionDate] = useState('');
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionPunches, setCorrectionPunches] = useState<{ type: 'IN' | 'OUT'; time: string }[]>([]);
+  const [correctionLoading, setCorrectionLoading] = useState(false);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [correctionSuccess, setCorrectionSuccess] = useState<string | null>(null);
+  const [correctionList, setCorrectionList] = useState<any[]>([]);
 
   // Helper to derive status and latest times from record
   const getRecordStatus = (record: any) => {
@@ -56,6 +66,12 @@ export default function AttendancePage() {
     fetchTodayAttendance();
     fetchHistory();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'corrections' && correctionEmployeeId) {
+      fetchCorrections();
+    }
+  }, [activeTab, correctionEmployeeId]);
 
   useEffect(() => {
     if (status === 'IN' && lastIn) {
@@ -250,6 +266,83 @@ export default function AttendancePage() {
     }
   };
 
+  const fetchCorrections = async () => {
+    if (!correctionEmployeeId) return;
+    try {
+      setCorrectionLoading(true);
+      setCorrectionError(null);
+      const res = await fetch(`${CORRECTIONS_BASE}/mine/${correctionEmployeeId}`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCorrectionList(Array.isArray(data) ? data : []);
+      } else {
+        setCorrectionList([]);
+        setCorrectionError('Failed to load correction requests');
+      }
+    } catch (err: any) {
+      setCorrectionError(err?.message || 'Failed to load correction requests');
+      setCorrectionList([]);
+    } finally {
+      setCorrectionLoading(false);
+    }
+  };
+
+  const addCorrectionPunch = () => {
+    if (!correctionDate) {
+      setCorrectionError('Choose a date before adding punches');
+      return;
+    }
+    setCorrectionPunches([...correctionPunches, { type: 'IN', time: `${correctionDate}T09:00` }]);
+  };
+
+  const updateCorrectionPunch = (idx: number, field: 'type' | 'time', value: string) => {
+    const next = [...correctionPunches];
+    // @ts-ignore
+    next[idx][field] = value;
+    setCorrectionPunches(next);
+  };
+
+  const removeCorrectionPunch = (idx: number) => {
+    setCorrectionPunches(correctionPunches.filter((_, i) => i !== idx));
+  };
+
+  const submitCorrection = async () => {
+    setCorrectionSuccess(null);
+    setCorrectionError(null);
+    if (!correctionEmployeeId || !correctionDate || !correctionReason || correctionPunches.length === 0) {
+      setCorrectionError('Fill Employee ID, date, reason, and at least one punch');
+      return;
+    }
+    try {
+      setCorrectionLoading(true);
+      const res = await fetch(`${CORRECTIONS_BASE}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeId: correctionEmployeeId,
+          date: correctionDate,
+          reason: correctionReason,
+          punches: correctionPunches.map((p) => ({ ...p })),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || 'Failed to submit correction');
+      }
+      setCorrectionSuccess('Correction request submitted');
+      setCorrectionReason('');
+      setCorrectionPunches([]);
+      fetchCorrections();
+    } catch (err: any) {
+      setCorrectionError(err?.message || 'Failed to submit correction');
+    } finally {
+      setCorrectionLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -425,9 +518,126 @@ export default function AttendancePage() {
         </div>
         )}
         {activeTab === 'corrections' && (
-          <div className="text-center text-gray-500 py-12">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>No pending correction requests</p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-gray-500 dark:text-gray-300">Employee ID</label>
+                <input
+                  value={correctionEmployeeId}
+                  onChange={(e) => setCorrectionEmployeeId(e.target.value)}
+                  placeholder="EMP001"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-gray-500 dark:text-gray-300">Date</label>
+                <input
+                  type="date"
+                  value={correctionDate}
+                  onChange={(e) => setCorrectionDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-gray-500 dark:text-gray-300">Reason</label>
+                <input
+                  value={correctionReason}
+                  onChange={(e) => setCorrectionReason(e.target.value)}
+                  placeholder="Missed clock-out"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Punches</p>
+                <button
+                  onClick={addCorrectionPunch}
+                  className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg bg-gray-900 text-white dark:bg-gray-700"
+                >
+                  <Plus className="w-4 h-4" /> Add Punch
+                </button>
+              </div>
+              {correctionPunches.length === 0 ? (
+                <p className="text-gray-500 text-sm">No punches added yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {correctionPunches.map((punch, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                      <select
+                        value={punch.type}
+                        onChange={(e) => updateCorrectionPunch(idx, 'type', e.target.value)}
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                      >
+                        <option value="IN">IN</option>
+                        <option value="OUT">OUT</option>
+                      </select>
+                      <input
+                        type="datetime-local"
+                        value={punch.time}
+                        onChange={(e) => updateCorrectionPunch(idx, 'time', e.target.value)}
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                      />
+                      <button
+                        onClick={() => removeCorrectionPunch(idx)}
+                        className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {correctionError && (
+                <div className="text-sm text-red-500">{correctionError}</div>
+              )}
+              {correctionSuccess && (
+                <div className="text-sm text-green-500">{correctionSuccess}</div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={submitCorrection}
+                  disabled={correctionLoading}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium disabled:opacity-60"
+                >
+                  Submit Correction
+                </button>
+                <button
+                  onClick={fetchCorrections}
+                  disabled={correctionLoading || !correctionEmployeeId}
+                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  Refresh My Requests
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">My Correction Requests</h3>
+              {correctionLoading ? (
+                <p className="text-gray-500 text-sm">Loading...</p>
+              ) : correctionList.length === 0 ? (
+                <p className="text-gray-500 text-sm">No correction requests found.</p>
+              ) : (
+                <div className="space-y-2">
+                  {correctionList.map((req) => (
+                    <div key={req._id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                      <div className="text-sm text-gray-800 dark:text-gray-100">
+                        <p className="font-medium">{req.date ? new Date(req.date).toLocaleDateString() : '—'}</p>
+                        <p className="text-gray-500 text-xs">{req.reason || 'No reason provided'}</p>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200">
+                        {req.status || 'SUBMITTED'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
         {activeTab === 'summary' && (

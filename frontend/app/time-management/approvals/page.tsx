@@ -14,7 +14,9 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Default to a different port than the Next dev server to avoid hitting the frontend itself
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const CORRECTIONS_BASE = `${API_BASE_URL}/time-management/corrections`;
 
 export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState('pending');
@@ -46,11 +48,11 @@ export default function ApprovalsPage() {
   const fetchRequests = async (tab: 'pending' | 'approved' | 'rejected') => {
     setLoading(true);
     try {
-      let url = `${API_BASE_URL}/corrections/pending`;
+      let url = `${CORRECTIONS_BASE}/pending`;
       if (tab === 'approved') {
-        url = `${API_BASE_URL}/corrections?status=APPROVED`;
+        url = `${CORRECTIONS_BASE}?status=APPROVED`;
       } else if (tab === 'rejected') {
-        url = `${API_BASE_URL}/corrections?status=REJECTED`;
+        url = `${CORRECTIONS_BASE}?status=REJECTED`;
       }
 
       const response = await fetch(url, {
@@ -74,7 +76,7 @@ export default function ApprovalsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/corrections`, {
+      const response = await fetch(`${CORRECTIONS_BASE}`, {
         credentials: 'include',
       });
 
@@ -119,8 +121,8 @@ export default function ApprovalsPage() {
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     try {
       const endpoint = action === 'approve' 
-        ? `${API_BASE_URL}/corrections/${id}/approve`
-        : `${API_BASE_URL}/corrections/${id}/reject`;
+        ? `${CORRECTIONS_BASE}/${id}/approve`
+        : `${CORRECTIONS_BASE}/${id}/reject`;
         
       const body = action === 'approve' 
         ? { approvedBy: 'CURRENT_USER_ID' } // In real app, get from auth context
