@@ -13,6 +13,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
   const [departments, setDepartments] = useState<any[]>([]);
   const [selectedCycleId, setSelectedCycleId] = useState<string>('');
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
+  const [sendToAll, setSendToAll] = useState<boolean>(true); // Default to send to all
   const [reminderType, setReminderType] = useState<string>('CYCLE_ENDING_SOON');
   const [customMessage, setCustomMessage] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -25,8 +26,8 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
 
   const fetchCycles = async () => {
     try {
-      console.log('[SendReminder] Fetching ACTIVE cycles...');
-      const response = await fetch('/api/performance/cycles?status=ACTIVE', {
+      console.log('[SendReminder] Fetching cycles...');
+      const response = await fetch('http://localhost:3000/api/performance/cycles', {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -36,7 +37,11 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
       }
       const data = await response.json();
       console.log('[SendReminder] Fetched cycles:', data);
-      setCycles(Array.isArray(data) ? data : []);
+      // Filter to show ACTIVE and PLANNED cycles
+      const activeCycles = (Array.isArray(data) ? data : []).filter(
+        (c: any) => c.status === 'ACTIVE' || c.status === 'PLANNED'
+      );
+      setCycles(activeCycles);
     } catch (error) {
       console.error('[SendReminder] Error fetching cycles:', error);
       setCycles([]);
@@ -47,7 +52,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
   const fetchDepartments = async () => {
     try {
       console.log('[SendReminder] Fetching departments...');
-      const response = await fetch('/api/org/departments', {
+      const response = await fetch('http://localhost:3000/api/org/departments', {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -71,27 +76,34 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
     );
   };
 
+  const selectAllDepartments = () => {
+    setSelectedDepartmentIds(departments.map(d => d._id || d.id));
+  };
+
   const handleSendReminder = async () => {
     if (!selectedCycleId) {
       onNotify?.('Please select a cycle', 'error');
       return;
     }
 
-    if (selectedDepartmentIds.length === 0) {
-      onNotify?.('Please select at least one department', 'error');
+    // If sendToAll is true, we don't need departments
+    // If sendToAll is false, we need at least one department selected
+    if (!sendToAll && selectedDepartmentIds.length === 0) {
+      onNotify?.('Please select at least one department or choose "Send to all department heads"', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/performance/assignments/send-reminder', {
+      const response = await fetch('http://localhost:3000/api/performance/assignments/send-reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           cycleId: selectedCycleId,
           reminderType,
-          departmentIds: selectedDepartmentIds,
+          // If sendToAll, send empty array to indicate all departments
+          departmentIds: sendToAll ? [] : selectedDepartmentIds,
           customMessage: customMessage || undefined,
         }),
       });
@@ -103,7 +115,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
       }
       const result = await response.json();
       setReminderResult(result);
-      onNotify?.(`Reminders sent to ${result.remindersCount} manager(s)`, 'success');
+      onNotify?.(`Reminders sent to ${result.remindersCount} department head(s)`, 'success');
     } catch (error) {
       console.error('Error sending reminder:', error);
       onNotify?.('Failed to send reminders', 'error');
@@ -117,7 +129,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold text-white">Send Appraisal Reminders</h2>
-        <p className="mt-1 text-sm text-gray-400">Send reminders to managers for pending appraisals</p>
+        <p className="mt-1 text-sm text-gray-400">Send reminders to department heads for pending appraisals in a cycle</p>
       </div>
 
       {/* Form */}
@@ -130,7 +142,6 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
             onChange={(e) => {
               console.log('[SendReminder] Cycle selected:', e.target.value);
               setSelectedCycleId(e.target.value);
-              setSelectedDepartmentIds([]);
               setReminderResult(null);
             }}
             className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
@@ -160,34 +171,76 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
             <option value="PENDING_ASSIGNMENT">Pending Assignment</option>
             <option value="OVERDUE_ASSIGNMENT">Overdue Assignment</option>
           </select>
-          <p className="mt-1 text-xs text-gray-400">
+        </div>
+
+        {/* Send To All Toggle */}
+        <div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sendToAll}
+              onChange={(e) => {
+                setSendToAll(e.target.checked);
+                if (e.target.checked) {
+                  setSelectedDepartmentIds([]);
+                }
+              }}
+              className="h-5 w-5 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-300">
+              Send to all department heads with pending appraisals
+            </span>
+          </label>
+          <p className="mt-1 ml-8 text-xs text-gray-400">
+            When checked, reminders will be sent to all department heads who have pending appraisals in the selected cycle
           </p>
         </div>
 
-        {/* Department Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Select Departments *</label>
-          <div className="space-y-2 bg-gray-700/50 p-3 rounded max-h-48 overflow-y-auto">
-            {departments.length === 0 ? (
-              <p className="text-xs text-gray-400">No departments available</p>
-            ) : (
-              departments.map((dept) => (
-                <label key={dept._id || dept.id} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedDepartmentIds.includes(dept._id || dept.id)}
-                    onChange={() => toggleDepartment(dept._id || dept.id)}
-                    className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-200">{dept.name}</span>
-                </label>
-              ))
-            )}
+        {/* Department Selection - Only show if not sending to all */}
+        {!sendToAll && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Select Specific Departments
+            </label>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={selectAllDepartments}
+                className="text-xs text-blue-400 hover:text-blue-300"
+              >
+                Select All
+              </button>
+              <span className="text-gray-600">|</span>
+              <button
+                type="button"
+                onClick={() => setSelectedDepartmentIds([])}
+                className="text-xs text-gray-400 hover:text-gray-300"
+              >
+                Clear All
+              </button>
+            </div>
+            <div className="space-y-2 bg-gray-700/50 p-3 rounded max-h-48 overflow-y-auto">
+              {departments.length === 0 ? (
+                <p className="text-xs text-gray-400">No departments available</p>
+              ) : (
+                departments.map((dept) => (
+                  <label key={dept._id || dept.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedDepartmentIds.includes(dept._id || dept.id)}
+                      onChange={() => toggleDepartment(dept._id || dept.id)}
+                      className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-200">{dept.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <p className="mt-2 text-xs text-gray-400">
+              Selected: {selectedDepartmentIds.length} department(s)
+            </p>
           </div>
-          <p className="mt-2 text-xs text-gray-400">
-            Selected: {selectedDepartmentIds.length} department(s)
-          </p>
-        </div>
+        )}
 
         {/* Custom Message */}
         <div>
@@ -206,7 +259,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
         <div>
           <button
             onClick={handleSendReminder}
-            disabled={loading || !selectedCycleId || selectedDepartmentIds.length === 0}
+            disabled={loading || !selectedCycleId}
             className="w-full flex items-center justify-center gap-2 rounded bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
@@ -217,7 +270,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
             ) : (
               <>
                 <Send size={18} />
-                Send Reminder
+                Send Reminder{sendToAll ? ' to All Department Heads' : ''}
               </>
             )}
           </button>

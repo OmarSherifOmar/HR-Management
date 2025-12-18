@@ -13,9 +13,10 @@ export class SendReminderDto {
   @IsEnum(ReminderType)
   reminderType: ReminderType;
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  departmentIds: string[];
+  departmentIds?: string[];
 
   @IsOptional()
   @IsString()

@@ -75,16 +75,18 @@ export class PublishAppraisalDto {
   @IsString()
   recordId: string;
 
+  @IsOptional()
   @IsString()
-  publishedByEmployeeId: string;
+  publishedByEmployeeId?: string;
 }
 
 export class BulkPublishDto {
   @IsString()
   cycleId: string;
 
+  @IsOptional()
   @IsString()
-  publishedByEmployeeId: string;
+  publishedByEmployeeId?: string;
 
   @IsOptional()
   @IsArray()

@@ -87,14 +87,37 @@ export class AssignmentController {
   }
 
   @Put('publish')
-  @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
-  async publish(@Body() dto: PublishAppraisalDto) {
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
+  async publish(@Body() dto: PublishAppraisalDto, @Req() req) {
+    console.log('[AssignmentController] PUT /publish for record:', dto.recordId);
+    // Extract user ID from JWT token if not provided
+    if (!dto.publishedByEmployeeId) {
+      dto.publishedByEmployeeId = req.user?.employeeId;
+    }
+    return this.assignmentService.publish(dto);
+  }
+
+  @Post('publish')
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
+  async publishPost(@Body() dto: PublishAppraisalDto, @Req() req) {
+    console.log('[AssignmentController] POST /publish for record:', dto.recordId);
+    console.log('[AssignmentController] User from JWT:', req.user?.employeeId);
+    // Extract user ID from JWT token if not provided
+    if (!dto.publishedByEmployeeId) {
+      dto.publishedByEmployeeId = req.user?.employeeId;
+    }
     return this.assignmentService.publish(dto);
   }
 
   @Post('bulk-publish')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
-  async bulkPublish(@Body() dto: BulkPublishDto) {
+  async bulkPublish(@Body() dto: BulkPublishDto, @Req() req) {
+    console.log('[AssignmentController] POST /bulk-publish for cycle:', dto.cycleId);
+    console.log('[AssignmentController] User from JWT:', req.user?.employeeId);
+    // Extract user ID from JWT token if not provided
+    if (!dto.publishedByEmployeeId) {
+      dto.publishedByEmployeeId = req.user?.employeeId;
+    }
     return this.assignmentService.bulkPublish(dto);
   }
 
@@ -159,6 +182,6 @@ export class AssignmentController {
   async sendReminder(@Body() dto: SendReminderDto, @Req() req) {
     console.log('[AssignmentController] POST /send-reminder called by user:', req.user?.employeeId);
     console.log('[AssignmentController] Reminder DTO:', dto);
-    return this.assignmentService.sendReminder(dto.cycleId, dto.reminderType, dto.departmentIds, dto.customMessage);
+    return this.assignmentService.sendReminder(dto.cycleId, dto.reminderType, dto.departmentIds || [], dto.customMessage);
   }
 }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, CheckCircle, AlertCircle, Users, CheckSquare, FileEdit, Star, Save } from 'lucide-react';
+import { authenticatedFetch } from '@/app/context/AuthContext';
 
 interface Cycle {
   _id: string;
@@ -179,13 +180,13 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
     if (!currentUserId) {
       const fetchCurrentUser = async () => {
         try {
-          const response = await fetch('http://localhost:3000/api/employee-profile/me', {
-            credentials: 'include',
-          });
+          const response = await authenticatedFetch('http://localhost:3000/api/employee-profile/me');
           if (response.ok) {
             const data = await response.json();
             setCurrentUserId(data._id || data.id);
             console.log('[PerformanceAssignments] Current user ID:', data._id || data.id);
+          } else {
+            console.log('[PerformanceAssignments] Failed to fetch current user, status:', response.status);
           }
         } catch (error) {
           console.log('[PerformanceAssignments] Could not fetch current user:', error);
@@ -193,7 +194,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       };
       fetchCurrentUser();
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     fetchAssignments();
@@ -654,14 +655,12 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
       for (const assignmentId of selectedAssignments) {
         try {
+          // Backend extracts publishedByEmployeeId from JWT
           const response = await fetch('http://localhost:3000/api/performance/assignments/publish', {
-            method: 'PUT',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ 
-              recordId: assignmentId,
-              publishedByEmployeeId: currentUserId,
-            }),
+            body: JSON.stringify({ recordId: assignmentId }),
           });
 
           if (response.ok) {
@@ -699,18 +698,10 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       return;
     }
 
-    // Get publishedByEmployeeId - use current user's ID
-    let publisherId = currentUserId;
-    
-    if (!publisherId) {
-      onNotify?.('Employee ID is missing. Please log in again.', 'error');
-      return;
-    }
-
     try {
+      // Backend will extract publishedByEmployeeId from JWT token
       const payload = {
         cycleId: bulkPublishData.cycleId,
-        publishedByEmployeeId: publisherId,
         departmentIds: bulkPublishData.departmentIds.length > 0 ? bulkPublishData.departmentIds : undefined,
       };
 
@@ -760,34 +751,19 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
   const handlePublish = async (recordId: string) => {
     try {
-      console.log('[handlePublish] Publishing recordId:', recordId, 'currentUserId:', currentUserId);
+      console.log('[handlePublish] Publishing recordId:', recordId);
       
       if (!recordId) {
         onNotify?.('No record ID available. Please submit the appraisal first.', 'error');
         return;
       }
 
-      // Get publishedByEmployeeId - use current user's ID
-      let publisherId = currentUserId;
-      if (!publisherId) {
-        // Try to get from document cookie
-        const cookies = document.cookie.split(';');
-        const employeeCookie = cookies.find(c => c.trim().startsWith('employeeId='));
-        if (employeeCookie) {
-          publisherId = employeeCookie.split('=')[1]?.trim();
-        }
-      }
-      
-      if (!publisherId) {
-        onNotify?.('Employee ID is missing. Please log in again.', 'error');
-        return;
-      }
-
-      const payload = { recordId, publishedByEmployeeId: publisherId };
+      // Backend will extract publishedByEmployeeId from JWT token
+      const payload = { recordId };
       console.log('[handlePublish] Payload:', JSON.stringify(payload));
       
       const response = await fetch('http://localhost:3000/api/performance/assignments/publish', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload),
@@ -1597,11 +1573,24 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
           assignments.map((assignment) => {
             const assignmentId = assignment._id || assignment.id || '';
             const isPublished = assignment.status === 'PUBLISHED' || assignment.status === 'HR_PUBLISHED';
-            const isSubmitted = assignment.status === 'SUBMITTED';
+            const isSubmitted = assignment.status === 'SUBMITTED' || assignment.currentRecord?.status === 'MANAGER_SUBMITTED';
+            const recordId = assignment.currentRecord?.recordId || assignment.latestAppraisalId;
             const isSelected = selectedAssignments.includes(assignmentId);
-            const canPublish = isHRRole && !isPublished; // Show publish button for all non-published assignments for HR
+            const canPublish = isHRRole && isSubmitted && recordId && !isPublished; // Show publish button only for submitted assignments with recordId
             const canFillAppraisal = canSubmitAppraisals && !isPublished && !isSubmitted && assignment.status !== 'ACKNOWLEDGED';
-            const canManagerPublish = isDepartmentHead && isSubmitted && assignment.currentRecord?.recordId;
+            const canManagerPublish = isDepartmentHead && isSubmitted && recordId;
+            
+            // Debug logging
+            if (canPublish || canManagerPublish) {
+              console.log('[Assignment Debug]', {
+                assignmentId,
+                status: assignment.status,
+                currentRecordStatus: assignment.currentRecord?.status,
+                currentRecordId: assignment.currentRecord?.recordId,
+                latestAppraisalId: assignment.latestAppraisalId,
+                resolvedRecordId: recordId,
+              });
+            }
             
             return (
               <div
@@ -1677,7 +1666,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
                   {/* Manager can publish their own submitted appraisal */}
                   {canManagerPublish && (
                     <button
-                      onClick={() => handlePublish(assignment.currentRecord?.recordId || assignment.latestAppraisalId || '')}
+                      onClick={() => handlePublish(recordId)}
                       className="flex items-center gap-1 rounded bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
                     >
                       <Send size={14} />
@@ -1687,7 +1676,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
                   {/* HR Publish Button */}
                   {canPublish && !canManagerPublish && (
                     <button
-                      onClick={() => handlePublish(assignment.currentRecord?.recordId || assignment.latestAppraisalId || '')}
+                      onClick={() => handlePublish(recordId)}
                       className="flex items-center gap-1 rounded bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
                     >
                       <Send size={14} />

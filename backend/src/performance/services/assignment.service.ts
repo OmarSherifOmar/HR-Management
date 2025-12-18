@@ -913,20 +913,38 @@ export class AssignmentService {
     const cycle = await this.cycleModel.findById(new Types.ObjectId(cycleId)).lean().exec() as any;
     if (!cycle) throw new NotFoundException('Cycle not found');
 
-    // Convert department IDs
-    const depIds = departmentIds.map(id => new Types.ObjectId(id));
+    // First, check all assignments in this cycle for debugging
+    const allAssignmentsInCycle = await this.assignmentModel.find({ cycleId: new Types.ObjectId(cycleId) }).lean().exec();
+    console.log(`[sendReminder] Total assignments in cycle: ${allAssignmentsInCycle.length}`);
+    if (allAssignmentsInCycle.length > 0) {
+      console.log('[sendReminder] Assignment statuses:', allAssignmentsInCycle.map((a: any) => a.status));
+      console.log('[sendReminder] Assignment departments:', allAssignmentsInCycle.map((a: any) => a.departmentId?.toString()));
+    }
 
-    // Find all managers with pending assignments in these departments for this cycle
+    // Build query for assignments that are not yet published
+    const query: any = {
+      cycleId: new Types.ObjectId(cycleId),
+      status: { $nin: [AppraisalAssignmentStatus.PUBLISHED, AppraisalAssignmentStatus.ACKNOWLEDGED] },
+    };
+
+    // If departmentIds provided and not empty, filter by departments
+    if (departmentIds && departmentIds.length > 0) {
+      const depIds = departmentIds.map(id => new Types.ObjectId(id));
+      query.departmentId = { $in: depIds };
+    }
+
+    console.log('[sendReminder] Query:', JSON.stringify(query));
+
+    // Find all managers with assignments in these departments for this cycle
     const pendingAssignments = await this.assignmentModel
-      .find({
-        cycleId: new Types.ObjectId(cycleId),
-        departmentId: { $in: depIds },
-        status: { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] },
-      })
+      .find(query)
       .lean()
       .exec() as any[];
 
     console.log(`[sendReminder] Found ${pendingAssignments.length} pending assignments`);
+    if (pendingAssignments.length > 0) {
+      console.log('[sendReminder] Sample assignment:', pendingAssignments[0]);
+    }
 
     // Get unique manager IDs
     const managerIds = [...new Set(pendingAssignments.map(a => a.managerProfileId?.toString()))].filter(Boolean);
@@ -955,11 +973,13 @@ export class AssignmentService {
     // Send notifications to each manager
     for (const managerId of managerIds) {
       try {
-        await this.notificationModel.create({
+        console.log(`[sendReminder] Creating notification for manager ${managerId}`);
+        const notification = await this.notificationModel.create({
           to: new Types.ObjectId(managerId),
-          type: `APPRAISAL_${reminderType}`,
+          type: 'APPRAISAL_REMINDER',
           message: notificationMessage,
-        } as any);
+        });
+        console.log(`[sendReminder] Notification created:`, notification);
         remindersCount++;
 
         const manager = await this.employeeModel.findById(managerId).lean().exec() as any;
