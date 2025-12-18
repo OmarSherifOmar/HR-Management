@@ -184,8 +184,11 @@ export class AccrualSuspensionService {
    * Get extended leave days (>30 days) for an employee in a given period
    * Excludes maternity leave which is identified by code 'MATERNITY' or name containing 'maternity'
    * 
-   * Business Rule: If an employee takes vacation/leave for more than 30 days 
+   * Business Rule: If an employee takes vacation/leave for more than 30 calendar days 
    * (excluding maternity leave), accrual calculation should stop during that extended leave period.
+   * 
+   * Note: We use CALENDAR DAYS (not business days) to determine if leave exceeds 30 days.
+   * This is calculated from dates.from to dates.to, inclusive of all days including weekends.
    */
   async getExtendedLeaveDays(
     employeeId: string,
@@ -208,12 +211,12 @@ export class AccrualSuspensionService {
       return 0;
     }
 
-    // Find all approved leaves that are longer than 30 days
-    const extendedLeaves = await this.leaveRequestModel.find({
+    // Find all approved leaves that overlap with the period
+    // We'll filter by calendar days duration in the loop below
+    const approvedLeaves = await this.leaveRequestModel.find({
       employeeId: new Types.ObjectId(employeeId),
       leaveTypeId: { $in: leaveTypeIds },
       status: LeaveStatus.APPROVED,
-      durationDays: { $gt: 30 }, // Leave is longer than 30 days
       $or: [
         // Leave starts within period
         { 'dates.from': { $gte: periodStart, $lte: periodEnd } },
@@ -225,12 +228,18 @@ export class AccrualSuspensionService {
     }).exec();
 
     let totalExtendedLeaveDays = 0;
-    for (const leave of extendedLeaves) {
-      // Calculate overlapping days with the period
-      const overlapStart = new Date(Math.max(leave.dates.from.getTime(), periodStart.getTime()));
-      const overlapEnd = new Date(Math.min(leave.dates.to.getTime(), periodEnd.getTime()));
-      const overlapDays = this.calculateCalendarDays(overlapStart, overlapEnd);
-      totalExtendedLeaveDays += overlapDays;
+    for (const leave of approvedLeaves) {
+      // Calculate TOTAL CALENDAR DAYS of the leave (not just business days)
+      const totalLeaveDays = this.calculateCalendarDays(leave.dates.from, leave.dates.to);
+      
+      // Only count as "extended leave" if the total leave duration exceeds 30 calendar days
+      if (totalLeaveDays > 30) {
+        // Calculate overlapping days with the accrual period
+        const overlapStart = new Date(Math.max(leave.dates.from.getTime(), periodStart.getTime()));
+        const overlapEnd = new Date(Math.min(leave.dates.to.getTime(), periodEnd.getTime()));
+        const overlapDays = this.calculateCalendarDays(overlapStart, overlapEnd);
+        totalExtendedLeaveDays += overlapDays;
+      }
     }
 
     return totalExtendedLeaveDays;
