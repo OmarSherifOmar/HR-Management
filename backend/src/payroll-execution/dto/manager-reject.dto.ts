@@ -7,10 +7,6 @@ export class ManagerRejectDto {
 
   @IsNotEmpty()
   @IsString()
-  managerId: string;
-
-  @IsNotEmpty()
-  @IsString()
   rejectionReason: string;
 }
 

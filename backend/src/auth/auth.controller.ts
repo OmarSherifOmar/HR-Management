@@ -19,11 +19,12 @@ import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService, private userService: EmployeeService) {
-      console.log('AuthController instantiated');
-
+  constructor(
+    private authService: AuthService,
+    private userService: EmployeeService,
+  ) {
+    console.log('AuthController instantiated');
   }
-  
 
   @Public()
   @Post('login')
@@ -56,10 +57,11 @@ export class AuthController {
       const result = await this.authService.signIn(signInDto.email, signInDto.password);
 
       const isProd = process.env.NODE_ENV === 'production';
+      
       res.cookie('token', result.access_token, {
         httpOnly: true,
         secure: isProd,
-        sameSite: 'lax',
+        sameSite: 'lax', // Keep it simple - use 'lax' for both dev and prod
         maxAge: (() => {
           const exp = process.env.JWT_EXPIRES_IN ?? '1h';
           if (/^\d+$/.test(exp)) return Number(exp) * 1000;
@@ -81,7 +83,10 @@ export class AuthController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new HttpException(
-        { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'An error occurred during login' },
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'An error occurred during login',
+        },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -92,7 +97,11 @@ export class AuthController {
   async signup(@Body() registerRequestDto: RegisterRequestDto) {
     try {
       const result = await this.authService.register(registerRequestDto);
-      return { statusCode: HttpStatus.CREATED, message: 'User registered successfully', data: result };
+      return {
+        statusCode: HttpStatus.CREATED,
+        message: 'User registered successfully',
+        data: result,
+      };
     } catch (error) {
       // Re-throw HTTP exceptions as-is
       if (error instanceof HttpException) {
@@ -129,7 +138,8 @@ export class AuthController {
   async getMe(@Req() req: Request) {
     const payload: any = (req as any).user;
     const userId = payload?.sub;
-    if (!userId) throw new HttpException('Invalid token payload', HttpStatus.UNAUTHORIZED);
+    if (!userId)
+      throw new HttpException('Invalid token payload', HttpStatus.UNAUTHORIZED);
 
     const user = await this.userService.findById(userId);
     if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -145,7 +155,9 @@ export class AuthController {
       biography: user.biography,
       profilePictureUrl: user.profilePictureUrl,
       status: user.status,
-      roles: (await this.userService.getSystemRoleForEmployee(user._id))?.roles ?? [],
+      roles:
+        (await this.userService.getSystemRoleForEmployee(user._id))?.roles ??
+        [],
     };
   }
 
@@ -153,7 +165,12 @@ export class AuthController {
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
     const isProd = process.env.NODE_ENV === 'production';
-    res.cookie('token', '', { httpOnly: true, secure: isProd, sameSite: 'strict', expires: new Date(0) });
+    res.cookie('token', '', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax', // Match the login cookie settings
+      expires: new Date(0),
+    });
     return { message: 'Logged out successfully' };
   }
 }

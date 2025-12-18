@@ -6,6 +6,8 @@ import {
   Patch,
   Post,
   UseGuards,
+  Delete,
+  Req,
 } from '@nestjs/common';
 import { SigningBonusesService } from '../services/signing-bonuses.service';
 import { CreateSigningBonusDto } from '../dtos/create-signing-bonus.dto';
@@ -22,20 +24,20 @@ export class SigningBonusesController {
   ) {}
 
   @Post()
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
-  async createSigningBonus(
+  @Roles(Role.PAYROLL_SPECIALIST)
+    async createSigningBonus(
     @Body() createSigningBonusDto: CreateSigningBonusDto,
   ): Promise<signingBonusDocument> {
     return this.signingBonusesService.createSigningBonus(
       createSigningBonusDto,
     );
   }
-
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   @Get()
   async getAllSigningBonuses(): Promise<signingBonusDocument[]> {
     return this.signingBonusesService.findAllSigningBonuses();
   }
-
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   @Get(':id')
   async getSigningBonusById(
     @Param('id') id: string,
@@ -44,7 +46,7 @@ export class SigningBonusesController {
   }
 
   @Patch(':id')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async updateSigningBonus(
     @Param('id') id: string,
     @Body() updateSigningBonusDto: UpdateSigningBonusDto,
@@ -54,4 +56,23 @@ export class SigningBonusesController {
       updateSigningBonusDto,
     );
   }
+    @Post(':id/approve')
+    @Roles(Role.Payroll_MANAGER)
+    async approve(@Param('id') id: string, @Req() req: any) {
+      const approverId = req.user?._id;
+      return this.signingBonusesService.approve(id, approverId);
+    }
+  
+    @Post(':id/reject')
+    @Roles(Role.Payroll_MANAGER)
+    async reject(@Param('id') id: string, @Req() req: any) {
+      const approverId = req.user?._id;
+      return this.signingBonusesService.reject(id, approverId);
+    }
+  
+    @Delete(':id')
+    @Roles(Role.Payroll_MANAGER)
+    async delete(@Param('id') id: string) {
+      return this.signingBonusesService.delete(id);
+    }
 }

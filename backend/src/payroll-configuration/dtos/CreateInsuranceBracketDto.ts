@@ -7,11 +7,6 @@ export class CreateInsuranceBracketDto {
   @IsNotEmpty()
   name: string;
 
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  amount: number;
-
   @IsMongoId()
   @IsOptional()
   createdBy?: string;

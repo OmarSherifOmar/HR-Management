@@ -5,10 +5,6 @@ export class ManagerApprovalDto {
   @IsString()
   payrollRunId: string;
 
-  @IsNotEmpty()
-  @IsString()
-  managerId: string;
-
   @IsOptional()
   @IsString()
   comment?: string;

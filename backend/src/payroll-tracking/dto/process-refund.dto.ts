@@ -1,5 +1,4 @@
 import {
-  IsMongoId,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -8,9 +7,9 @@ import {
 } from 'class-validator';
 
 export class ProcessRefundDto {
-  @IsMongoId()
+  @IsString()
   @IsNotEmpty()
-  linkedId!: string; // disputeId or claimId
+  linkedId!: string; // disputeId, claimId, or Mongo _id
 
   @IsOptional()
   @IsString()

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsIn } from 'class-validator';
+import { IsNotEmpty, IsString, IsIn, IsOptional } from 'class-validator';
 
 export class ResolveIrregularityDto {
   @IsNotEmpty()
@@ -7,7 +7,10 @@ export class ResolveIrregularityDto {
 
   @IsNotEmpty()
   @IsString()
-  managerId: string;
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  managerId?: string;
 
   @IsNotEmpty()
   @IsString()

@@ -1,8 +1,9 @@
 import { IsString, IsOptional, IsDateString, IsEnum } from 'class-validator';
 
 export class EditPayrollInitiationDto {
+  @IsOptional()
   @IsString()
-  runId: string;
+  runId?: string;
 
   @IsOptional()
   @IsDateString()
@@ -16,8 +17,9 @@ export class EditPayrollInitiationDto {
   @IsEnum(['Monthly', 'Bi-Weekly', 'Weekly'])
   payPeriodType?: string;
 
+  @IsOptional()
   @IsString()
-  editReason: string;
+  editReason?: string;
 
   @IsOptional()
   @IsString()

@@ -84,84 +84,115 @@ export default function DashboardLayout({ children, title, description }: Dashbo
     return null;
   }
 
+  // Role-based permission checks
+  const canViewPayroll = () => {
+    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal & Policy Admin', 'HR Manager', 'System Admin'];
+    return payrollRoles.includes(user?.role || '');
+  };
+
   const menuItems: MenuItem[] = [
     {
-      name: 'Dashboard',
+      name: "Dashboard",
       icon: <LayoutDashboard size={20} />,
-      href: '/dashboard',
+      href: "/dashboard",
     },
     {
-      name: 'Employees',
+      name: "Employees",
       icon: <Users size={20} />,
       subItems: [
-        { name: 'View All', href: '/dashboard/employees' },
-        { name: 'Add New', href: '/dashboard/employees/add' },
-        { name: 'Departments', href: '/dashboard/employees/departments' },
-        { name: 'Positions', href: '/dashboard/employees/positions' },
+        { name: "View All", href: "/dashboard/employees" },
+        { name: "Add New", href: "/dashboard/employees/add" },
+        { name: "Departments", href: "/dashboard/employees/departments" },
+        { name: "Positions", href: "/dashboard/employees/positions" },
       ],
     },
     {
-      name: 'Organization',
+      name: "Organization",
       icon: <Building2 size={20} />,
       subItems: [
-        { name: 'Structure', href: '/dashboard/organization' },
-        { name: 'Departments', href: '/dashboard/organization/departments' },
-        { name: 'Hierarchy', href: '/dashboard/organization/hierarchy' },
+        { name: "Structure", href: "/dashboard/organization" },
+        { name: "Departments", href: "/dashboard/organization/departments" },
+        { name: "Hierarchy", href: "/dashboard/organization/hierarchy" },
       ],
     },
     {
-      name: 'Leaves',
+      name: "Leaves",
       icon: <Calendar size={20} />,
       subItems: [
-        { name: 'Requests', href: '/leaves' },
-        { name: 'Approvals', href: '/dashboard/leaves/approvals' },
-        { name: 'My Balance', href: '/leaves/balance' },
-        ...(user?.role === 'HR Admin' ? [
-          { name: 'Admin: Policies', href: '/dashboard/admin/policies' },
-          { name: 'Admin: Leave Types', href: '/dashboard/admin/leave-types' },
-          { name: 'Admin: Eligibility Rules', href: '/dashboard/admin/eligibility' },
-          { name: 'Admin: Calendar & Blocked Days', href: '/dashboard/admin/calendar' },
-          { name: 'Admin: Settings', href: '/dashboard/admin/settings' },
-          { name: 'Admin: Entitlements', href: '/dashboard/admin/entitlements' },
-        ] : []),
+        { name: "Requests", href: "/leaves" },
+        { name: "Approvals", href: "/dashboard/leaves/approvals" },
+        { name: "My Balance", href: "/leaves/balance" },
+        ...(user?.role === "HR Admin"
+          ? [
+              { name: "Admin: Policies", href: "/dashboard/admin/policies" },
+              {
+                name: "Admin: Leave Types",
+                href: "/dashboard/admin/leave-types",
+              },
+              {
+                name: "Admin: Eligibility Rules",
+                href: "/dashboard/admin/eligibility",
+              },
+              {
+                name: "Admin: Calendar & Blocked Days",
+                href: "/dashboard/admin/calendar",
+              },
+              { name: "Admin: Settings", href: "/dashboard/admin/settings" },
+              {
+                name: "Admin: Entitlements",
+                href: "/dashboard/admin/entitlements",
+              },
+            ]
+          : []),
       ],
     },
-    {
+    // Conditionally include Payroll section based on user role
+    ...(canViewPayroll() ? [{
       name: 'Payroll',
       icon: <DollarSign size={20} />,
       subItems: [
-        { name: 'Run Payroll', href: '/dashboard/payroll' },
+        { name: 'Payroll Policies', href: '/payroll/config/PayrollPolicies' },
+        { name: 'Pay Grades', href: '/payroll/config/pay-grades' },
+        { name: 'Pay Types', href: '/payroll/config/pay-types' },
+        { name: 'Run Payroll', href: '/payroll/execution' },
+        { name: 'Allowances', href: '/payroll/config/allowances' },
+        { name: 'Signing Bonuses', href: '/payroll/config/SigningBonuses' },
+        { name: 'Termination Benefits', href: '/payroll/config/TerminationBenefits' },
+        { name: 'Tax Rules', href: '/payroll/config/Tax-Rule' },
+        { name: 'Insurance Brackets', href: '/payroll/config/Insurance-Bracket' },
+        { name: 'Company Wide Settings', href: '/payroll/config/Company-wide-settings' },
         { name: 'Configuration', href: '/dashboard/payroll/configuration' },
         { name: 'History', href: '/dashboard/payroll/history' },
         { name: 'Reports', href: '/dashboard/payroll/reports' },
+        { name: "Tracking", href: "/payroll/tracking" }
       ],
-    },
+    }] : []),
     {
-      name: 'Performance',
+      name: "Performance",
       icon: <TrendingUp size={20} />,
       subItems: [
-        { name: 'Reviews', href: '/dashboard/performance' },
-        { name: 'Goals', href: '/dashboard/performance/goals' },
-        { name: 'Feedback', href: '/dashboard/performance/feedback' },
+        { name: "Reviews", href: "/dashboard/performance" },
+        { name: "Goals", href: "/dashboard/performance/goals" },
+        { name: "Feedback", href: "/dashboard/performance/feedback" },
       ],
     },
     {
-      name: 'Recruitment',
+      name: "Recruitment",
       icon: <Target size={20} />,
       subItems: [
-        { name: 'Job Postings', href: '/dashboard/recruitment' },
-        { name: 'Candidates', href: '/dashboard/recruitment/candidates' },
-        { name: 'Interviews', href: '/dashboard/recruitment/interviews' },
-        { name: 'Offers', href: '/dashboard/recruitment/offers' },
+        { name: "Job Postings", href: "/dashboard/recruitment" },
+        { name: "Candidates", href: "/dashboard/recruitment/candidates" },
+        { name: "Interviews", href: "/dashboard/recruitment/interviews" },
+        { name: "Offers", href: "/dashboard/recruitment/offers" },
       ],
     },
     {
-      name: 'Time Management',
+      name: "Time Management",
       icon: <Clock size={20} />,
       subItems: [
-        { name: 'Attendance', href: '/dashboard/time-management' },
-        { name: 'Schedules', href: '/dashboard/time-management/schedules' },
-        { name: 'Overtime', href: '/dashboard/time-management/overtime' },
+        { name: "Attendance", href: "/dashboard/time-management" },
+        { name: "Schedules", href: "/dashboard/time-management/schedules" },
+        { name: "Overtime", href: "/dashboard/time-management/overtime" },
       ],
     },
   ];
