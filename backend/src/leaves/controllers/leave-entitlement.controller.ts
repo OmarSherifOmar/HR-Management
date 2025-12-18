@@ -256,4 +256,27 @@ export class LeaveEntitlementController {
     return this.entitlementService.fixExistingEntitlements();
   }
 
+  /**
+   * Fix PER_TERM entitlements to grant correct initial half
+   * POST /leaves/entitlements/fix-per-term
+   */
+  @Post('fix-per-term')
+  @Roles(Role.HR_ADMIN)
+  async fixPerTermEntitlements() {
+    return this.entitlementService.fixPerTermEntitlements();
+  }
+
+  /**
+   * Debug endpoint: show policy and entitlement details
+   * GET /leaves/entitlements/debug/:employeeId/:leaveTypeId
+   */
+  @Get('debug/:employeeId/:leaveTypeId')
+  @Roles(Role.HR_ADMIN)
+  async debugEntitlement(
+    @Param('employeeId') employeeId: string,
+    @Param('leaveTypeId') leaveTypeId: string,
+  ) {
+    return this.entitlementService.debugEntitlement(employeeId, leaveTypeId);
+  }
+
 }

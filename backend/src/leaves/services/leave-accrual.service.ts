@@ -437,8 +437,9 @@ export class LeaveAccrualService {
         rawAmount = (effectiveYearlyEntitlement / 365) * serviceDays;
         break;
       case AccrualMethod.PER_TERM:
-        // Quarterly accrual - recalculate based on total annual entitlement
-        rawAmount = effectiveYearlyEntitlement / 4;
+        // Per-term accrual: grant half at start, half after 6 months
+        // This calculation is for periodic accrual, so return half
+        rawAmount = effectiveYearlyEntitlement / 2;
         break;
       default:
         rawAmount = effectiveYearlyEntitlement / 12;

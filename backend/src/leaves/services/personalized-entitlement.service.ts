@@ -102,9 +102,10 @@ export class PersonalizedEntitlementService {
         initialAccrued = yearlyEntitlement / 12;
         console.log('Monthly accrual detected - initial accrued (recalculated):', initialAccrued);
       } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
-        // Per term accrual: grant one term's worth immediately (yearly / 4 for quarterly)
-        initialAccrued = yearlyEntitlement / 4;
-        console.log('Per term accrual detected - initial accrued:', initialAccrued);
+        // Per term accrual: grant half of yearly entitlement at start
+        // The other half will be granted after 6 months
+        initialAccrued = yearlyEntitlement / 2;
+        console.log('Per term accrual detected - initial accrued (half):', initialAccrued);
       } else if (policy.accrualMethod === AccrualMethod.YEARLY) {
         // Yearly accrual: grant full entitlement upfront
         initialAccrued = yearlyEntitlement;
@@ -145,8 +146,9 @@ export class PersonalizedEntitlementService {
         newAccrued = yearlyEntitlement / 12;
         console.log('Monthly accrual - setting accrued to (recalculated):', newAccrued);
       } else if (policy.accrualMethod === AccrualMethod.PER_TERM) {
-        newAccrued = yearlyEntitlement / 4;
-        console.log('Per term accrual - setting accrued to:', newAccrued);
+        // Grant half of yearly entitlement (other half after 6 months)
+        newAccrued = yearlyEntitlement / 2;
+        console.log('Per term accrual - setting accrued to (half):', newAccrued);
       } else if (policy.accrualMethod === AccrualMethod.YEARLY) {
         newAccrued = yearlyEntitlement;
         console.log('Yearly accrual - setting to full entitlement:', newAccrued);
