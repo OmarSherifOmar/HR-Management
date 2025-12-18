@@ -144,7 +144,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
               ))
             ) : (
               <option disabled>No active cycles available</option>
-            )}}
+            )}
           </select>
         </div>
 
@@ -161,9 +161,6 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
             <option value="OVERDUE_ASSIGNMENT">Overdue Assignment</option>
           </select>
           <p className="mt-1 text-xs text-gray-400">
-            {reminderType === 'CYCLE_ENDING_SOON' && 'Notify managers that the cycle is ending soon.'}
-            {reminderType === 'PENDING_ASSIGNMENT' && 'Notify managers about pending assignments.'}
-            {reminderType === 'OVERDUE_ASSIGNMENT' && 'Notify managers about overdue assignments.'}
           </p>
         </div>
 
