@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
-import { getAPIUrl } from '../../../utils/apiClient';
 import { 
   Eye, 
   CheckCircle, 
@@ -302,7 +301,7 @@ export default function PayrollReviewPage() {
       if (editForm.editReason) payload.editReason = editForm.editReason;
       if (editForm.notes) payload.notes = editForm.notes;
 
-      const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/initiation/run/${selectedRun._id}/edit`, {
+      const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/initiation/run/${selectedRun._id}/edit`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -411,7 +410,7 @@ export default function PayrollReviewPage() {
       setActionError(null);
 
       // First fetch payslips for the payroll run to get a payslip id
-      const listRes = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/run/${runId}`, { method: 'GET' });
+      const listRes = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/run/${runId}`, { method: 'GET' });
       if (!listRes.ok) {
         const txt = await listRes.text();
         throw new Error(txt || `Error ${listRes.status}`);
@@ -429,7 +428,7 @@ export default function PayrollReviewPage() {
 
       const payslipId = payslips[0]._id;
 
-      const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
+      const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
@@ -1348,7 +1347,7 @@ export default function PayrollReviewPage() {
                   setPayslipLoading(true);
                   setActionError(null);
                   try {
-                    const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/generate/${selectedRun._id}`, { method: 'POST' });
+                    const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/generate/${selectedRun._id}`, { method: 'POST' });
                     if (!res.ok) {
                       const txt = await res.text();
                       throw new Error(txt || `Error ${res.status}`);

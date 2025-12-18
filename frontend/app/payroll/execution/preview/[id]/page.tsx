@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../components/DashboardLayout';
 import { authenticatedFetch, useAuth } from '../../../../context/AuthContext';
-import { getAPIUrl } from '../../../../utils/apiClient';
 import { ArrowLeft, AlertCircle, DollarSign, Users, Download } from 'lucide-react';
 
 interface Employee {
@@ -80,7 +79,7 @@ export default function PayrollPreviewPage() {
         try {
           setPayslips(null);
           const runIdForQuery = previewData?.payrollRun?.runId || id;
-          const pRes = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/run/${encodeURIComponent(runIdForQuery)}`, { method: 'GET' });
+          const pRes = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/run/${encodeURIComponent(runIdForQuery)}`, { method: 'GET' });
           if (pRes.ok) {
             const pJson = await pRes.json();
             setPayslips(Array.isArray(pJson) ? pJson : []);
@@ -308,7 +307,7 @@ export default function PayrollPreviewPage() {
 
                                         if (!match) {
                                           // fallback: refresh payslips and try again
-                                          const pRes = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/run/${encodeURIComponent(data?.payrollRun?.runId || id)}`, { method: 'GET' });
+                                          const pRes = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/run/${encodeURIComponent(data?.payrollRun?.runId || id)}`, { method: 'GET' });
                                           if (pRes.ok) {
                                             const pJson = await pRes.json();
                                             setPayslips(Array.isArray(pJson) ? pJson : []);
@@ -330,7 +329,7 @@ export default function PayrollPreviewPage() {
 
                                         const payslipId = match._id;
                                         setDownloadLoading(payslipId);
-                                        const res = await authenticatedFetch(`${getAPIUrl()}/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
+                                        const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
                                         if (!res.ok) {
                                           const txt = await res.text();
                                           throw new Error(txt || `Error ${res.status}`);

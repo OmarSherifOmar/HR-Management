@@ -140,6 +140,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: 'Payroll Policies', href: '/payroll/config/PayrollPolicies' },
         { name: 'Pay Grades', href: '/payroll/config/pay-grades' },
         { name: 'Pay Types', href: '/payroll/config/pay-types' },
+        { name: 'Run Payroll', href: '/payroll/execution' },
         { name: 'Allowances', href: '/payroll/config/allowances' },
         { name: 'Signing Bonuses', href: '/payroll/config/SigningBonuses' },
         { name: 'Termination Benefits', href: '/payroll/config/TerminationBenefits' },

@@ -5,7 +5,6 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { useRouter } from 'next/navigation';
 import { Eye, Play, Lock, Unlock, Trash2, Edit2, Check, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getAPIUrl } from '../../utils/apiClient';
 
 // Action buttons updated - View, Edit, Approve, Reject
 
@@ -65,7 +64,7 @@ export default function PayrollExecutionPage() {
       setError(null);
 
       console.log('Fetching compensations...');
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
       // Fetch both signing bonuses and termination/resignation benefits
       const [signingResponse, terminationResponse] = await Promise.all([
         fetch(`${API_URL}/payroll-execution/signing-bonus/pending`, {
@@ -193,7 +192,7 @@ export default function PayrollExecutionPage() {
   const fetchEmployees = async () => {
     try {
       setLoadingEmployees(true);
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
       const response = await fetch(`${API_URL}/employees/list`, {
         method: 'GET',
         credentials: 'include',
@@ -225,7 +224,7 @@ export default function PayrollExecutionPage() {
     }
 
     try {
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
       const comp = compensations.find(c => c._id === id);
       const endpoint = comp?.type === 'Signing Bonus'
         ? `/payroll-execution/signing-bonus/${id}`
@@ -266,7 +265,7 @@ export default function PayrollExecutionPage() {
     }
 
     try {
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
       const comp = compensations.find(c => c._id === id);
       const endpoint = comp?.type === 'Signing Bonus'
         ? `/payroll-execution/signing-bonus/${id}/approve`
@@ -307,7 +306,7 @@ export default function PayrollExecutionPage() {
     }
 
     try {
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
       const comp = compensations.find(c => c._id === id);
       const endpoint = comp?.type === 'Signing Bonus'
         ? `/payroll-execution/signing-bonus/${id}/reject`
@@ -370,7 +369,7 @@ export default function PayrollExecutionPage() {
       setCreating(true);
       setError(null);
 
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
 
       // Determine endpoint based on type
       const isSigningBonus = formData.type === 'Signing Bonus';
@@ -460,7 +459,7 @@ export default function PayrollExecutionPage() {
       setCreating(true);
       setError(null);
 
-      const API_URL = getAPIUrl();
+      const API_URL = 'http://localhost:3000';
 
       // Determine endpoint and body based on type
       const isSigningBonus = formData.type === 'Signing Bonus';
