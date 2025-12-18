@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './context/AuthContext';
+import { getAPIUrl } from './utils/apiClient';
 
 export default function Home() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function Home() {
   useEffect(() => {
     // Redirect to dashboard if already logged in
     if (!isLoading && isLoggedIn) {
-      router.replace('/dashboard');
+      router.push('/payroll');
     }
   }, [isLoading, isLoggedIn, router]);
 
@@ -41,7 +42,8 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const API_URL = getAPIUrl();
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,13 +58,13 @@ export default function Home() {
         if (data.user) {
           login(data.user);
         }
-        router.push('/dashboard');
+        router.push('/payroll');
       } else {
         setError(data.message || 'Invalid email or password');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Failed to connect to server. Make sure the backend is running on port 3000.');
+      setError('Failed to connect to server. Make sure the backend is running on port 3002.');
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ export default function Home() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (signupData.password !== signupData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -85,7 +87,8 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/register', {
+      const API_URL = getAPIUrl();
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +135,36 @@ export default function Home() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // If already logged in, show option to go to dashboard or logout
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+        <div className="bg-[#2a2a2a] p-8 rounded-lg text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">You are already logged in</h2>
+          <p className="text-gray-400 mb-6">Would you like to go to the dashboard?</p>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push('/payroll')}
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all"
+            >
+              Go to Dashboard
+            </button>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="w-full py-3 px-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-all"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -157,11 +189,10 @@ export default function Home() {
               setActiveTab('login');
               setError('');
             }}
-            className={`flex-1 py-3 px-4 text-center font-medium transition-all ${
-              activeTab === 'login'
+            className={`flex-1 py-3 px-4 text-center font-medium transition-all ${activeTab === 'login'
                 ? 'text-white border-b-2 border-white'
                 : 'text-gray-400 hover:text-gray-300'
-            }`}
+              }`}
           >
             Sign In
           </button>
@@ -170,11 +201,10 @@ export default function Home() {
               setActiveTab('signup');
               setError('');
             }}
-            className={`flex-1 py-3 px-4 text-center font-medium transition-all ${
-              activeTab === 'signup'
+            className={`flex-1 py-3 px-4 text-center font-medium transition-all ${activeTab === 'signup'
                 ? 'text-white border-b-2 border-white'
                 : 'text-gray-400 hover:text-gray-300'
-            }`}
+              }`}
           >
             Sign Up
           </button>
