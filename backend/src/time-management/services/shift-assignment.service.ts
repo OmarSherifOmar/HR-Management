@@ -69,6 +69,23 @@ export class ShiftAssignmentService {
     });
   }
 
+  // Get shift assignments within a date range (used by attendance/leaves integration)
+  async getAssignmentsInRange(startDate: Date, endDate: Date, employeeId?: string) {
+    const query: any = {
+      $or: [
+        { startDate: { $gte: startDate, $lte: endDate } },
+        { endDate: { $gte: startDate, $lte: endDate } },
+        { startDate: { $lte: startDate }, endDate: { $gte: endDate } },
+      ],
+    };
+
+    if (employeeId) {
+      query.employeeId = new Types.ObjectId(employeeId);
+    }
+
+    return this.shiftAssignmentModel.find(query).lean();
+  }
+
   // ==================== CREATE OPERATIONS ====================
 
   /**
