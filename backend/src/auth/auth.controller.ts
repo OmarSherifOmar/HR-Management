@@ -92,7 +92,11 @@ export class AuthController {
   async signup(@Body() registerRequestDto: RegisterRequestDto) {
     try {
       const result = await this.authService.register(registerRequestDto);
-      return { statusCode: HttpStatus.CREATED, message: 'User registered successfully', data: result };
+      return { 
+        statusCode: HttpStatus.CREATED, 
+        message: 'Candidate registered successfully. Please wait for HR approval to become an employee.',
+        data: result 
+      };
     } catch (error) {
       // Re-throw HTTP exceptions as-is
       if (error instanceof HttpException) {

@@ -96,8 +96,8 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       subItems: [
         { name: 'View All', href: '/dashboard/employees' },
         { name: 'Add New', href: '/dashboard/employees/add' },
-        { name: 'Departments', href: '/dashboard/employees/departments' },
-        { name: 'Positions', href: '/dashboard/employees/positions' },
+        { name: 'My Profile', href: '/dashboard/employee-profile' },
+        { name: 'My Team', href: '/dashboard/employee-profile/team' },
       ],
     },
     {

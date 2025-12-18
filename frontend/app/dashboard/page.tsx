@@ -1,102 +1,177 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCanAccess } from '../hooks/useRole';
 import DashboardLayout from '../components/DashboardLayout';
+import Link from 'next/link';
 import { 
   FileInput,
   UserPlus,
   Banknote,
-  TrendingUp
+  TrendingUp,
+  User,
+  ChevronRight,
+  AlertCircle,
+  Award,
 } from 'lucide-react';
+import {
+  SelfServiceContactInfo,
+  SelfServiceProfilePicture,
+  SelfServiceChangeRequests,
+  ManagerTeamView,
+  HREmployeeManagement,
+  HRChangeRequestReview,
+  CandidateManagement,
+} from '../components/EmployeeProfile';
+import { PerformanceManagement } from '../components/Performance';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const {
+    canViewMyProfile,
+    canViewTeamMembers,
+    canSearchEmployees,
+    canListChangeRequests,
+  } = useCanAccess();
+  const [activeView, setActiveView] = useState<string | null>(null);
 
-  const recentActivities = [
-    { type: 'leave', message: 'John Doe requested 3 days leave', time: '2 hours ago', status: 'pending' },
-    { type: 'employee', message: 'Sarah Smith joined as Senior Developer', time: '5 hours ago', status: 'completed' },
-    { type: 'payroll', message: 'Payroll processed for December', time: '1 day ago', status: 'completed' },
-    { type: 'performance', message: 'Q4 Performance reviews started', time: '2 days ago', status: 'ongoing' },
-  ];
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Dashboard" description={`Welcome back, ${user?.name || 'User'}!`}>
+        <div className="flex items-center justify-center py-12">
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const canAccess = canViewMyProfile();
+  const canAccessTeam = canViewTeamMembers();
+  const canAccessHR = canSearchEmployees() || canListChangeRequests();
+
+  // Define menu items based on permissions
+  const menuItems = [];
+  
+  if (canAccess) {
+    menuItems.push({ id: 'profile', label: 'My Profile', icon: User });
+  }
+  if (canAccessTeam) {
+    menuItems.push({ id: 'team', label: 'My Team', icon: UserPlus });
+  }
+  if (canSearchEmployees()) {
+    menuItems.push({ id: 'employees', label: 'View All', icon: FileInput });
+    menuItems.push({ id: 'candidates', label: 'Candidates', icon: UserPlus });
+  }
+  if (canListChangeRequests()) {
+    menuItems.push({ id: 'review-requests', label: 'Review Requests', icon: TrendingUp });
+  }
+  
+  // Always add Performance tab for authorized roles
+  menuItems.push({ id: 'performance', label: 'Performance', icon: Award });
+
+  // Set default active view to first available menu item if not set
+  const currentActiveView = activeView || (menuItems.length > 0 ? menuItems[0].id : null);
 
   return (
     <DashboardLayout 
       title="Dashboard" 
       description={`Welcome back, ${user?.name || 'User'}!`}
     >
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#2a2a2a] rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Recent Activities
-          </h3>
-          <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 p-3 rounded-lg bg-[#1a1a1a] hover:bg-[#333333] transition-colors"
-              >
-                <div className="flex-1">
-                  <p className="text-sm text-white font-medium">
-                    {activity.message}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {activity.time}
-                  </p>
-                </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                  activity.status === 'completed'
-                    ? 'bg-green-600 text-white'
-                    : activity.status === 'pending'
-                    ? 'bg-yellow-600 text-white'
-                    : 'bg-blue-600 text-white'
-                }`}>
-                  {activity.status}
-                </span>
-              </div>
-            ))}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Menu Sidebar */}
+        {menuItems.length > 0 ? (
+          <div className="lg:col-span-1">
+            <div className="bg-[#2a2a2a] rounded-lg p-4 border border-gray-700 sticky top-20">
+              <h3 className="text-sm font-semibold text-gray-400 mb-3 px-2">MENU</h3>
+              <nav className="space-y-1">
+                {menuItems.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveView(item.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-sm transition-colors ${
+                        currentActiveView === item.id
+                          ? 'bg-blue-600/20 text-blue-400 border border-blue-600'
+                          : 'text-gray-300 hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {IconComponent && <IconComponent size={16} />}
+                        {item.label}
+                      </div>
+                      {currentActiveView === item.id && <ChevronRight size={16} />}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        {/* Quick Actions */}
-        <div className="bg-[#2a2a2a] rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Quick Actions
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left group">
-              <span className="text-2xl mb-2 block">
-                <UserPlus size={24} />
-              </span>
-              <span className="text-sm font-medium text-white">
-                Add Employee
-              </span>
-            </button>
-            <button className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left group">
-              <span className="text-2xl mb-2 block">
-                <FileInput size={24} />
-              </span>
-              <span className="text-sm font-medium text-white">
-                New Leave Request
-              </span>
-            </button>
-            <button className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left group">
-              <span className="text-2xl mb-2 block">
-                <Banknote size={24} />
-              </span>
-              <span className="text-sm font-medium text-white">
-                Process Payroll
-              </span>
-            </button>
-            <button className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left group">
-              <span className="text-2xl mb-2 block">
-                <TrendingUp size={24} />
-              </span>
-              <span className="text-sm font-medium text-white">
-                View Reports
-              </span>
-            </button>
-          </div>
+        {/* Content Area */}
+        <div className={menuItems.length > 0 ? 'lg:col-span-3' : 'lg:col-span-4'}>
+          {!currentActiveView && menuItems.length === 0 ? (
+            <div className="p-6 bg-yellow-900/20 border border-yellow-700 rounded-lg flex items-start gap-4">
+              <AlertCircle size={24} className="text-yellow-500 mt-1" />
+              <div>
+                <h3 className="text-yellow-200 font-semibold mb-1">
+                  No Features Available
+                </h3>
+                <p className="text-yellow-200 text-sm">
+                  Your current role doesn't have access to any employee profile features.
+                  Contact your administrator for more information.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* My Profile View */}
+              {currentActiveView === 'profile' && canAccess && (
+                <div className="space-y-4">
+                  <SelfServiceContactInfo />
+                  <SelfServiceProfilePicture />
+                  <SelfServiceChangeRequests />
+                </div>
+              )}
+
+              {/* My Team View */}
+              {currentActiveView === 'team' && canAccessTeam && (
+                <div>
+                  <ManagerTeamView />
+                </div>
+              )}
+
+              {/* View All Employees */}
+              {currentActiveView === 'employees' && canSearchEmployees() && (
+                <div>
+                  <HREmployeeManagement />
+                </div>
+              )}
+
+              {/* Candidates */}
+              {currentActiveView === 'candidates' && canSearchEmployees() && (
+                <div>
+                  <CandidateManagement />
+                </div>
+              )}
+
+              {/* Review Requests */}
+              {currentActiveView === 'review-requests' && canListChangeRequests() && (
+                <div>
+                  <HRChangeRequestReview />
+                </div>
+              )}
+
+              {/* Performance Management */}
+              {currentActiveView === 'performance' && user && (
+                <div>
+                  <PerformanceManagement userRole={user.role} employeeId={user.id} />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </DashboardLayout>

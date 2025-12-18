@@ -1,10 +1,12 @@
 import { Controller, Post, Get, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { CreatePositionDto } from '../dtos/create-position.dto';
 import { UpdatePositionDto } from '../dtos/update-position.dto';
 import { PositionService } from '../services/position.service';
 import { AuthGuard } from '../../auth/./guards/authentication.guard';
 import { authorizationGuard } from '../../auth/./guards/authorization.guard';
 import { Roles, Role } from '../../auth/./decorators/roles.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @UseGuards(AuthGuard)
 @Controller('api/org/positions')
@@ -19,22 +21,25 @@ export class PositionController {
   }
 
   @Get()
-  async list(@Query('departmentId') departmentId?: string, @Query('active') active?: string) {
+  @Public()
+  async list(@Query('departmentId') departmentId?: string, @Query('active') active = 'true') {
     const filters: any = {};
-    if (departmentId) filters.departmentId = departmentId;
-    // If active is not provided or is 'undefined', get all positions
-    // If active is 'true', get only active positions
-    // If active is 'false', get only inactive positions
+    if (departmentId) {
+      // departmentId can be stored as either string or ObjectId in MongoDB
+      // Use $or to match both formats
+      filters.$or = [
+        { departmentId: departmentId }, // string match
+        { departmentId: new Types.ObjectId(departmentId) }, // ObjectId match
+      ];
+    }
     if (active === 'true') {
       filters.isActive = true;
-    } else if (active === 'false') {
-      filters.isActive = false;
     }
-    // If active is undefined, no filter is applied - returns all positions
     return this.svc.findAll(filters);
   }
 
   @Get(':id')
+  @Public()
   async get(@Param('id') id: string) {
     return this.svc.findById(id);
   }
