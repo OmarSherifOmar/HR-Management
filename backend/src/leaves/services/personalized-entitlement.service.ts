@@ -529,7 +529,7 @@ export class PersonalizedEntitlementService {
     console.log(`Total employees to check: ${allEmployees.length}`);
     for (const employee of allEmployees) {
       const isEligible = this.checkEmployeeEligibility(employee, eligibilityRules);
-      console.log(`Employee ${employee._id} (${employee.firstName} ${employee.lastName}): ${isEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}`);
+      console.log(`Employee ${employee._id} (${isEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}`);
       if (isEligible) {
         candidates.push(employee);
       } else {
