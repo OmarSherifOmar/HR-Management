@@ -50,7 +50,8 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        // Access denied is ok for non-HR roles
+        // Access denied - show message for users who need access
+        onNotify?.('Access Denied: You do not have permission to view performance reports. Please contact your administrator if you need access.', 'error');
         setReports([]);
         return;
       }
@@ -101,7 +102,7 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
       console.log('[handleGenerateReport] Response status:', response.status);
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to generate reports', 'error');
+        onNotify?.('Access Denied: You do not have permission to generate performance reports. This action requires HR Manager role.', 'error');
         return;
       }
 

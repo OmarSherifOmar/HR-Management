@@ -345,6 +345,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
       if (response.status === 403) {
         console.log('[fetchAssignments] Access denied (403)');
+        onNotify?.('Access Denied: You do not have permission to view performance assignments. Please contact your administrator.', 'error');
         setAssignments([]);
         return;
       }
@@ -532,7 +533,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to create assignments', 'error');
+        onNotify?.('Access Denied: You do not have permission to create performance assignments. This action requires HR Manager or department head role.', 'error');
         return;
       }
 
@@ -593,7 +594,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to create assignments', 'error');
+        onNotify?.('Access Denied: You do not have permission to create bulk assignments. This action requires HR Manager role.', 'error');
         return;
       }
 
@@ -726,7 +727,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       console.log('[handleBulkPublishByCycle] Response status:', response.status);
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to bulk publish', 'error');
+        onNotify?.('Access Denied: You do not have permission to bulk publish appraisals. This action requires HR Manager role.', 'error');
         return;
       }
 
@@ -781,7 +782,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       console.log('[handlePublish] Response status:', response.status);
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to publish', 'error');
+        onNotify?.('Access Denied: You do not have permission to publish appraisals. This action requires HR Manager role.', 'error');
         return;
       }
 
@@ -977,7 +978,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       console.log('[handleSubmitOnly] Response status:', response.status);
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to submit appraisals', 'error');
+        onNotify?.('Access Denied: You do not have permission to submit this appraisal. Only the assigned manager can submit appraisals.', 'error');
         return;
       }
 
@@ -1042,7 +1043,7 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       console.log('[handleSubmitAndPublish] Response status:', response.status);
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to submit appraisals', 'error');
+        onNotify?.('Access Denied: You do not have permission to submit and publish appraisals. This action requires HR Manager role.', 'error');
         return;
       }
 

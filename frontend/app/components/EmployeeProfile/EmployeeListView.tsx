@@ -36,6 +36,19 @@ export default function EmployeeListView({ viewType = 'grid' }: EmployeeListView
     const fetchEmployees = async () => {
       try {
         const response = await fetch('/api/employees');
+        
+        if (response.status === 403) {
+          console.error('Access Denied: You do not have permission to view employee list.');
+          alert('Access Denied: You do not have permission to view employee list. Please contact your administrator.');
+          setLoading(false);
+          return;
+        }
+        
+        if (response.status === 401) {
+          window.location.href = '/';
+          return;
+        }
+        
         const data = await response.json();
         setEmployees(data);
         setFilteredEmployees(data);

@@ -131,6 +131,10 @@ export default function CreateEmployeeModal({ isOpen, onClose, onCreateSuccess }
         }),
       });
 
+      if (response.status === 403) {
+        throw new Error('Access Denied: You do not have permission to create employees. This action requires HR Admin or HR Manager role.');
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create employee');

@@ -71,7 +71,7 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
       });
 
       if (response.status === 403) {
-        onNotify?.('Access denied to cycles', 'error');
+        onNotify?.('Access Denied: You do not have permission to view performance cycles. Please contact your administrator.', 'error');
         return;
       }
 
@@ -95,7 +95,7 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
       });
 
       if (response.status === 403) {
-        console.warn('Access denied to templates');
+        onNotify?.('Access Denied: You do not have permission to view templates.', 'error');
         setTemplates([]);
         return;
       }
@@ -183,7 +183,7 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
       });
 
       if (response.status === 403) {
-        onNotify?.(`You do not have permission to ${editingId ? 'update' : 'create'} cycles`, 'error');
+        onNotify?.(`Access Denied: You do not have permission to ${editingId ? 'update' : 'create'} performance cycles. This action requires HR Manager or System Admin role.`, 'error');
         return;
       }
 
@@ -226,7 +226,7 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to activate cycles', 'error');
+        onNotify?.('Access Denied: You do not have permission to activate performance cycles. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 
@@ -251,7 +251,7 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to close cycles', 'error');
+        onNotify?.('Access Denied: You do not have permission to close performance cycles. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 

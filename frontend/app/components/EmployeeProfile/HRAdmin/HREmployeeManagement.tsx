@@ -370,7 +370,7 @@ export default function HREmployeeManagement() {
       }
 
       if (response.status === 403) {
-        setError('You do not have permission to search employees. Only HR_ADMIN role can access this.');
+        setError('Access Denied: You do not have permission to search employees. This feature requires HR Admin role. Please contact your administrator.');
         return;
       }
 
@@ -403,7 +403,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to view employee details.');
+        setError('Access Denied: You do not have permission to view employee details. This feature requires HR Admin role.');
         return;
       }
 
@@ -431,7 +431,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to edit employees');
+        setError('Access Denied: You do not have permission to edit employee information. This feature requires HR Admin role.');
         return;
       }
 
@@ -461,7 +461,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to change employee status');
+        setError('Access Denied: You do not have permission to change employee status. This feature requires HR Admin role.');
         return;
       }
 
@@ -493,7 +493,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to assign roles');
+        setError('Access Denied: You do not have permission to assign roles. This feature requires System Admin role.');
         return;
       }
 
