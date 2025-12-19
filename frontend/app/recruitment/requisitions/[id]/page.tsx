@@ -45,7 +45,6 @@ export default function RequisitionDetailsPage() {
         },
       );
 
-      // ✅ Redirect back to requisitions list
       router.push('/recruitment/requisitions');
     } finally {
       setLoading(false);
@@ -62,7 +61,9 @@ export default function RequisitionDetailsPage() {
 
       <p>
         <span className="text-gray-400">Status:</span>{' '}
-        <span className="font-semibold">{data.publishStatus}</span>
+        <span className="font-semibold capitalize">
+          {data.publishStatus}
+        </span>
       </p>
 
       <p>
@@ -74,7 +75,24 @@ export default function RequisitionDetailsPage() {
         {data.location || '-'}
       </p>
 
-      <div className="flex gap-3 pt-4">
+      {/* ACTIONS */}
+      <div className="flex flex-wrap gap-3 pt-4">
+
+        {/* Apply Candidate */}
+        {data.publishStatus === 'published' && (
+          <button
+            onClick={() =>
+              router.push(
+                `/recruitment/applications/create?requisitionId=${id}`
+            )
+            }
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            Apply Candidate
+          </button>
+        )}
+
+        {/* Publish */}
         {data.publishStatus === 'draft' && (
           <button
             disabled={loading}
@@ -85,6 +103,7 @@ export default function RequisitionDetailsPage() {
           </button>
         )}
 
+        {/* Close */}
         {data.publishStatus !== 'closed' && (
           <button
             disabled={loading}

@@ -10,6 +10,7 @@ export default function CreateCandidatePage() {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
+    nationalId: '',
     personalEmail: '',
     mobilePhone: '',
     biography: '',
@@ -18,9 +19,27 @@ export default function CreateCandidatePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  function update<K extends keyof typeof form>(key: K, value: string) {
+    setForm(prev => ({ ...prev, [key]: value }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    // 🔒 client-side validation
+    if (!form.firstName || !form.lastName) {
+      return setError('First name and last name are required');
+    }
+
+    if (!form.nationalId) {
+      return setError('National ID is required');
+    }
+
+    if (!form.personalEmail) {
+      return setError('Email is required');
+    }
+
     setLoading(true);
 
     try {
@@ -28,13 +47,7 @@ export default function CreateCandidatePage() {
         'http://localhost:3000/employees/candidates',
         {
           method: 'POST',
-          body: JSON.stringify({
-            firstName: form.firstName,
-            lastName: form.lastName,
-            personalEmail: form.personalEmail,
-            mobilePhone: form.mobilePhone,
-            biography: form.biography,
-          }),
+          body: JSON.stringify(form),
         },
       );
 
@@ -62,12 +75,13 @@ export default function CreateCandidatePage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
         <input
           required
           placeholder="First Name"
           className="w-full p-3 bg-[#1a1a1a] text-white rounded"
           value={form.firstName}
-          onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+          onChange={e => update('firstName', e.target.value)}
         />
 
         <input
@@ -75,7 +89,15 @@ export default function CreateCandidatePage() {
           placeholder="Last Name"
           className="w-full p-3 bg-[#1a1a1a] text-white rounded"
           value={form.lastName}
-          onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+          onChange={e => update('lastName', e.target.value)}
+        />
+
+        <input
+          required
+          placeholder="National ID"
+          className="w-full p-3 bg-[#1a1a1a] text-white rounded"
+          value={form.nationalId}
+          onChange={e => update('nationalId', e.target.value)}
         />
 
         <input
@@ -84,35 +106,40 @@ export default function CreateCandidatePage() {
           placeholder="Email"
           className="w-full p-3 bg-[#1a1a1a] text-white rounded"
           value={form.personalEmail}
-          onChange={(e) =>
-            setForm({ ...form, personalEmail: e.target.value })
-          }
+          onChange={e => update('personalEmail', e.target.value)}
         />
 
         <input
           placeholder="Phone"
           className="w-full p-3 bg-[#1a1a1a] text-white rounded"
           value={form.mobilePhone}
-          onChange={(e) =>
-            setForm({ ...form, mobilePhone: e.target.value })
-          }
+          onChange={e => update('mobilePhone', e.target.value)}
         />
 
         <textarea
           placeholder="Notes / Bio"
           className="w-full p-3 bg-[#1a1a1a] text-white rounded"
           value={form.biography}
-          onChange={(e) =>
-            setForm({ ...form, biography: e.target.value })
-          }
+          onChange={e => update('biography', e.target.value)}
         />
 
-        <button
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded text-white"
-        >
-          {loading ? 'Creating...' : 'Create Candidate'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded text-white"
+          >
+            {loading ? 'Creating...' : 'Create Candidate'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded text-white"
+          >
+            Cancel
+          </button>
+        </div>
       </form>
     </div>
   );
