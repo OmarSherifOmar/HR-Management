@@ -21,7 +21,7 @@ export default function RequestDetailPage() {
         setLoading(true);
         setError(null);
         const data = await getChangeRequestById(requestId);
-        setRequest(data);
+        setRequest((data as ChangeRequest) || null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load request details');
       } finally {
