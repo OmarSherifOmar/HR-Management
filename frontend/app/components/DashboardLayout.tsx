@@ -165,16 +165,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       href: "/dashboard",
     },
     {
-      name: "Employees",
-      icon: <Users size={20} />,
-      subItems: [
-        { name: "View All", href: "/dashboard/employees" },
-        { name: "Add New", href: "/dashboard/employees/add" },
-        { name: "Departments", href: "/dashboard/employees/departments" },
-        { name: "Positions", href: "/dashboard/employees/positions" },
-      ],
-    },
-    {
       name: "Organization",
       icon: <Building2 size={20} />,
       subItems: [
@@ -254,15 +244,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: "Tracking", href: "/payroll/tracking" }
       ],
     }] : []),
-    {
-      name: "Performance",
-      icon: <TrendingUp size={20} />,
-      subItems: [
-        { name: "Reviews", href: "/dashboard/performance" },
-        { name: "Goals", href: "/dashboard/performance/goals" },
-        { name: "Feedback", href: "/dashboard/performance/feedback" },
-      ],
-    },
     {
       name: "Recruitment",
       icon: <Target size={20} />,
