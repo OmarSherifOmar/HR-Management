@@ -732,12 +732,8 @@ export class LeaveAccrualService {
   }
 
   /**
-<<<<<<< HEAD
-   * Run year-end carry-forward for all leave types that allow carry-forward
-=======
    * Year-end carry-forward job (DEPRECATED - now automatic)
    * Kept for compatibility and manual execution
->>>>>>> upstream-leaves/main
    */
   async runYearEndCarryForwardJob(
     fromYear: number,
@@ -746,12 +742,8 @@ export class LeaveAccrualService {
     leaveTypes: string[];
     summaries: BulkCarryForwardSummary[];
   }> {
-<<<<<<< HEAD
-    // Find all policies that allow carry-forward
-=======
     this.logger.log('[Job] Running year-end carry-forward (state-driven)');
     
->>>>>>> upstream-leaves/main
     const policies = await this.policyModel
       .find({ carryForwardAllowed: true })
       .populate('leaveTypeId', 'name code')
@@ -770,47 +762,18 @@ export class LeaveAccrualService {
       summaries.push(summary);
     }
 
-<<<<<<< HEAD
-=======
     this.logger.log(`[Job] Year-end carry-forward completed for ${leaveTypes.length} leave types`);
->>>>>>> upstream-leaves/main
     return { leaveTypes, summaries };
   }
 
   /**
-<<<<<<< HEAD
-   * Process expired carry-forward balances
-   * Should be run periodically to check and deduct expired carry-forward amounts
-=======
    * Process expired carry-forward balances (DEPRECATED - now automatic)
    * Expiry is now checked automatically in ensureEntitlementUpToDate
->>>>>>> upstream-leaves/main
    */
   async processExpiredCarryForward(): Promise<{
     processed: number;
     expired: Array<{ employeeId: string; leaveTypeId: string; expiredAmount: number }>;
   }> {
-<<<<<<< HEAD
-    const today = new Date();
-    const expired: Array<{ employeeId: string; leaveTypeId: string; expiredAmount: number }> = [];
-
-    // Find entitlements with carry-forward that might have expired
-    // This requires tracking expiry dates - for now, we check adjustments
-    const recentCarryForwards = await this.adjustmentModel
-      .find({
-        reason: { $regex: /^\[CARRY_FORWARD\]/ },
-        createdAt: { $lte: new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()) },
-      })
-      .exec();
-
-    // Note: A more robust implementation would store expiry dates in the entitlement
-    // and check against those. For now, this is a simplified version.
-
-    return {
-      processed: recentCarryForwards.length,
-      expired,
-    };
-=======
     this.logger.log('[Job] Processing carry-forward expiry (state-driven)');
     
     const today = new Date();
@@ -843,17 +806,12 @@ export class LeaveAccrualService {
 
     this.logger.log(`[Job] Processed ${toExpire.length} expiry checks`);
     return { processed: toExpire.length, expired };
->>>>>>> upstream-leaves/main
   }
 
   // ==================== UTILITY METHODS ====================
 
   /**
-<<<<<<< HEAD
-   * Get accrual status for an employee
-=======
    * Get accrual status for an employee (always returns up-to-date state)
->>>>>>> upstream-leaves/main
    */
   async getAccrualStatus(
     employeeId: string,
@@ -881,8 +839,6 @@ export class LeaveAccrualService {
       .populate('leaveTypeId', 'name code')
       .exec();
 
-<<<<<<< HEAD
-=======
     // Ensure each entitlement is up-to-date before returning
     for (const ent of entitlements) {
       const policy = await this.policyModel.findOne({ leaveTypeId: ent.leaveTypeId });
@@ -891,7 +847,6 @@ export class LeaveAccrualService {
       }
     }
 
->>>>>>> upstream-leaves/main
     return {
       employeeId,
       entitlements: entitlements.map((e) => ({
@@ -908,11 +863,7 @@ export class LeaveAccrualService {
   }
 
   /**
-<<<<<<< HEAD
-   * Preview carry-forward calculation without applying
-=======
    * Preview carry-forward calculation without applying (uses current state)
->>>>>>> upstream-leaves/main
    */
   async previewCarryForward(
     employeeId: string,
@@ -925,27 +876,14 @@ export class LeaveAccrualService {
     carryForwardAllowed: boolean;
     expiryMonths?: number;
   }> {
-<<<<<<< HEAD
-    const entitlement = await this.entitlementModel.findOne({
-      employeeId: new Types.ObjectId(employeeId),
-      leaveTypeId: new Types.ObjectId(leaveTypeId),
-    });
-
-=======
     // Get up-to-date entitlement
     const entitlement = await this.getEntitlementUpToDate(employeeId, leaveTypeId);
->>>>>>> upstream-leaves/main
     const policy = await this.policyModel.findOne({
       leaveTypeId: new Types.ObjectId(leaveTypeId),
     });
 
-<<<<<<< HEAD
-    if (!entitlement || !policy) {
-      throw new NotFoundException('Entitlement or policy not found');
-=======
     if (!policy) {
       throw new NotFoundException('Policy not found');
->>>>>>> upstream-leaves/main
     }
 
     const maxCarryForward = policy.maxCarryForward || 45;
