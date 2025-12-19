@@ -13,7 +13,19 @@ import { ShiftTypeModule } from './modules/shift-type.module';
 import { ShiftModule } from './modules/shift.module';
 import { ShiftAssignmentModule } from './modules/shift-assignment.module';
 import { ScheduleRuleModule } from './modules/schedule-rule.module';
+import { AttendanceController } from './controllers/attendance-Controller';
+import { CorrectnessController } from './controllers/correctness-Controller';
+import { HolidayController } from './controllers/holiday.controller';
+import { AttendanceService } from './services/attendance.service';
+import { CorrectionService } from './services/correction.service';
+import { PolicyService } from './services/policy.service';
+import { HolidayService } from './services/holiday.service';
 import { NotificationService } from './services/notification.service';
+import { ShiftAssignmentService } from './services/shift-assignment.service';
+import { Shift, ShiftSchema } from './models/shift.schema';
+import { ShiftAssignment, ShiftAssignmentSchema } from './models/shift-assignment.schema';
+import { ReportsController } from './controllers/reports.controller';
+import { ReportsService } from './services/reports.service';
 
 
 @Module({
@@ -26,14 +38,24 @@ import { NotificationService } from './services/notification.service';
       { name: OvertimeRule.name, schema: OvertimeRuleSchema },
       { name: LatenessRule.name, schema: latenessRuleSchema },
       { name: Holiday.name, schema: HolidaySchema },
+      { name: Shift.name, schema: ShiftSchema },
+      { name: ShiftAssignment.name, schema: ShiftAssignmentSchema },
     ]),
     ShiftTypeModule,
     ShiftModule,
     ShiftAssignmentModule,
     ScheduleRuleModule,
   ],
-  controllers: [TimeManagementController],
-  providers: [TimeManagementService, NotificationService],
+  controllers: [TimeManagementController, AttendanceController, CorrectnessController, ReportsController, HolidayController],
+  providers: [
+    TimeManagementService,
+    AttendanceService,
+    CorrectionService,
+    PolicyService,
+    HolidayService,
+    NotificationService,
+    ReportsService,
+  ],
   exports: [ShiftTypeModule, ShiftModule, ShiftAssignmentModule, ScheduleRuleModule, NotificationService],
 })
 export class TimeManagementModule {}

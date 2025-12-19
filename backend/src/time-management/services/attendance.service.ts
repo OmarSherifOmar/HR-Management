@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AttendanceRecord, AttendanceRecordDocument } from '../models/attendance-record.schema';
@@ -7,7 +7,7 @@ import { PunchType, TimeExceptionType, PunchPolicy } from '../models/enums';
 import { TimeException, TimeExceptionDocument } from '../models/time-exception.schema';
 import { ShiftService } from './shift.service';
 import { HolidayService } from './holiday.service';
-import { ShiftAssignmentService } from './ShiftAssignmentService';
+import { ShiftAssignmentService } from './shift-assignment.service';
 import { startOfDay, endOfDay, buildDateFromShiftTime } from '../utils/time.utils';
 import { PolicyService } from './policy.service';
 
@@ -23,9 +23,34 @@ export class AttendanceService {
     private readonly shiftService: ShiftService,
     private readonly holidayService: HolidayService,
     private readonly shiftAssignmentService: ShiftAssignmentService,
+    @Inject(forwardRef(() => PolicyService))
     private readonly policyService: PolicyService,
   ) {}
 
+
+  // Helper to transform record for frontend
+  private transformRecord(record: any) {
+    if (!record) return null;
+    const recordObj = record.toObject ? record.toObject() : record;
+    const punches = recordObj.punches || [];
+    
+    // Create a copy and sort punches by time
+    const sortedPunches = [...punches].sort((a: any, b: any) => new Date(a.time).getTime() - new Date(b.time).getTime());
+    
+    const inPunch = sortedPunches.find((p: any) => p.type === PunchType.IN);
+    // Create another copy for reverse to avoid mutating the sorted array
+    const outPunch = [...sortedPunches].reverse().find((p: any) => p.type === PunchType.OUT);
+    
+    const lastPunch = sortedPunches.length > 0 ? sortedPunches[sortedPunches.length - 1] : null;
+    const status = lastPunch ? lastPunch.type : 'OUT';
+
+    return {
+        ...recordObj,
+        clockInTime: inPunch ? inPunch.time : null,
+        clockOutTime: outPunch ? outPunch.time : null,
+        status,
+    };
+  }
 
   // Clock-in: enforces punch policy and computes lateness
   async clockIn(employeeIdRaw: string, time?: Date) {
@@ -41,7 +66,7 @@ export class AttendanceService {
     // find or create today's attendance record by punches range
     let record = await this.attendanceModel.findOne({ employeeId, 'punches.time': { $gte: start, $lte: end } });
     if (!record) {
-      record = new this.attendanceModel({ employeeId, punches: [] });
+      record = new this.attendanceModel({ employeeId, date: start, punches: [] });
     }
 
     // TODO integrate policies
@@ -50,8 +75,8 @@ export class AttendanceService {
       shiftDoc = await this.shiftService.getById(assignment.shiftId);
     }
 
-    // determine punch policy (safe fallback to FIRST_LAST)
-    const policy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.FIRST_LAST;
+    // determine punch policy (safe fallback to MULTIPLE for flexibility)
+    const policy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.MULTIPLE;
 
     // Enforce Phase-2 policies: MULTIPLE or FIRST_LAST (ONLY_FIRST treated like FIRST_LAST)
     if (policy === PunchPolicy.MULTIPLE) {
@@ -90,7 +115,7 @@ export class AttendanceService {
     }
 
     await record.save();
-    return record;
+    return this.transformRecord(record);
   }
 
   // Clock-out: requires an existing clock-in
@@ -114,7 +139,7 @@ export class AttendanceService {
     if (assignment) {
       shiftDoc = await this.shiftService.getById(assignment.shiftId);
     }
-    const outPolicy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.FIRST_LAST;
+    const outPolicy = (shiftDoc && shiftDoc.punchPolicy) ? shiftDoc.punchPolicy : PunchPolicy.MULTIPLE;
 
     if (outPolicy === PunchPolicy.MULTIPLE) {
       // allow multiple OUTs
@@ -155,14 +180,26 @@ export class AttendanceService {
     }
 
     await record.save();
-    return record;
+    return this.transformRecord(record);
   }
 
   async getRecordForEmployeeByDate(employeeIdRaw: string, date: Date) {
     const employeeId = new Types.ObjectId(employeeIdRaw);
     const start = startOfDay(date);
     const end = endOfDay(date);
-    return this.attendanceModel.findOne({ employeeId, 'punches.time': { $gte: start, $lte: end } });
+    const record = await this.attendanceModel.findOne({ employeeId, 'punches.time': { $gte: start, $lte: end } });
+    return this.transformRecord(record);
+  }
+
+  // Get attendance history for an employee within a date range
+  async getHistoryForEmployee(employeeIdRaw: string, startDate: Date, endDate: Date) {
+    const employeeId = new Types.ObjectId(employeeIdRaw);
+    const start = startOfDay(startDate);
+    const end = endOfDay(endDate);
+    const records = await this.attendanceModel
+      .find({ employeeId, 'punches.time': { $gte: start, $lte: end } })
+      .sort({ date: -1 });
+    return records.map((r) => this.transformRecord(r));
   }
 
   // scheduled check for missed punches 
@@ -182,5 +219,51 @@ export class AttendanceService {
       }
     }
     await this.policyService.sendMissedPunchAlerts(date);
+  }
+
+  /**
+   * FR-TM-16: Integrated Attendance + Leave View
+   * Returns attendance records and approved leave days for the date range
+   */
+  async getIntegratedAttendanceLeaveView(startDate: Date, endDate: Date, employeeId?: string) {
+    const query: any = {
+      date: { $gte: startDate, $lte: endDate }
+    };
+    
+    if (employeeId) {
+      query.employeeId = new Types.ObjectId(employeeId);
+    }
+
+    // Fetch attendance records
+    const attendanceRecords = await this.attendanceModel.find(query)
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .sort({ date: 1 })
+      .lean();
+
+    // Fetch approved leave requests from leaves subsystem via HTTP or direct DB access
+    // For now, we'll check shift assignments marked as ON_LEAVE (synced by leavesSync.service)
+    const shiftAssignments = await this.shiftAssignmentService.getAssignmentsInRange(startDate, endDate, employeeId);
+    
+    const leaveDays = shiftAssignments
+      .filter((sa: any) => sa.status === 'ON_LEAVE')
+      .map((sa: any) => ({
+        employeeId: sa.employeeId,
+        date: sa.startDate,
+        endDate: sa.endDate,
+        status: 'ON_LEAVE',
+        type: 'APPROVED_LEAVE'
+      }));
+
+    return {
+      attendanceRecords: attendanceRecords.map(record => ({
+        _id: record._id,
+        employeeId: record.employeeId,
+        date: record.date,
+        punches: record.punches,
+        totalWorkMinutes: record.totalWorkMinutes,
+      })),
+      leaveDays,
+      dateRange: { start: startDate, end: endDate }
+    };
   }
 }
