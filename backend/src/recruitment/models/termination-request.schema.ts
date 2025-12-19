@@ -9,6 +9,8 @@ export class TerminationRequest {
   @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile', required: true })
   employeeId: Types.ObjectId;
 
+  
+
   @Prop({
     enum: TerminationInitiation,
     required: true
