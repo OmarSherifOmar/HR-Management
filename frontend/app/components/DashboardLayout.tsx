@@ -266,10 +266,22 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: "Recruitment",
       icon: <Target size={20} />,
       subItems: [
-        { name: "Job Postings", href: "/dashboard/recruitment" },
-        { name: "Candidates", href: "/dashboard/recruitment/candidates" },
-        { name: "Interviews", href: "/dashboard/recruitment/interviews" },
-        { name: "Offers", href: "/dashboard/recruitment/offers" },
+        { name: 'Job Postings', href: '/recruitment' },
+        { name: 'Candidates', href: '/recruitment/candidates' },
+        { name: 'Interviews', href: '/recruitment/interviews' },
+        { name: 'Offers', href: '/recruitment/offers' },
+        { name: 'My Resignation', href: '/recruitment/offboarding/resignation' },
+        ...(user?.role === 'HR Manager' || user?.role === 'HR Admin' ? [
+          { name: 'Terminations', href: '/recruitment/offboarding/terminations' },
+          { name: 'Clearance Tracking', href: '/recruitment/offboarding/clearance' },
+          { name: 'Exit Settlements', href: '/recruitment/offboarding/settlements' },
+        ] : []),
+        ...(user?.role === 'System Admin' ? [
+          { name: 'Access Revocation', href: '/recruitment/offboarding/access-revocation' },
+        ] : []),
+        ...(user?.role === 'department head' || user?.role === 'IT' || user?.role === 'Finance' || user?.role === 'Facilities' ? [
+          { name: 'Department Clearance', href: '/recruitment/offboarding/department-clearance' },
+        ] : []),
       ],
     },
     {
