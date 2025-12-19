@@ -6,9 +6,9 @@ import {
   Param,
   Body,
   UseGuards,
-  Request,
   HttpException,
   HttpStatus,
+  Request,
 } from '@nestjs/common';
 import { EmployeeSigningBonusService } from '../services/employee-signing-bonus.service';
 import { EditSigningBonusDto } from '../dto/EmployeeSigningBonusEdit.dto';
@@ -22,7 +22,42 @@ import { Roles, Role } from '../../auth/decorators/roles.decorator';
 export class EmployeeSigningBonusController {
   constructor(
     private readonly signingBonusService: EmployeeSigningBonusService,
-  ) {}
+  ) { }
+
+  /**
+   * Create a new signing bonus
+   * POST /payroll-execution/signing-bonus
+   */
+  @Post()
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER)
+  async createSigningBonus(@Body() dto: any, @Request() req) {
+    try {
+      const creatorId = req.user.sub || req.user._id;
+      return await this.signingBonusService.createSigningBonus(dto, creatorId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all pending signing bonuses requiring approval
+   * GET /payroll-execution/signing-bonus/pending
+   * NOTE: Must be placed BEFORE generic parameter routes to prevent route collision
+   */
+  @Get('pending')
+  async getPendingSigningBonuses() {
+    try {
+      return await this.signingBonusService.getPendingSigningBonuses();
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve pending signing bonuses',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   /**
    * Auto-process signing bonuses for a payroll run
@@ -36,6 +71,23 @@ export class EmployeeSigningBonusController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to auto-process signing bonuses',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all signing bonuses for a payroll run
+   * GET /payroll-execution/signing-bonus/run/:runId
+   */
+  @Get('run/:runId')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getSigningBonusesByRun(@Param('runId') runId: string) {
+    try {
+      return await this.signingBonusService.getSigningBonusesByRun(runId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve signing bonuses',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -132,40 +184,6 @@ export class EmployeeSigningBonusController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to reject signing bonus',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get all signing bonuses for a payroll run
-   * GET /payroll-execution/signing-bonus/run/:runId
-   */
-  @Get('run/:runId')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
-  async getSigningBonusesByRun(@Param('runId') runId: string) {
-    try {
-      return await this.signingBonusService.getSigningBonusesByRun(runId);
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to retrieve signing bonuses',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get all pending signing bonuses requiring approval
-   * GET /payroll-execution/signing-bonus/pending
-   */
-  @Get('pending')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
-  async getPendingSigningBonuses() {
-    try {
-      return await this.signingBonusService.getPendingSigningBonuses();
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to retrieve pending signing bonuses',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -15,5 +15,14 @@ export class EditSigningBonusDto {
 
   @IsOptional()
   @IsString()
+  @IsOptional()
+  @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  paymentDate?: Date | string;
 }

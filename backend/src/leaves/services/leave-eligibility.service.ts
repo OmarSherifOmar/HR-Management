@@ -214,4 +214,132 @@ export class LeaveEligibilityService {
       eligibility: policy.eligibility || {},
     }));
   }
+
+  /**
+   * Check if an employee is eligible for a specific leave type
+   */
+  async isEmployeeEligibleForLeaveType(
+    employeeId: string,
+    leaveTypeId: string,
+    employee?: any,
+  ): Promise<{ eligible: boolean; reason?: string }> {
+    // Find the policy for this leave type
+    const policy = await this.leavePolicyModel
+      .findOne({ leaveTypeId: new Types.ObjectId(leaveTypeId) })
+      .exec();
+
+    // If no policy or no eligibility rules, employee is eligible by default
+    if (!policy || !policy.eligibility) {
+      console.log(`No policy or eligibility rules for leave type ${leaveTypeId} - eligible by default`);
+      return { eligible: true };
+    }
+
+    const eligibility = policy.eligibility;
+
+    // If no eligibility rules are set, employee is eligible
+    if (
+      !eligibility.minTenureMonths &&
+      (!eligibility.contractTypesAllowed || eligibility.contractTypesAllowed.length === 0) &&
+      (!eligibility.positionsAllowed || eligibility.positionsAllowed.length === 0)
+    ) {
+      console.log(`No eligibility restrictions set for leave type ${leaveTypeId} - eligible by default`);
+      return { eligible: true };
+    }
+
+    // If employee data not provided, cannot verify eligibility - assume ineligible for safety
+    if (!employee) {
+      console.warn(`Employee data not provided for eligibility check - leave type ${leaveTypeId} marked as ineligible`);
+      return { 
+        eligible: false, 
+        reason: 'Unable to verify eligibility - employee data unavailable' 
+      };
+    }
+
+    console.log(`Checking eligibility for employee ${employeeId}, leave type ${leaveTypeId}`);
+    console.log(`Eligibility rules:`, eligibility);
+    console.log(`Employee data:`, {
+      hireDate: employee.hireDate,
+      contractType: employee.contractType || employee.employmentType,
+      position: employee.position?.name || employee.position
+    });
+
+    // Check minimum tenure
+    if (eligibility.minTenureMonths && eligibility.minTenureMonths > 0) {
+      const hireDate = employee.hireDate ? new Date(employee.hireDate) : null;
+      if (hireDate) {
+        const monthsWorked = this.calculateMonthsWorked(hireDate);
+        console.log(`Tenure check: ${monthsWorked} months worked vs ${eligibility.minTenureMonths} required`);
+        if (monthsWorked < eligibility.minTenureMonths) {
+          return {
+            eligible: false,
+            reason: `Requires minimum ${eligibility.minTenureMonths} months tenure (current: ${monthsWorked} months)`,
+          };
+        }
+      }
+    }
+
+    // Check contract type
+    if (eligibility.contractTypesAllowed && eligibility.contractTypesAllowed.length > 0) {
+      const employeeContractType = employee.contractType || employee.employmentType;
+      console.log(`Contract type check: ${employeeContractType} vs allowed:`, eligibility.contractTypesAllowed);
+      if (employeeContractType && !eligibility.contractTypesAllowed.includes(employeeContractType)) {
+        return {
+          eligible: false,
+          reason: `Contract type '${employeeContractType}' not allowed for this leave type`,
+        };
+      }
+    }
+
+    // Check position
+    if (eligibility.positionsAllowed && eligibility.positionsAllowed.length > 0) {
+      const employeePosition = employee.position?.name || employee.position;
+      const employeePositionCode = employee.position?.code || '';
+      
+      console.log(`Position check: Employee position="${employeePosition}", code="${employeePositionCode}"`);
+      console.log(`Allowed positions:`, eligibility.positionsAllowed);
+      
+      // Check if employee has a position
+      if (!employeePosition) {
+        return {
+          eligible: false,
+          reason: `No position assigned - this leave type requires specific positions`,
+        };
+      }
+      
+      // Check if position matches (exact match or partial match with code)
+      const isAllowed = eligibility.positionsAllowed.some(allowedPos => {
+        // Try exact match
+        if (allowedPos === employeePosition) return true;
+        
+        // Try matching without parentheses (e.g., "Manager" matches "Manager (EF11)")
+        const allowedPosBase = allowedPos.split('(')[0].trim();
+        const employeePosBase = employeePosition.split('(')[0].trim();
+        if (allowedPosBase === employeePosBase) return true;
+        
+        // Try matching with code in parentheses
+        if (employeePositionCode && allowedPos.includes(`(${employeePositionCode})`)) return true;
+        
+        return false;
+      });
+      
+      if (!isAllowed) {
+        return {
+          eligible: false,
+          reason: `Position '${employeePosition}' not allowed for this leave type. Required: ${eligibility.positionsAllowed.join(', ')}`,
+        };
+      }
+    }
+
+    console.log(`Employee ${employeeId} is eligible for leave type ${leaveTypeId}`);
+    return { eligible: true };
+  }
+
+  /**
+   * Calculate months worked since hire date
+   */
+  private calculateMonthsWorked(hireDate: Date): number {
+    const now = new Date();
+    const months = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
+    return Math.max(0, months);
+  }
 }

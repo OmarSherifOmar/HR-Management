@@ -3,8 +3,9 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateClaimDto {
   @IsString()
+  @IsOptional()
   @IsNotEmpty()
-  employeeId: string;
+  employeeId?: string;
 
   @IsString()
   @IsOptional()

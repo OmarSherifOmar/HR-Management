@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AppraisalRecord } from '../models/appraisal-record.schema';
 import { AppraisalCycle } from '../models/appraisal-cycle.schema';
+import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
+import { Department } from '../../organization-structure/models/department.schema';
 import { AppraisalRecordStatus, AppraisalCycleStatus } from '../enums/performance.enums';
 
 @Injectable()
@@ -10,8 +12,8 @@ export class ReportingService {
   constructor(
     @InjectModel(AppraisalRecord.name) private recordModel: Model<any>,
     @InjectModel(AppraisalCycle.name) private cycleModel: Model<any>,
-    @InjectModel('EmployeeProfile') private employeeModel: Model<any>,
-    @InjectModel('Department') private departmentModel: Model<any>,
+    @InjectModel(EmployeeProfile.name) private employeeModel: Model<any>,
+    @InjectModel(Department.name) private departmentModel: Model<any>,
   ) {}
 
   async archive(recordId: string) {
@@ -166,5 +168,78 @@ export class ReportingService {
     };
 
     return report;
+  }
+
+  async getMultiCycleTrendAnalysis(employeeId: string, limit: number = 10) {
+    console.log('[ReportingService] getMultiCycleTrendAnalysis for employee:', employeeId, 'limit:', limit);
+    
+    // Get all records for the employee (including archived) sorted by cycle date
+    const records = await this.recordModel
+      .find({ employeeProfileId: new Types.ObjectId(employeeId) })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec() as any[];
+
+    if (records.length === 0) {
+      return {
+        employeeId,
+        message: 'No appraisal records found for this employee',
+        trendData: [],
+        summary: {
+          totalCycles: 0,
+          averageScore: 0,
+          highestScore: null,
+          lowestScore: null,
+          improvementTrend: null,
+        },
+      };
+    }
+
+    const cycleIds = [...new Set(records.map(r => r.cycleId?.toString()))].filter(Boolean);
+    const cycles = await this.cycleModel
+      .find({ _id: { $in: cycleIds.map(id => new Types.ObjectId(id)) } })
+      .lean()
+      .exec() as any[];
+    const cycleMap = new Map(cycles.map(c => [c._id.toString(), c]));
+
+    // Build trend data with cycle information
+    const trendData = records
+      .filter(r => r.totalScore !== undefined && r.totalScore !== null && r.status === AppraisalRecordStatus.HR_PUBLISHED || r.status === AppraisalRecordStatus.ARCHIVED)
+      .map(r => {
+        const cycle = cycleMap.get(r.cycleId?.toString());
+        return {
+          cycleId: r.cycleId?.toString(),
+          cycleName: cycle?.name || 'Unknown Cycle',
+          cycleType: cycle?.cycleType,
+          cycleStatus: cycle?.status,
+          date: r.hrPublishedAt || r.managerSubmittedAt || r.createdAt,
+          score: r.totalScore,
+          ratingLabel: r.overallRatingLabel,
+          status: r.status,
+          isArchived: r.status === AppraisalRecordStatus.ARCHIVED,
+        };
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, limit);
+
+    const scores = trendData.map(t => t.score);
+    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const highestScore = scores.length > 0 ? Math.max(...scores) : null;
+    const lowestScore = scores.length > 0 ? Math.min(...scores) : null;
+    const improvement = scores.length >= 2 ? scores[scores.length - 1] - scores[0] : null;
+
+    return {
+      employeeId,
+      trendData,
+      summary: {
+        totalCycles: trendData.length,
+        averageScore: Math.round(avgScore * 100) / 100,
+        highestScore,
+        lowestScore,
+        improvementTrend: improvement ? Math.round(improvement * 100) / 100 : null,
+        improvementDirection: improvement && improvement > 0 ? 'IMPROVING' : improvement && improvement < 0 ? 'DECLINING' : 'STABLE',
+        includesArchivedData: trendData.some(t => t.isArchived),
+      },
+    };
   }
 }

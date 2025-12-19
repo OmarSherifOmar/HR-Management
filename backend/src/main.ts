@@ -5,14 +5,15 @@ import { AppModule } from './app.module';
 import mongoose from 'mongoose';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { DepartmentSchema } from './organization-structure/models/department.schema';
-
+import { join } from 'path';
+import * as express from 'express';
 
 async function printRoutes(app) {
   await app.init(); // ensure adapters mounted
   const adapter = app.getHttpAdapter();
   const instance = adapter.getInstance(); // express app
   const stack = instance._router?.stack ?? [];
-const routes: string[] = [];
+  const routes: string[] = [];
   stack.forEach((layer) => {
     if (layer.route && layer.route.path) {
       const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
@@ -21,17 +22,21 @@ const routes: string[] = [];
   });
 }
 
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000'], // Your frontend URL and same origin
+    origin: ['http://localhost:3000', 'http://localhost:3001'], // Your frontend URL and same origin
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   });
+
+  // Serve static files (uploads)
+  const uploadsPath = join(__dirname, '..', 'uploads');
+  app.use('/uploads', express.static(uploadsPath));
+  console.log(`Static files serving from: ${uploadsPath}`);
 
   // Get the NestJS mongoose connection and register Department model globally
   // This fixes position.schema.ts middleware that uses model(Department.name)

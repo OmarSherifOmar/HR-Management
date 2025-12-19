@@ -14,9 +14,9 @@ export class CreatePositionDto {
   @IsString()
   departmentId: string;
 
-
+  @IsOptional()
   @IsString()
-  payGrade?: string;
+  payGradeId?: string;
 
   @IsOptional()
   @IsString()

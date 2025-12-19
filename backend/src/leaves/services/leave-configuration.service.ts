@@ -94,6 +94,8 @@ export class LeaveConfigurationService {
           `Leave type with ID ${updateLeavePolicyDto.leaveTypeId} not found`,
         );
       }
+      // Convert leaveTypeId to ObjectId before assigning
+      updateLeavePolicyDto.leaveTypeId = new Types.ObjectId(updateLeavePolicyDto.leaveTypeId) as any;
     }
 
     Object.assign(existingPolicy, updateLeavePolicyDto);

@@ -518,4 +518,33 @@ export class BalanceAdjustmentService {
       remaining: entitlement.remaining,
     };
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // GET ALL ADJUSTMENTS (AUDIT LOG)
+  // ─────────────────────────────────────────────────────────────
+
+  async getAllAdjustments(filters?: {
+    fromDate?: Date;
+    toDate?: Date;
+  }): Promise<LeaveAdjustmentDocument[]> {
+    const query: any = {};
+
+    if (filters?.fromDate || filters?.toDate) {
+      query.createdAt = {};
+      if (filters.fromDate) {
+        query.createdAt.$gte = filters.fromDate;
+      }
+      if (filters.toDate) {
+        query.createdAt.$lte = filters.toDate;
+      }
+    }
+
+    return this.leaveAdjustmentModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .populate('leaveTypeId', 'name code')
+      .populate('hrUserId', 'firstName lastName employeeNumber')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
 }

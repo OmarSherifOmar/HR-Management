@@ -15,6 +15,7 @@ import { Types } from 'mongoose';
 export type SignInResult = {
   access_token: string;
   payload: { sub: string; employeeNumber?: string; roles: string[]; username?: string };
+  isCandidate?: boolean;
 };
 
 
@@ -38,32 +39,33 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    let employee;
+    let candidate;
     try {
       const [firstName, ...rest] = dto.name.split(" ");
       const lastName = rest.join(" ") || "Unknown";
 
-      const employeeNumber = "EMP-" + Date.now();
+      const candidateNumber = "CAND-" + Date.now();
       const nationalId = String(Math.floor(Math.random() * 1e14));
-      const dateOfHire = new Date();
+      const applicationDate = new Date();
 
-      // Create employee
-      employee = await this.usersService.create({
+      // Create candidate instead of employee with all provided fields
+      candidate = await this.usersService.createCandidate({
         firstName,
         lastName,
         nationalId,
         password: dto.password,
         personalEmail: dto.email,
-        employeeNumber,
-        dateOfHire,
-        primaryPositionId: dto.primaryPositionId ? new Types.ObjectId(dto.primaryPositionId) : undefined,
-        supervisorPositionId: dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined,
+        candidateNumber,
+        applicationDate,
+        // Candidate-specific fields from registration
+        departmentId: dto.departmentId ? new Types.ObjectId(dto.departmentId) : (dto.primaryPositionId ? new Types.ObjectId(dto.primaryPositionId) : undefined),
+        positionId: dto.positionId ? new Types.ObjectId(dto.positionId) : (dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined),
+        resumeUrl: dto.resumeUrl,
+        notes: dto.notes,
+        status: dto.status || 'APPLIED',
       });
 
-      // Assign role
-      await this.usersService.assignRole(employee._id, dto.role);
-
-      return employee;
+      return candidate;
     } catch (err) {
       console.error("REGISTRATION ERROR:", err);
       
@@ -81,9 +83,23 @@ export class AuthService {
     throw new BadRequestException('Email and password are required');
   }
 
-  const user = await this.usersService.findByEmail(email);
+  // Check both employees and candidates
+  let user: any = await this.usersService.findByEmail(email);
+  let isCandidate = false;
+
+  if (!user) {
+    // Check if it's a candidate
+    user = await this.usersService.findCandidateByEmail(email);
+    isCandidate = true;
+  }
+
   if (!user) {
     throw new UnauthorizedException('Invalid credentials');
+  }
+
+  // Block candidates from logging in
+  if (isCandidate) {
+    throw new UnauthorizedException('Your application is pending review. Please wait for the HR team to process your registration before you can access the system.');
   }
 
   if (!user.password) {
@@ -98,15 +114,15 @@ export class AuthService {
   const sub = user._id.toString();
 
   let roles: string[] = [];
-try {
-  const sysRole = await this.usersService.getSystemRoleForEmployee(sub);
-  if (sysRole && Array.isArray(sysRole.roles)) {
-    roles = sysRole.roles;
+  
+  try {
+    const sysRole = await this.usersService.getSystemRoleForEmployee(sub);
+    if (sysRole && Array.isArray(sysRole.roles)) {
+      roles = sysRole.roles;
+    }
+  } catch (err) {
+    console.error("ROLE FETCH ERROR:", err);
   }
-} catch (err) {
-  console.error("ROLE FETCH ERROR:", err);
-}
-
 
   const username =
     user.fullName ||

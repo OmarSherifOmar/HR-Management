@@ -47,6 +47,9 @@ export class AppraisalDispute {
   @Prop({ type: String })
   resolutionSummary?: string;
 
+  @Prop({ type: String, enum: ['DENY', 'APPROVE_CHANGE'] })
+  decision?: string;
+
   @Prop({ type: Date })
   resolvedAt?: Date;
 

@@ -151,4 +151,46 @@ export class PersonalizedEntitlementController {
   async getEntitlementSummary(@Param('employeeId') employeeId: string) {
     return this.personalizedEntitlementService.getEntitlementSummary(employeeId);
   }
+
+  /**
+   * Get eligibility options for dropdown fields
+   * Returns real data from database for departments, positions, contract types, etc.
+   */
+  @Get('eligibility-options')
+  @Roles(Role.HR_ADMIN)
+  async getEligibilityOptions() {
+    return this.personalizedEntitlementService.getEligibilityOptions();
+  }
+
+  /**
+   * Add entitlement with eligibility rules
+   * This endpoint applies entitlements ONLY to employees who meet the defined eligibility criteria
+   * Strict enforcement: no entitlement will be created for ineligible employees
+   */
+  @Post('add-with-eligibility')
+  @Roles(Role.HR_ADMIN)
+  async addEntitlementWithEligibility(
+    @Body() dto: {
+      leaveTypeId: string;
+      yearlyEntitlement: number;
+      reason?: string;
+      eligibilityRules: {
+        minTenureMonths?: number;
+        positionsAllowed?: string[];
+        contractTypesAllowed?: string[];
+        allPositionsAllowed?: boolean;
+        allContractTypesAllowed?: boolean;
+      };
+    },
+    @Request() req: any,
+  ) {
+    const hrUserId = req.user?.sub || req.user?.id || req.user?._id;
+    return this.personalizedEntitlementService.addEntitlementWithEligibility(
+      dto.leaveTypeId,
+      dto.yearlyEntitlement,
+      dto.eligibilityRules,
+      hrUserId,
+      dto.reason,
+    );
+  }
 }

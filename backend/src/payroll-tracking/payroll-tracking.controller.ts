@@ -98,21 +98,32 @@ export class PayrollTrackingController {
     },
   ) {
     const { userId } = this.extractUser(req);
+    if (!userId) {
+      throw new ForbiddenException('User ID missing in token');
+    }
+
     const roles = Array.isArray(req.user?.roles)
       ? req.user.roles
       : req.user?.role
         ? [req.user.role]
         : [];
 
-    const allowed =
+    const isHrOrAdmin =
       roles.includes(Role.HR_EMPLOYEE) ||
       roles.includes(Role.HR_MANAGER) ||
       roles.includes(Role.SYSTEM_ADMIN);
 
-    if (dto.employeeId !== userId && !allowed) {
-      throw new BadRequestException(
-        'employeeId must match authenticated user unless HR/System Admin',
-      );
+    // For regular employees, always bind the claim to their own employeeId.
+    if (!isHrOrAdmin) {
+      if (dto.employeeId && dto.employeeId !== userId) {
+        throw new BadRequestException(
+          'employeeId must match authenticated user unless HR/System Admin',
+        );
+      }
+      dto.employeeId = userId;
+    } else if (!dto.employeeId) {
+      // For HR/System Admin, require an explicit employeeId or default to self.
+      dto.employeeId = userId;
     }
 
     return this.svc.createClaim(dto);
@@ -128,21 +139,32 @@ export class PayrollTrackingController {
     },
   ) {
     const { userId } = this.extractUser(req);
+    if (!userId) {
+      throw new ForbiddenException('User ID missing in token');
+    }
+
     const roles = Array.isArray(req.user?.roles)
       ? req.user.roles
       : req.user?.role
         ? [req.user.role]
         : [];
 
-    const allowed =
+    const isHrOrAdmin =
       roles.includes(Role.HR_EMPLOYEE) ||
       roles.includes(Role.HR_MANAGER) ||
       roles.includes(Role.SYSTEM_ADMIN);
 
-    if (dto.employeeId !== userId && !allowed) {
-      throw new BadRequestException(
-        'employeeId must match authenticated user unless HR/System Admin',
-      );
+    // For regular employees, always bind the dispute to their own employeeId.
+    if (!isHrOrAdmin) {
+      if (dto.employeeId && dto.employeeId !== userId) {
+        throw new BadRequestException(
+          'employeeId must match authenticated user unless HR/System Admin',
+        );
+      }
+      dto.employeeId = userId;
+    } else if (!dto.employeeId) {
+      // For HR/System Admin, require an explicit employeeId or default to self.
+      dto.employeeId = userId;
     }
 
     return this.svc.createDispute(dto);
@@ -302,15 +324,62 @@ export class PayrollTrackingController {
     return this.svc.getClaimsForEmployee(userId);
   }
 
-  @Get('claims/:id')
+  @Get('disputes/mine')
   @Roles(Role.DEPARTMENT_EMPLOYEE)
-  async getMyClaimById(
+  async getMyDisputes(@Req() req: AuthenticatedRequest) {
+    const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.listDisputes({ employeeId: userId });
+  }
+
+  @Get('claims/:id')
+  @Roles(
+    Role.DEPARTMENT_EMPLOYEE,
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+  )
+  async getClaimById(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const { userId } = this.extractUser(req);
+
+    const roles = Array.isArray(req.user?.roles)
+      ? req.user.roles
+      : req.user?.role
+        ? [req.user.role]
+        : [];
+
+    const hasPayrollOrAdminRole = roles.some((r) =>
+      [
+        Role.PAYROLL_SPECIALIST,
+        Role.Payroll_MANAGER,
+        Role.FINANCE_STAFF,
+        Role.SYSTEM_ADMIN,
+      ].includes(r as Role),
+    );
+
+    // If user only has employee role (no payroll/admin), enforce ownership
+    if (!hasPayrollOrAdminRole) {
+      if (!userId) throw new ForbiddenException('User ID missing in token');
+      return this.svc.getClaimByIdForEmployee(userId, id);
+    }
+
+    // Payroll/admin roles can view any claim
+    return this.svc.getClaimById(id);
+  }
+
+  @Get('disputes/mine/:id')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async getMyDisputeById(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
     const { userId } = this.extractUser(req);
     if (!userId) throw new ForbiddenException('User ID missing in token');
-    return this.svc.getClaimByIdForEmployee(userId, id);
+    return this.svc.getDisputeByIdForEmployee(userId, id);
   }
 
   @Get('tax-documents/mine')
@@ -318,6 +387,31 @@ export class PayrollTrackingController {
   async getMyTaxDocs(@Req() req: AuthenticatedRequest) {
     const { userId } = this.extractUser(req);
     return await this.svc.listTaxDocumentsForEmployee(userId);
+  }
+
+  @Get('tax-documents/mine/:year/download')
+  @Roles(Role.DEPARTMENT_EMPLOYEE)
+  async downloadMyTaxDocument(
+    @Req() req: Request & { user?: { sub?: string } },
+    @Param('year') yearStr: string,
+    @Res() res: Response,
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+
+    const year = parseInt(yearStr, 10);
+    if (isNaN(year)) throw new BadRequestException('Invalid year');
+
+    const pdfBuffer = await this.svc.generateTaxDocumentPdf(employeeId, year);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="tax_document_${year}.pdf"`,
+    );
+
+    // Send raw PDF bytes so the client receives a proper PDF file.
+    res.end(pdfBuffer);
   }
 
   @Get('reports/payroll')
@@ -331,10 +425,91 @@ export class PayrollTrackingController {
     return this.svc.generatePayrollReport(q);
   }
 
+  @Get('reports/payroll/export/csv')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportPayrollReportCsv(@Query() q: PayrollReportQueryDto, @Res() res: Response) {
+    const csvBuffer = await this.svc.exportPayrollReportCsv(q);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="payroll_report.csv"',
+    );
+
+    res.end(csvBuffer);
+  }
+
+  @Get('reports/payroll/export/pdf')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportPayrollReportPdf(@Query() q: PayrollReportQueryDto, @Res() res: Response) {
+    const pdfBuffer = await this.svc.exportPayrollReportPdf(q);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="payroll_report.pdf"',
+    );
+
+    res.end(pdfBuffer);
+  }
+
+  @Get('reports/department/:departmentId/export/pdf')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportDepartmentReportPdf(
+    @Param('departmentId') departmentId: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.svc.exportDepartmentPayrollReportPdf(
+      departmentId,
+    );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="department_payroll_report.pdf"',
+    );
+
+    res.end(pdfBuffer);
+  }
+
   @Get('disputes')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.FINANCE_STAFF,
+  )
   async listDisputes(@Query('status') status?: string) {
     return this.svc.listDisputes({ status });
+  }
+
+  @Get('disputes/:id')
+  @Roles(
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.FINANCE_STAFF,
+  )
+  async getDisputeById(@Param('id') id: string) {
+    return this.svc.getDisputeById(id);
   }
 
   @Patch('disputes/:id')
@@ -381,9 +556,41 @@ export class PayrollTrackingController {
   }
 
   @Get('transparency/summary')
-  @Roles(Role.Payroll_MANAGER, Role.FINANCE_STAFF, Role.SYSTEM_ADMIN)
+  @Roles(
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.PAYROLL_SPECIALIST,
+    Role.HR_ADMIN,
+  )
   async getTransparency() {
     return this.svc.transparencySummary();
+  }
+
+  @Get('transparency/summary/export/pdf')
+  @Roles(
+    Role.Payroll_MANAGER,
+    Role.FINANCE_STAFF,
+    Role.SYSTEM_ADMIN,
+    Role.PAYROLL_SPECIALIST,
+    Role.HR_ADMIN,
+  )
+  async exportTransparencyPdf(@Res() res: Response) {
+    const pdfBuffer = await this.svc.exportTransparencySummaryPdf();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="transparency_summary.pdf"',
+    );
+
+    res.end(pdfBuffer);
+  }
+
+  @Get('refunds/pending')
+  @Roles(Role.FINANCE_STAFF)
+  async getPendingRefunds() {
+    return this.svc.getPendingRefunds();
   }
 
   @Post('refunds')
@@ -394,6 +601,17 @@ export class PayrollTrackingController {
   ) {
     const { userId, role } = this.extractUser(req);
     return this.svc.processRefund({ userId, role }, dto);
+  }
+
+  @Post('refunds/:id/mark-paid')
+  @Roles(Role.FINANCE_STAFF)
+  async markRefundPaid(
+    @Param('id') id: string,
+    @Body('payrollRunId') payrollRunId: string,
+  ) {
+    if (!payrollRunId)
+      throw new BadRequestException('payrollRunId is required');
+    return this.svc.markRefundPaid(id, payrollRunId);
   }
 
   @Post('disputes/:id/notes')
@@ -411,6 +629,12 @@ export class PayrollTrackingController {
   // PAYSLIP + COMPENSATION (EMPLOYEE)
   // ---------------------------------------------------------------------------
 
+  @Get('me/refunds')
+  async getMyRefunds(@Req() req: AuthenticatedRequest) {
+    const { userId } = this.extractUser(req);
+    if (!userId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getRefundsForEmployee(userId);
+  }
   @Get('me/payslips')
   getMyPayslips(@Req() req: Request & { user?: { sub?: string } }) {
     const employeeId = req.user?.sub;
@@ -432,22 +656,23 @@ export class PayrollTrackingController {
   async downloadMyPayslip(
     @Req() req: Request & { user?: { sub?: string } },
     @Param('id') payslipId: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const employeeId = req.user?.sub;
     if (!employeeId) throw new ForbiddenException('User ID missing in token');
 
-    const csvBuffer = await this.svc.downloadPayslipCsv(employeeId, payslipId);
-    if (!csvBuffer)
+    const pdfBuffer = await this.svc.generatePayslipPdf(employeeId, payslipId);
+    if (!pdfBuffer || !pdfBuffer.length)
       throw new NotFoundException('Payslip not found or access denied');
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="payslip_${payslipId}.csv"`,
+      `attachment; filename="payslip_${payslipId}.pdf"`,
     );
 
-    return csvBuffer;
+    // Send raw PDF bytes so the client receives a downloadable PDF file.
+    res.end(pdfBuffer);
   }
 
   @Get('me/base-salary')
@@ -537,5 +762,65 @@ export class PayrollTrackingController {
     const employeeId = req.user?.sub;
     if (!employeeId) throw new ForbiddenException('User ID missing in token');
     return this.svc.calculateUnpaidLeaveDeductions(employeeId);
+  }
+
+  @Get('me/salary-history')
+  async getMySalaryHistory(@Req() req: Request & { user?: { sub?: string } }) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getSalaryHistory(employeeId);
+  }
+
+  @Get('me/employer-contributions')
+  async getMyEmployerContributions(
+    @Req() req: Request & { user?: { sub?: string } },
+  ) {
+    const employeeId = req.user?.sub;
+    if (!employeeId) throw new ForbiddenException('User ID missing in token');
+    return this.svc.getEmployerContributions(employeeId);
+  }
+
+  /**
+   * Finance staff export: taxes, insurance contributions and benefits as PDF
+   */
+  @Get('reports/finance/tax-benefits/export/pdf')
+  @Roles(
+    Role.FINANCE_STAFF,
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async exportFinanceTaxBenefitsPdf(
+    @Query() query: PayrollReportQueryDto,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.svc.exportFinanceTaxBenefitsPdf(query);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="finance_tax_benefits_report.pdf"',
+    );
+
+    res.end(pdfBuffer);
+  }
+
+  /**
+   * Finance staff report: aggregate taxes, insurance contributions, and benefits
+   * across all payslips in a period (month/year).
+   */
+  @Get('reports/finance/tax-benefits')
+  @Roles(
+    Role.FINANCE_STAFF,
+    Role.PAYROLL_SPECIALIST,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+  )
+  async getFinanceTaxBenefitsReport(
+    @Query() query: PayrollReportQueryDto,
+  ) {
+    return this.svc.generateFinanceTaxBenefitsReport(query);
   }
 }
