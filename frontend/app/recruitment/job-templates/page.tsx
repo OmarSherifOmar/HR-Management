@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '../../../../app/components/DashboardLayout';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import DashboardLayout from '../../components/DashboardLayout';
+import { authenticatedFetch } from '../../context/AuthContext';
 import { 
   FileText,
   Search,

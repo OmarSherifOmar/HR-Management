@@ -8,7 +8,7 @@ import {
   User, Video, Phone, MapPin, CheckCircle, XCircle,
   Edit, Trash2, Eye, Mail
 } from 'lucide-react';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { authenticatedFetch } from '../../context/AuthContext';
 
 interface Interview {
   _id: string;

@@ -8,7 +8,7 @@ import {
   Clock, CheckCircle, XCircle, User, DollarSign,
   TrendingUp, Download, Eye, Edit
 } from 'lucide-react';
-import { authenticatedFetch } from '../../../context/AuthContext';
+import { authenticatedFetch } from '../../context/AuthContext';
 
 interface Offer {
   _id: string;

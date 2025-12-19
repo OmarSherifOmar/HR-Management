@@ -8,7 +8,7 @@ interface Candidate {
   _id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  personalEmail: string;
   status: string;
 }
 
@@ -22,7 +22,7 @@ export default function CandidatesPage() {
 
   async function loadCandidates() {
     try {
-      const res = await authenticatedFetch('http://localhost:3000/candidates');
+      const res = await authenticatedFetch('http://localhost:3000/employees/candidates/list/all');
       const data = await res.json();
       setCandidates(data);
     } catch (e) {
@@ -68,7 +68,7 @@ export default function CandidatesPage() {
                     {c.firstName} {c.lastName}
                   </Link>
                 </td>
-                <td className="p-3">{c.email}</td>
+                <td className="p-3">{c.personalEmail}</td>
                 <td className="p-3 capitalize">{c.status}</td>
               </tr>
             ))}

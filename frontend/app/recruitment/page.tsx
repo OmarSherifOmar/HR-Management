@@ -7,7 +7,7 @@ import {
   Users, Briefcase, Calendar, FileText, Target, 
   TrendingUp, CheckCircle, Clock, DollarSign 
 } from 'lucide-react';
-import { authenticatedFetch } from '../../context/AuthContext';
+import { authenticatedFetch } from '../context/AuthContext';
 
 interface RecruitmentStats {
   totalCandidates: number;
