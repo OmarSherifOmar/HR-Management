@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { EmployeeProfile, EmployeeProfileDocument } from './models/employee-profile.schema';
+import { Candidate, CandidateDocument } from './models/candidate.schema';
 import { EmployeeProfileChangeRequest } from './models/ep-change-request.schema';
 import { EmployeeSystemRole } from './models/employee-system-role.schema';
 import { UpdateContactDto } from './dto/update-contact.dto';
@@ -27,6 +28,7 @@ import { not } from 'rxjs/internal/util/not';
 export class EmployeeService {
   constructor(
     @InjectModel('EmployeeProfile') private readonly employeeModel: Model<EmployeeProfile & any>,
+    @InjectModel('Candidate') private readonly candidateModel: Model<Candidate & any>,
     @InjectModel('EmployeeProfileChangeRequest') private readonly changeRequestModel: Model<EmployeeProfileChangeRequest & any>,
     @InjectModel('EmployeeSystemRole') private readonly systemRoleModel: Model<EmployeeSystemRole & any>,
     @InjectModel('Position') private readonly positionModel: Model<Position&any>,
