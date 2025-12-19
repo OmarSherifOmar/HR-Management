@@ -1,20 +1,46 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { IsEnum, IsString, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
 import { HolidayService } from '../services/holiday.service';
 import { HolidayType } from '../models/enums';
 import { Roles, Role } from '../../auth/decorators/roles.decorator';
 
 class CreateHolidayDto {
+  @IsEnum(HolidayType)
+  @IsNotEmpty()
   type!: HolidayType;
-  startDate!: string; // ISO date
-  endDate?: string; // ISO date
+
+  @IsString()
+  @IsNotEmpty()
+  startDate!: string;
+
+  @IsString()
+  @IsOptional()
+  endDate?: string;
+
+  @IsString()
+  @IsOptional()
   name?: string;
 }
 
 class UpdateHolidayDto {
+  @IsEnum(HolidayType)
+  @IsOptional()
   type?: HolidayType;
+
+  @IsString()
+  @IsOptional()
   startDate?: string;
+
+  @IsString()
+  @IsOptional()
   endDate?: string;
+
+  @IsString()
+  @IsOptional()
   name?: string;
+
+  @IsBoolean()
+  @IsOptional()
   active?: boolean;
 }
 
@@ -23,26 +49,35 @@ export class HolidayController {
   constructor(private readonly holidayService: HolidayService) {}
 
   @Get()
-  @Roles(Role.SYSTEM_ADMIN, Role.HR_ADMIN)
   async list() {
     return this.holidayService.listHolidays();
   }
 
   @Post()
-  @Roles(Role.SYSTEM_ADMIN, Role.HR_ADMIN)
-  async create(@Body() body: CreateHolidayDto) {
-    const { type, startDate, endDate, name } = body;
-    return this.holidayService.createHoliday({
-      type,
-      startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : undefined,
-      name,
+  async create(@Body() body: any) {
+    console.log('=== CREATE HOLIDAY DEBUG ===');
+    console.log('Received raw body:', body);
+    console.log('Body type:', typeof body);
+    console.log('Body.type value:', body.type);
+    console.log('Body keys:', Object.keys(body));
+    console.log('JSON stringified:', JSON.stringify(body));
+    
+    const payload: any = {
+      type: body.type,
+      startDate: new Date(body.startDate),
+      name: body.name,
       active: true,
-    } as any);
+    };
+    
+    if (body.endDate) {
+      payload.endDate = new Date(body.endDate);
+    }
+    
+    console.log('Creating holiday with payload:', payload);
+    return this.holidayService.createHoliday(payload);
   }
 
   @Patch(':id')
-  @Roles(Role.SYSTEM_ADMIN, Role.HR_ADMIN)
   async update(@Param('id') id: string, @Body() body: UpdateHolidayDto) {
     const updates: any = { ...body };
     if (body.startDate) updates.startDate = new Date(body.startDate);

@@ -187,13 +187,6 @@ export default function AdminPoliciesPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar size={16} className="text-blue-400" />
-                    <span className="text-gray-400">Annual Entitlement:</span>
-                    <span className="text-white font-semibold ml-auto">
-                      {policy.annualEntitlement || 0} days
-                    </span>
-                  </div>
 
                   {policy.accrualRate?.enabled && (
                     <div className="flex items-center gap-2 text-sm">

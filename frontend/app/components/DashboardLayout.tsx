@@ -288,9 +288,13 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: "Time Management",
       icon: <Clock size={20} />,
       subItems: [
-        { name: "Attendance", href: "/dashboard/time-management" },
-        { name: "Schedules", href: "/dashboard/time-management/schedules" },
-        { name: "Overtime", href: "/dashboard/time-management/overtime" },
+        { name: 'Attendance', href: '/time-management/attendance' },
+        { name: 'Policy', href: '/time-management/policy' },
+        { name: 'Shift Management', href: '/time-management/shift-management' },
+        { name: 'Configuration', href: '/time-management/configuration' },
+        { name: 'Exceptions', href: '/time-management/exceptions' },
+        { name: 'Approvals', href: '/time-management/approvals' },
+        { name: 'Reports', href: '/time-management/reports' },
       ],
     },
   ];
@@ -349,7 +353,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
               {/* Flyout Submenu */}
               {item.subItems && hoveredMenu === item.name && (
                 <div
-                  className={`absolute top-0 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 py-2 min-w-[200px] z-50 max-h-[70vh] overflow-y-auto custom-scrollbar transition-all duration-150 ${
+                  className={`absolute top-0 bg-[#2a2a2a] rounded-lg shadow-xl border border-gray-700 py-2 min-w-[360px] z-50 max-h-[70vh] overflow-y-auto custom-scrollbar transition-all duration-150 ${
                     sidebarOpen ? 'left-full ml-2' : 'left-full ml-2'
                   }`}
                   onMouseEnter={() => handleMenuEnter(item.name)}
@@ -360,12 +364,14 @@ export default function DashboardLayout({ children, title, description }: Dashbo
                       {item.name}
                     </span>
                   </div>
-                  <div className="py-1">
-                    {item.subItems.map((subItem) => (
+                  <div className="py-1 grid grid-cols-2 gap-1">
+                    {item.subItems.map((subItem, idx) => (
                       <Link
                         key={subItem.name}
                         href={subItem.href}
-                        className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-[#333333] transition-all"
+                        className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-[#333333] transition-all truncate"
+                        title={subItem.name}
+                        style={{ gridColumn: (idx % 2) + 1 }}
                       >
                         {subItem.name}
                       </Link>
