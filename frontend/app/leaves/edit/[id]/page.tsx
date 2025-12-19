@@ -49,6 +49,7 @@ export default function EditLeaveRequestPage() {
   const router = useRouter();
   const params = useParams();
   const requestId = params.id as string;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -304,7 +305,7 @@ export default function EditLeaveRequestPage() {
         payload.attachmentId = attachmentId;
       }
 
-      const response = await authenticatedFetch(`${URL}/leave-requests/${requestId}`, {
+      const response = await authenticatedFetch(`${backendUrl}/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

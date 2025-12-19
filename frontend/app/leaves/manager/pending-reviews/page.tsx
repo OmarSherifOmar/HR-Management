@@ -63,6 +63,7 @@ interface LeaveRequest {
 }
 
 export default function ManagerPendingReviewsPage() {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
@@ -365,7 +366,7 @@ export default function ManagerPendingReviewsPage() {
                             </div>
                           </div>
                           <a
-                            href={`${URL}/attachments/${request.attachmentId._id}/download`}
+                            href={`${backendUrl}/attachments/${request.attachmentId._id}/download`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"

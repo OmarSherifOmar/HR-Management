@@ -29,6 +29,7 @@ type CalendarData = {
 };
 
 export default function CalendarPage() {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const [calendars, setCalendars] = useState<CalendarData[]>([]);
@@ -146,7 +147,7 @@ export default function CalendarPage() {
         payload.endDate = new Date(holidayForm.endDate).toISOString();
       }
 
-      const response = await fetch(`${URL}/leaves/calendar/year/${selectedYear}/holidays`, {
+      const response = await fetch(`${backendUrl}/leaves/calendar/year/${selectedYear}/holidays`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -43,6 +43,7 @@ interface Employee {
 export default function RoleManagementPage() {
   const { user, isLoggedIn, isLoading, refreshPermissions } = useAuth();
   const router = useRouter();
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   
   // Tab state
   const [activeTab, setActiveTab] = useState<"roles" | "users" | "approvals">("roles");
@@ -243,7 +244,7 @@ export default function RoleManagementPage() {
       setError(null);
       
       const response = await fetch(
-        `${URL}/leaves/role-management/users/${selectedEmployee}/roles`,
+        `${backendUrl}/leaves/role-management/users/${selectedEmployee}/roles`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -292,7 +293,7 @@ export default function RoleManagementPage() {
       setError(null);
       
       const response = await fetch(
-        `${URL}/leaves/role-management/users/${selectedEmployee}/roles/${role}`,
+        `${backendUrl}/leaves/role-management/users/${selectedEmployee}/roles/${role}`,
         {
           method: "DELETE",
           credentials: "include",
