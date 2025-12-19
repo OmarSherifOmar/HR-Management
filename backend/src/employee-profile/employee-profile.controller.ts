@@ -324,40 +324,41 @@ export class EmployeeController {
     return this.employeeService.activateEmployee(req.user._id, id);
   }
 
-  @Get(':id')
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
-  getEmployee(@Param('id') id: string) {
-    return this.employeeService.getEmployeeById(id);
-  }
+  // ✅ CANDIDATES FIRST
+@Get('candidates/list/all')
+@UseGuards(AuthGuard, authorizationGuard)
+@Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+async getAllCandidates() {
+  return this.employeeService.getAllCandidates();
+}
 
-
-  @Get('candidates/list/all')
-  @UseGuards(AuthGuard, authorizationGuard)
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
-  async getAllCandidates() {
-    return this.employeeService.getAllCandidates();
+@Get('candidates/:id')
+@UseGuards(AuthGuard, authorizationGuard)
+@Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+async getCandidateById(@Param('id') id: string) {
+  const candidate = await this.employeeService.getCandidateById(id);
+  if (!candidate) {
+    throw new NotFoundException('Candidate not found');
   }
+  return candidate;
+}
 
-  @Get('candidates/:id')
-  @UseGuards(AuthGuard, authorizationGuard)
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
-  async getCandidateById(@Param('id') id: string) {
-    const candidate = await this.employeeService.getCandidateById(id);
-    if (!candidate) {
-      throw new NotFoundException('Candidate not found');
-    }
-    return candidate;
-  }
+@Post('candidates/:id/convert')
+@UseGuards(AuthGuard, authorizationGuard)
+@Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+@HttpCode(HttpStatus.CREATED)
+async convertCandidateToEmployee(
+  @Param('id') candidateId: string,
+  @Body() employeeData: CreateEmployeeDto,
+) {
+  const employee =
+    await this.employeeService.convertCandidateToEmployee(candidateId, employeeData);
+  return new EmployeePublicDto(employee);
+}
 
-  @Post('candidates/:id/convert')
-  @UseGuards(AuthGuard, authorizationGuard)
-  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
-  @HttpCode(HttpStatus.CREATED)
-  async convertCandidateToEmployee(
-    @Param('id') candidateId: string,
-    @Body() employeeData: CreateEmployeeDto,
-  ) {
-    const employee = await this.employeeService.convertCandidateToEmployee(candidateId, employeeData);
-    return new EmployeePublicDto(employee);
-  }
+@Get(':id')
+@Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+getEmployee(@Param('id') id: string) {
+  return this.employeeService.getEmployeeById(id);
+}
 }
