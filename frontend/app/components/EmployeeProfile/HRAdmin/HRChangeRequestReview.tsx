@@ -19,6 +19,7 @@ export default function HRChangeRequestReview() {
   const [success, setSuccess] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
     fetchChangeRequests();
@@ -28,7 +29,7 @@ export default function HRChangeRequestReview() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:3000/employees/change-requests', {
+      const response = await fetch(`${URL}/employees/change-requests`, {
         credentials: 'include',
       });
 
@@ -53,7 +54,7 @@ export default function HRChangeRequestReview() {
 
   const handleReviewRequest = async (id: string, approve: boolean) => {
     try {
-      const response = await fetch(`http://localhost:3000/employees/change-requests/${id}/review`, {
+      const response = await fetch(`${URL}/employees/change-requests/${id}/review`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

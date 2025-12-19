@@ -44,8 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserPermissions = useCallback(async () => {
     try {
       console.log('Fetching permissions from backend...');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/leaves/role-management/my-permissions`,
+        `${URL}/leaves/role-management/my-permissions`,
         { credentials: 'include' }
       );
       

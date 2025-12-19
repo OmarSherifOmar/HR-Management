@@ -53,10 +53,10 @@ export default function RecruitmentDashboardPage() {
       
       // Fetch statistics from APIs
       const [candidatesRes, applicationsRes, interviewsRes, offersRes] = await Promise.all([
-        authenticatedFetch('http://localhost:3000/candidates'),
-        authenticatedFetch('http://localhost:3000/applications'),
-        authenticatedFetch('http://localhost:3000/interviews'),
-        authenticatedFetch('http://localhost:3000/offers'),
+        authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/candidates`),
+        authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/applications`),
+        authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/interviews`),
+        authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/offers`),
       ]);
 
       const candidates = await candidatesRes.json();
@@ -139,7 +139,7 @@ export default function RecruitmentDashboardPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Recruitment Dashboard">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading recruitment data...</div>
         </div>
@@ -148,10 +148,7 @@ export default function RecruitmentDashboardPage() {
   }
 
   return (
-    <RecruitmentLayout 
-      title="Recruitment Dashboard" 
-      description="Overview of hiring activities and metrics"
-    >
+    <RecruitmentLayout>
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-[#2a2a2a] rounded-lg p-6">

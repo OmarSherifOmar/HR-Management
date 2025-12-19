@@ -23,6 +23,7 @@ interface Stats {
 }
 
 export default function TrackingPage() {
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [stats, setStats] = useState<Stats>({
     totalPayslips: 0,
     activeClaims: 0,
@@ -39,13 +40,13 @@ export default function TrackingPage() {
     try {
       setLoading(true);
       const payslipsRes = await fetch(
-        "http://localhost:3000/payroll-tracking/me/payslips",
+        `${URL}/payroll-tracking/me/payslips`,
         { credentials: "include" }
       );
       const payslips = payslipsRes.ok ? await payslipsRes.json() : [];
 
       const claimsRes = await fetch(
-        "http://localhost:3000/payroll-tracking/claims/mine",
+        `${URL}/payroll-tracking/claims/mine`,
         { credentials: "include" }
       );
       const claims = claimsRes.ok ? await claimsRes.json() : [];
@@ -55,7 +56,7 @@ export default function TrackingPage() {
       );
 
       const disputesRes = await fetch(
-        "http://localhost:3000/payroll-tracking/disputes/mine",
+        `${URL}/payroll-tracking/disputes/mine`,
         { credentials: "include" }
       );
       const disputes = disputesRes.ok ? await disputesRes.json() : [];

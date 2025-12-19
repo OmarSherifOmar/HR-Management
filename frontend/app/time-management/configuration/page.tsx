@@ -31,7 +31,7 @@ export default function TimeManagementConfigurationPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Holiday>>({});
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
 
   useEffect(() => {
     fetchHolidays();

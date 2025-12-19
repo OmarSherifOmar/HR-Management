@@ -79,7 +79,8 @@ export default function InterviewFeedbackPage() {
 
   const fetchInterview = async () => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/interviews/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/interviews/${id}`);
       const data = await res.json();
       setInterview(data);
       
@@ -148,7 +149,8 @@ export default function InterviewFeedbackPage() {
         ...formData,
       };
 
-      const res = await authenticatedFetch('http://localhost:3000/feedback', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(feedbackData),
@@ -157,7 +159,8 @@ export default function InterviewFeedbackPage() {
       if (res.ok) {
         // Update interview with feedback ID
         const feedback = await res.json();
-        await authenticatedFetch(`http://localhost:3000/interviews/${id}`, {
+        const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        await authenticatedFetch(`${URL}/interviews/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ feedbackId: feedback._id }),
@@ -177,7 +180,7 @@ export default function InterviewFeedbackPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Interview Feedback" description="Submit interview feedback">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading...</div>
         </div>
@@ -187,7 +190,7 @@ export default function InterviewFeedbackPage() {
 
   if (!interview) {
     return (
-      <RecruitmentLayout title="Interview Not Found" description="The requested interview was not found">
+      <RecruitmentLayout>
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
             <FileText className="w-8 h-8 text-gray-400" />
@@ -206,7 +209,7 @@ export default function InterviewFeedbackPage() {
   }
 
   return (
-    <RecruitmentLayout title="Interview Feedback" description={`Feedback for ${interview.applicationId.candidateId.name}`}>
+    <RecruitmentLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">

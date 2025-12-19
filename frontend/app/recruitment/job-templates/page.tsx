@@ -48,7 +48,8 @@ export default function JobTemplatesPage() {
 
   const fetchJobTemplates = async () => {
     try {
-      const response = await authenticatedFetch('http://localhost:3000/job-templates');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/job-templates`);
       if (response.ok) {
         const data = await response.json();
         setTemplates(data);
@@ -87,7 +88,8 @@ export default function JobTemplatesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await authenticatedFetch(`http://localhost:3000/job-templates/${id}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/job-templates/${id}`, {
         method: 'DELETE',
       });
 

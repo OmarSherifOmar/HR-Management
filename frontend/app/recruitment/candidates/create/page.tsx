@@ -43,8 +43,9 @@ export default function CreateCandidatePage() {
     setLoading(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const res = await authenticatedFetch(
-        'http://localhost:3000/employees/candidates',
+        `${URL}/employees/candidates`,
         {
           method: 'POST',
           body: JSON.stringify(form),

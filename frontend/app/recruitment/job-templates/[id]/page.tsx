@@ -49,7 +49,8 @@ export default function JobTemplateDetailPage() {
 
   const fetchTemplate = async () => {
     try {
-      const response = await authenticatedFetch(`http://localhost:3000/job-templates/${templateId}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/job-templates/${templateId}`);
       if (response.ok) {
         const data = await response.json();
         setTemplate(data);

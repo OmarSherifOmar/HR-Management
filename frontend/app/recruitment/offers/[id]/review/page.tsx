@@ -78,7 +78,8 @@ export default function OfferReviewPage() {
 
   const fetchOfferDetails = async () => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/offers/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/offers/${id}`);
       const data = await res.json();
       setOffer(data);
       setLoading(false);
@@ -102,8 +103,9 @@ export default function OfferReviewPage() {
     setSubmitting(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Get current user (in a real app, this would come from auth context)
-      const userRes = await authenticatedFetch('http://localhost:3000/auth/me');
+      const userRes = await authenticatedFetch(`${URL}/auth/me`);
       const userData = await userRes.json();
 
       const reviewData = {
@@ -115,7 +117,7 @@ export default function OfferReviewPage() {
       };
 
       // Add approver to offer
-      await authenticatedFetch(`http://localhost:3000/offers/${id}/approvers`, {
+      await authenticatedFetch(`${URL}/offers/${id}/approvers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewData),
@@ -123,7 +125,7 @@ export default function OfferReviewPage() {
 
       // If approved, also update the offer status
       if (reviewForm.status === 'approved') {
-        await authenticatedFetch(`http://localhost:3000/offers/${id}`, {
+        await authenticatedFetch(`${URL}/offers/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ finalStatus: 'approved' }),
@@ -141,7 +143,7 @@ export default function OfferReviewPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Review Offer" description="Review and approve offer">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading offer details...</div>
         </div>
@@ -151,7 +153,7 @@ export default function OfferReviewPage() {
 
   if (!offer) {
     return (
-      <RecruitmentLayout title="Offer Not Found" description="The requested offer was not found">
+      <RecruitmentLayout>
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
             <FileText className="w-8 h-8 text-gray-400" />
@@ -170,7 +172,7 @@ export default function OfferReviewPage() {
   }
 
   return (
-    <RecruitmentLayout title="Review Offer" description={`Review offer for ${offer.candidateId.name}`}>
+    <RecruitmentLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">

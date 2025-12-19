@@ -21,6 +21,7 @@ type LeaveType = {
   category: LeaveCategory | string;
   paid: boolean;
   deductible?: boolean;
+  color?: string;
   requiresAttachment?: boolean;
   attachmentType?: string;
   minTenureMonths?: number;
@@ -56,8 +57,9 @@ export default function AdminLeaveTypesPage() {
 
   const fetchLeaveTypes = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
-      const response = await fetch('http://localhost:3000/leaves/types', {
+      const response = await fetch(`${URL}/leaves/types`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -77,7 +79,8 @@ export default function AdminLeaveTypesPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3000/leaves/types/categories', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/types/categories`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -99,7 +102,8 @@ export default function AdminLeaveTypesPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/leaves/types/${typeId}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/types/${typeId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -120,7 +124,7 @@ export default function AdminLeaveTypesPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/leaves/types/categories/${categoryId}`, {
+      const response = await fetch(`${URL}/leaves/types/categories/${categoryId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -224,7 +228,7 @@ export default function AdminLeaveTypesPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <div
                           className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: type.color }}
+                          // style={{ backgroundColor: type.color }}
                         />
                         <h3 className="text-lg font-semibold text-white">
                           {type.name}

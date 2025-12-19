@@ -98,7 +98,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onCreateSuccess }
     }
 
     try {
-      const response = await fetch('http://localhost:3000/employees', {
+      const response = await fetch(`${URL}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,6 +171,8 @@ export default function CreateEmployeeModal({ isOpen, onClose, onCreateSuccess }
       setLoading(false);
     }
   };
+
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   if (!isOpen) return null;
 

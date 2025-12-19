@@ -91,8 +91,9 @@ export default function EditLeaveRequestPage() {
 
   const fetchLeaveRequest = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
-      const response = await authenticatedFetch(`http://localhost:3000/leave-requests/${requestId}`);
+      const response = await authenticatedFetch(`${URL}/leave-requests/${requestId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -133,7 +134,8 @@ export default function EditLeaveRequestPage() {
 
   const fetchLeaveTypes = async () => {
     try {
-      const response = await authenticatedFetch('http://localhost:3000/leaves/entitlements/my-balance');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/leaves/entitlements/my-balance`);
       
       if (response.ok) {
         const result = await response.json();
@@ -243,10 +245,11 @@ export default function EditLeaveRequestPage() {
     setFormErrors(prev => ({ ...prev, attachment: '' }));
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const uploadFormData = new FormData();
       uploadFormData.append('file', selectedFile);
 
-      const response = await authenticatedFetch('http://localhost:3000/attachments', {
+      const response = await authenticatedFetch(`${URL}/attachments`, {
         method: 'POST',
         body: uploadFormData,
       });
@@ -301,7 +304,7 @@ export default function EditLeaveRequestPage() {
         payload.attachmentId = attachmentId;
       }
 
-      const response = await authenticatedFetch(`http://localhost:3000/leave-requests/${requestId}`, {
+      const response = await authenticatedFetch(`${URL}/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

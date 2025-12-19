@@ -45,8 +45,9 @@ export default function TransparencyPage() {
   const fetchTransparencySummary = async () => {
     try {
       setLoading(true);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/transparency/summary",
+        `${URL}/payroll-tracking/transparency/summary`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch transparency summary");

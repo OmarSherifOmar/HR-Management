@@ -37,7 +37,8 @@ export default function CreateOfferPage() {
   /* ---------------- FETCH APPLICATIONS ---------------- */
 
   useEffect(() => {
-    authenticatedFetch('http://localhost:3000/applications')
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+    authenticatedFetch(`${URL}/applications`)
       .then(res => res.json())
       .then((data: Application[]) => setApplications(data))
       .catch(() => setError('Failed to load applications'));
@@ -76,8 +77,9 @@ export default function CreateOfferPage() {
     setLoading(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const res = await authenticatedFetch(
-        'http://localhost:3000/offers',
+        `${URL}/offers`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -110,10 +112,7 @@ export default function CreateOfferPage() {
   /* ---------------- UI ---------------- */
 
   return (
-    <RecruitmentLayout
-      title="Create Offer"
-      description="Create a job offer for an application"
-    >
+    <RecruitmentLayout>
       <div className="max-w-xl">
 
         {error && (

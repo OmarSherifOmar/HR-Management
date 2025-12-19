@@ -55,7 +55,8 @@ export default function TerminationsPage() {
 
   const fetchTerminations = async () => {
     try {
-      const response = await fetch('http://localhost:3000/termination-requests', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/termination-requests`, {
         credentials: 'include',
       });
 
@@ -72,7 +73,8 @@ export default function TerminationsPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('http://localhost:3000/employee-profile', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/employee-profile`, {
         credentials: 'include',
       });
 
@@ -91,8 +93,9 @@ export default function TerminationsPage() {
     setSubmitting(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Fetch employee's contract ID
-      const employeeResponse = await fetch(`http://localhost:3000/employee-profile/${formData.employeeId}`, {
+      const employeeResponse = await fetch(`${URL}/employee-profile/${formData.employeeId}`, {
         credentials: 'include',
       });
 
@@ -111,7 +114,7 @@ export default function TerminationsPage() {
         contractId: employeeData.contractId || '000000000000000000000000', // Placeholder
       };
 
-      const response = await fetch('http://localhost:3000/termination-requests', {
+      const response = await fetch(`${URL}/termination-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +147,8 @@ export default function TerminationsPage() {
 
   const handleApprove = async (terminationId: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/termination-requests/${terminationId}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/termination-requests/${terminationId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -163,7 +167,8 @@ export default function TerminationsPage() {
 
   const handleReject = async (terminationId: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/termination-requests/${terminationId}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/termination-requests/${terminationId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

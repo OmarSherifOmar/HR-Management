@@ -46,10 +46,12 @@ export default function SelfServiceContactInfo() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const fetchProfile = useCallback(async () => {
     setIsFetching(true);
     try {
-      const response = await fetch('http://localhost:3000/employees/me', {
+      const response = await fetch(`${URL}/employees/me`, {
         credentials: 'include',
       });
       
@@ -126,7 +128,7 @@ export default function SelfServiceContactInfo() {
         personalEmail: contactData.personalEmail,
       });
 
-      const response = await fetch('http://localhost:3000/employees/me/contact', {
+      const response = await fetch(`${URL}/employees/me/contact`, {
         method: 'PATCH',
         credentials: 'include',
         headers: {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useAuth, authenticatedFetch } from '../../../context/AuthContext';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
 
 interface ApiResponse<T = any> {
   ok: boolean;

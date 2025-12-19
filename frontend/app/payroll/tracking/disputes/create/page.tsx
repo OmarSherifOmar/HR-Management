@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DashboardLayout from "../../../../components/DashboardLayout";
@@ -13,6 +13,20 @@ interface Payslip {
 }
 
 export default function CreateDisputePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+          <div className="text-white">Loading...</div>
+        </div>
+      }
+    >
+      <CreateDisputeContent />
+    </Suspense>
+  );
+}
+
+function CreateDisputeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledPayslipId = searchParams.get("payslipId") || "";
@@ -34,11 +48,11 @@ export default function CreateDisputePage() {
 
   const fetchPayslips = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoadingPayslips(true);
-      const response = await fetch(
-        `http://localhost:3000/payroll-tracking/me/payslips`,
-        { credentials: "include" }
-      );
+      const response = await fetch(`${URL}/payroll-tracking/me/payslips`, {
+        credentials: "include",
+      });
       console.log("Payslips response status:", response.status);
       if (!response.ok) {
         const errorText = await response.text();
@@ -71,22 +85,20 @@ export default function CreateDisputePage() {
     }
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
-      const response = await fetch(
-        "http://localhost:3000/payroll-tracking/disputes",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            payslipId: formData.payslipId,
-            reason: formData.reason,
-            amount: formData.amount ? parseFloat(formData.amount) : undefined,
-          }),
-        }
-      );
+      const response = await fetch(`${URL}/payroll-tracking/disputes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          payslipId: formData.payslipId,
+          reason: formData.reason,
+          amount: formData.amount ? parseFloat(formData.amount) : undefined,
+        }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -176,7 +188,7 @@ export default function CreateDisputePage() {
                       href="/payroll/tracking/payslips"
                       className="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block"
                     >
-                      Go to Payslips →
+                      Go to Payslips
                     </Link>
                   </div>
                 ) : (
@@ -247,14 +259,14 @@ export default function CreateDisputePage() {
                   Common Dispute Categories
                 </h3>
                 <div className="grid grid-cols-2 gap-2 text-sm text-blue-300">
-                  <div>• Incorrect base salary</div>
-                  <div>• Missing allowances</div>
-                  <div>• Wrong tax deductions</div>
-                  <div>• Insurance calculation error</div>
-                  <div>• Incorrect leave deductions</div>
-                  <div>• Missing bonuses</div>
-                  <div>• Overtime not calculated</div>
-                  <div>• Other discrepancies</div>
+                  <div>- Incorrect base salary</div>
+                  <div>- Missing allowances</div>
+                  <div>- Wrong tax deductions</div>
+                  <div>- Insurance calculation error</div>
+                  <div>- Incorrect leave deductions</div>
+                  <div>- Missing bonuses</div>
+                  <div>- Overtime not calculated</div>
+                  <div>- Other discrepancies</div>
                 </div>
               </div>
 

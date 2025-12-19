@@ -26,9 +26,10 @@ export default function PayslipsPage() {
 
   const fetchPayslips = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/me/payslips`,
+        `${URL}/payroll-tracking/me/payslips`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch payslips");
@@ -73,8 +74,9 @@ export default function PayslipsPage() {
 
   const downloadPayslip = async (payslipId: string, month: string | null) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/me/payslips/${payslipId}/download`,
+        `${URL}/payroll-tracking/me/payslips/${payslipId}/download`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to download payslip");

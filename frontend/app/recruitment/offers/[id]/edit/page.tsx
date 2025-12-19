@@ -80,7 +80,8 @@ export default function EditOfferPage() {
 
   const fetchOfferDetails = async () => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/offers/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/offers/${id}`);
       const data = await res.json();
       setOffer(data);
       
@@ -163,7 +164,8 @@ export default function EditOfferPage() {
         return;
       }
 
-      const res = await authenticatedFetch(`http://localhost:3000/offers/${id}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/offers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -190,7 +192,7 @@ export default function EditOfferPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Edit Offer" description="Edit offer details">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading offer details...</div>
         </div>
@@ -200,7 +202,7 @@ export default function EditOfferPage() {
 
   if (!offer) {
     return (
-      <RecruitmentLayout title="Offer Not Found" description="The requested offer was not found">
+      <RecruitmentLayout>
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
             <FileText className="w-8 h-8 text-gray-400" />
@@ -219,7 +221,7 @@ export default function EditOfferPage() {
   }
 
   return (
-    <RecruitmentLayout title="Edit Offer" description={`Edit offer for ${offer.candidateId.name}`}>
+    <RecruitmentLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">

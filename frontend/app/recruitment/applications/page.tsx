@@ -1,7 +1,7 @@
 'use client';
 
 import RecruitmentLayout from '../layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Search,
@@ -42,6 +42,14 @@ interface Application {
 /* ================= PAGE ================= */
 
 export default function ApplicationsPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <ApplicationsContent />
+    </Suspense>
+  );
+}
+
+function ApplicationsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -63,8 +71,9 @@ export default function ApplicationsPage() {
 
   async function fetchApplications() {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const res = await authenticatedFetch(
-        'http://localhost:3000/applications',
+        `${URL}/applications`,
       );
       const data = await res.json();
       setApplications(Array.isArray(data) ? data : []);
@@ -110,10 +119,7 @@ export default function ApplicationsPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout
-        title="Applications"
-        description="Manage candidate applications"
-      >
+      <RecruitmentLayout>
         <div className="text-white">Loading...</div>
       </RecruitmentLayout>
     );
@@ -122,10 +128,7 @@ export default function ApplicationsPage() {
   /* ================= UI ================= */
 
   return (
-    <RecruitmentLayout
-      title="Applications"
-      description="Manage candidate applications"
-    >
+    <RecruitmentLayout>
       {/* Search & Filters */}
       <div className="flex gap-4 mb-6">
         <div className="flex-1 relative">

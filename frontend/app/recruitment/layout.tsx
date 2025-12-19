@@ -18,11 +18,9 @@ import {
 
 interface RecruitmentLayoutProps {
   children: ReactNode;
-  title: string;
-  description?: string;
 }
 
-export default function RecruitmentLayout({ children, title, description }: RecruitmentLayoutProps) {
+export default function RecruitmentLayout({ children }: RecruitmentLayoutProps) {
   const { user, isLoggedIn, isLoading, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -36,7 +34,7 @@ export default function RecruitmentLayout({ children, title, description }: Recr
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3000/auth/logout', {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -190,12 +188,6 @@ export default function RecruitmentLayout({ children, title, description }: Recr
 
       {/* Main Content */}
       <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
-          {description && (
-            <p className="text-gray-400 mt-2">{description}</p>
-          )}
-        </div>
         {children}
       </div>
     </div>

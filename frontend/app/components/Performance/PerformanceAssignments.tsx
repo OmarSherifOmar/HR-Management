@@ -180,7 +180,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
     if (!currentUserId) {
       const fetchCurrentUser = async () => {
         try {
-          const response = await authenticatedFetch('http://localhost:3000/api/employee-profile/me');
+          const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+          const response = await authenticatedFetch(`${URL}/api/employee-profile/me`);
           if (response.ok) {
             const data = await response.json();
             setCurrentUserId(data._id || data.id);
@@ -250,8 +251,9 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
   const fetchAllDepartmentEmployees = async (departmentId: string) => {
     try {
       console.log('Fetching all employees for department ID:', departmentId);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       
-      const response = await fetch(`http://localhost:3000/employees/searchs?department=${departmentId}&status=ACTIVE`, {
+      const response = await fetch(`${URL}/employees/searchs?department=${departmentId}&status=ACTIVE`, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -271,12 +273,13 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
   const findDepartmentHead = async (departmentId: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Try to get department head as manager
       const dept = departments.find(d => (d._id || d.id) === departmentId);
       if (dept?.headPositionId) {
         console.log('Looking for department head with position ID:', dept.headPositionId);
         // Search for employees in this department and find one with the head position
-        const response = await fetch(`http://localhost:3000/employees/searchs?department=${departmentId}&status=ACTIVE`, {
+        const response = await fetch(`${URL}/employees/searchs?department=${departmentId}&status=ACTIVE`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -317,14 +320,15 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       
       console.log('[fetchAssignments] normalizedRole:', normalizedRole, 'isHRRole:', isHRRole);
       
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       let url: string;
       if (isHRRole) {
         // HR can see all assignments
-        url = 'http://localhost:3000/api/performance/assignments';
+        url = `${URL}/api/performance/assignments`;
         console.log('[fetchAssignments] HR role - fetching all assignments from:', url);
       } else if (employeeId) {
         // Managers/Department Heads see their own assignments
-        url = `http://localhost:3000/api/performance/assignments/manager/${employeeId}`;
+        url = `${URL}/api/performance/assignments/manager/${employeeId}`;
         console.log('[fetchAssignments] Fetching via /manager/:id endpoint for:', employeeId);
       } else {
         console.log('[fetchAssignments] No employeeId available');
@@ -365,7 +369,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
   const fetchCycles = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/performance/cycles', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles`, {
         credentials: 'include',
       });
       if (!response.ok) return;
@@ -382,7 +387,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/performance/templates', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/templates`, {
         credentials: 'include',
       });
       if (!response.ok) return;
@@ -395,7 +401,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/departments', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/org/departments`, {
         credentials: 'include',
       });
       if (!response.ok) return;
@@ -408,7 +415,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
   const fetchPositions = async (departmentId: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/org/positions?departmentId=${departmentId}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/org/positions?departmentId=${departmentId}`, {
         credentials: 'include',
       });
       if (!response.ok) return;
@@ -425,8 +433,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       const departmentId = formData.departmentId;
       
       console.log('Fetching employees for position:', positionId, 'in department ID:', departmentId);
-      
-      const response = await fetch(`http://localhost:3000/employees/searchs?department=${departmentId}&status=ACTIVE`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/employees/searchs?department=${departmentId}&status=ACTIVE`, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -475,8 +483,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
   const fetchEmployeesByDepartment = async (departmentId: string) => {
     try {
       console.log('Fetching all employees for department ID:', departmentId);
-      
-      const response = await fetch(`http://localhost:3000/employees/searchs?department=${departmentId}&status=ACTIVE`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/employees/searchs?department=${departmentId}&status=ACTIVE`, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -515,8 +523,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       };
 
       console.log('Assignment payload:', JSON.stringify(payload, null, 2));
-
-      const response = await fetch('http://localhost:3000/api/performance/assignments', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -576,8 +584,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       };
 
       console.log('[handleBulkSubmit] Payload:', JSON.stringify(payload, null, 2));
-
-      const response = await fetch('http://localhost:3000/api/performance/assignments/bulk', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -655,8 +663,9 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
 
       for (const assignmentId of selectedAssignments) {
         try {
+          const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
           // Backend extracts publishedByEmployeeId from JWT
-          const response = await fetch('http://localhost:3000/api/performance/assignments/publish', {
+          const response = await fetch(`${URL}/api/performance/assignments/publish`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -706,8 +715,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       };
 
       console.log('[handleBulkPublishByCycle] Payload:', JSON.stringify(payload, null, 2));
-
-      const response = await fetch('http://localhost:3000/api/performance/assignments/bulk-publish', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/bulk-publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -761,8 +770,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       // Backend will extract publishedByEmployeeId from JWT token
       const payload = { recordId };
       console.log('[handlePublish] Payload:', JSON.stringify(payload));
-      
-      const response = await fetch('http://localhost:3000/api/performance/assignments/publish', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -807,7 +816,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
     if (templateId) {
       try {
         console.log('[openAppraisalForm] Fetching template:', templateId);
-        const response = await fetch(`http://localhost:3000/api/performance/templates/${templateId}`, {
+        const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const response = await fetch(`${URL}/api/performance/templates/${templateId}`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -956,8 +966,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       };
 
       console.log('[handleSubmitOnly] Payload:', JSON.stringify(payload, null, 2));
-
-      const response = await fetch('http://localhost:3000/api/performance/assignments/submit', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1021,8 +1031,8 @@ export default function PerformanceAssignments({ userRole, employeeId, onNotify 
       };
 
       console.log('[handleSubmitAndPublish] Payload:', JSON.stringify(payload, null, 2));
-
-      const response = await fetch('http://localhost:3000/api/performance/assignments/submit-and-publish', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/submit-and-publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

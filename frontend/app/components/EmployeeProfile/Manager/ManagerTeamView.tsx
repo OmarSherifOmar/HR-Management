@@ -35,6 +35,8 @@ interface TeamSummary {
   byPayGrade: Record<string, number>;
 }
 
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function ManagerTeamView() {
   const { user } = useAuth();
   const { canViewTeamMembers, canViewTeamSummary } = useCanAccess();
@@ -60,7 +62,7 @@ export default function ManagerTeamView() {
 
     try {
       console.log('[ManagerTeamView] Fetching team members...');
-      const response = await fetch('http://localhost:3000/employees/my-team', {
+      const response = await fetch(`${URL}/employees/my-team`, {
         credentials: 'include',
       });
 
@@ -88,7 +90,7 @@ export default function ManagerTeamView() {
     try {
       console.log('[ManagerTeamView] Fetching team summary...');
       const response = await fetch(
-        'http://localhost:3000/employees/my-team/summary',
+        `${URL}/employees/my-team/summary`,
         {
           credentials: 'include',
         }

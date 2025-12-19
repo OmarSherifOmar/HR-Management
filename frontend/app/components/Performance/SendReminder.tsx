@@ -27,7 +27,8 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
   const fetchCycles = async () => {
     try {
       console.log('[SendReminder] Fetching cycles...');
-      const response = await fetch('http://localhost:3000/api/performance/cycles', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles`, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -52,7 +53,8 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
   const fetchDepartments = async () => {
     try {
       console.log('[SendReminder] Fetching departments...');
-      const response = await fetch('http://localhost:3000/api/org/departments', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/org/departments`, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -95,7 +97,8 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/performance/assignments/send-reminder', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/send-reminder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

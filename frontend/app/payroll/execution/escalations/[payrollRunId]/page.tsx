@@ -7,7 +7,9 @@ import EscalationsList from '../../components/EscalationsList';
 export default function Page() {
   const params = useParams();
   const router = useRouter();
-  const payrollRunId = params?.payrollRunId || '';
+  const payrollRunId = Array.isArray(params?.payrollRunId) 
+    ? params.payrollRunId[0] 
+    : params?.payrollRunId || '';
 
   return (
     <div className="p-6">

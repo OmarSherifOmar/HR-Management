@@ -25,8 +25,9 @@ export default function TaxDocumentsPage() {
   const fetchTaxDocuments = async () => {
     try {
       setLoading(true);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/tax-documents/mine",
+        `${URL}/payroll-tracking/tax-documents/mine`,
         { credentials: "include" }
       );
       if (!response.ok) {
@@ -240,8 +241,9 @@ export default function TaxDocumentsPage() {
                         <button
                           onClick={async () => {
                             try {
+                              const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
                               const response = await fetch(
-                                `http://localhost:3000/payroll-tracking/tax-documents/mine/${doc.taxYear}/download`,
+                                `${URL}/payroll-tracking/tax-documents/mine/${doc.taxYear}/download`,
                                 { credentials: "include" }
                               );
                               if (!response.ok) {

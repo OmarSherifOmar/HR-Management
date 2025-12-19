@@ -23,7 +23,8 @@ export default function PerformanceManagementPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/auth/me', {
+        const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const response = await fetch(`${URL}/api/auth/me`, {
           credentials: 'include',
         });
 

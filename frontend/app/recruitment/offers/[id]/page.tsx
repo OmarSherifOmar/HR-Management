@@ -92,7 +92,8 @@ export default function OfferDetailPage() {
 
   const fetchOfferDetails = async () => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/offers/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/offers/${id}`);
       const data = await res.json();
       setOffer(data);
       setLoading(false);
@@ -184,7 +185,8 @@ export default function OfferDetailPage() {
   const handleUpdateResponse = async (response: 'accepted' | 'declined') => {
     if (confirm(`Are you sure you want to mark this offer as ${response}?`)) {
       try {
-        await authenticatedFetch(`http://localhost:3000/offers/${id}/applicant-response`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        await authenticatedFetch(`${URL}/offers/${id}/applicant-response`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ response }),
@@ -285,7 +287,7 @@ export default function OfferDetailPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Offer Details" description="View offer details">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading offer details...</div>
         </div>
@@ -295,7 +297,7 @@ export default function OfferDetailPage() {
 
   if (!offer) {
     return (
-      <RecruitmentLayout title="Offer Not Found" description="The requested offer was not found">
+      <RecruitmentLayout>
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
             <FileText className="w-8 h-8 text-gray-400" />
@@ -318,7 +320,7 @@ export default function OfferDetailPage() {
   const timelineEvents = generateTimeline();
 
   return (
-    <RecruitmentLayout title="Offer Details" description={`Offer for ${offer.candidateId.name}`}>
+    <RecruitmentLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">

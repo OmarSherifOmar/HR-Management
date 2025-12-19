@@ -66,9 +66,10 @@ export default function NewLeaveRequestPage() {
 
   const fetchLeaveTypes = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       setError(''); // Clear previous errors
-      const response = await authenticatedFetch('http://localhost:3000/leaves/entitlements/my-balance');
+      const response = await authenticatedFetch(`${URL}/leaves/entitlements/my-balance`);
       
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
@@ -120,8 +121,8 @@ export default function NewLeaveRequestPage() {
         console.log(JSON.stringify(types, null, 2));
         
         // Remove duplicates based on leave type ID, keeping the first occurrence
-        const uniqueTypes = types.filter((type, index, self) => 
-          index === self.findIndex((t) => t.id === type.id)
+        const uniqueTypes = types.filter((type: LeaveType, index: number, self: LeaveType[]) => 
+          index === self.findIndex((t: LeaveType) => t.id === type.id)
         );
         
         console.log('\n=== UNIQUE TYPES (after dedup) ===');
@@ -229,10 +230,11 @@ export default function NewLeaveRequestPage() {
     setFormErrors(prev => ({ ...prev, attachment: '' }));
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const uploadFormData = new FormData();
       uploadFormData.append('file', selectedFile);
 
-      const response = await authenticatedFetch('http://localhost:3000/attachments', {
+      const response = await authenticatedFetch(`${URL}/attachments`, {
         method: 'POST',
         body: uploadFormData,
       });
@@ -290,7 +292,8 @@ export default function NewLeaveRequestPage() {
         payload.attachmentId = attachmentId;
       }
 
-      const response = await authenticatedFetch('http://localhost:3000/leave-requests', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/leave-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -401,7 +404,7 @@ export default function NewLeaveRequestPage() {
                   <option value="">Select a leave type</option>
                   {leaveTypes.map((type) => (
                     <option key={type.id} value={type.id}>
-                      {type.name || 'Unknown'} ({type.code || 'N/A'}) - {isNaN(type.remaining) ? '0' : type.remaining} days available
+                      {type.name || 'Unknown'} ({type.code || 'N/A'}) - {type.remaining !== undefined && !isNaN(type.remaining) ? type.remaining : '0'} days available
                     </option>
                   ))}
                 </select>

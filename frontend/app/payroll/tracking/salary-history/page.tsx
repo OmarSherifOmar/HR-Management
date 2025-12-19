@@ -30,8 +30,9 @@ export default function SalaryHistoryPage() {
   const fetchSalaryHistory = async () => {
     try {
       setLoading(true);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/salary-history",
+        `${URL}/payroll-tracking/me/salary-history`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch salary history");

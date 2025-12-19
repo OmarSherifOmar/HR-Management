@@ -1,7 +1,7 @@
 'use client';
 
 import RecruitmentLayout from '../layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Search, Filter, Plus, MoreVertical, Calendar, Clock, 
@@ -37,6 +37,14 @@ interface Interview {
 }
 
 export default function InterviewsPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <InterviewsContent />
+    </Suspense>
+  );
+}
+
+function InterviewsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -52,7 +60,8 @@ export default function InterviewsPage() {
 
   const fetchInterviews = async () => {
     try {
-      const res = await authenticatedFetch('http://localhost:3000/interviews');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/interviews`);
       const data = await res.json();
       setInterviews(data);
       setLoading(false);
@@ -133,7 +142,7 @@ export default function InterviewsPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Interviews" description="Schedule and manage candidate interviews">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading interviews...</div>
         </div>
@@ -142,7 +151,7 @@ export default function InterviewsPage() {
   }
 
   return (
-    <RecruitmentLayout title="Interviews" description="Schedule and manage candidate interviews">
+    <RecruitmentLayout>
       {/* Header with Actions */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">

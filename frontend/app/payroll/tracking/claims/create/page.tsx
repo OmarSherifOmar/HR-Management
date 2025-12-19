@@ -33,9 +33,10 @@ export default function CreateClaimPage() {
     }
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/claims",
+        `${URL}/payroll-tracking/claims`,
         {
           method: "POST",
           headers: {

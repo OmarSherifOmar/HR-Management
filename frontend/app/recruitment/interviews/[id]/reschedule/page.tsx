@@ -77,7 +77,8 @@ export default function RescheduleInterviewPage() {
 
   const fetchInterviewDetails = async () => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/interviews/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/interviews/${id}`);
       const data = await res.json();
       setInterview(data);
       
@@ -171,8 +172,8 @@ export default function RescheduleInterviewPage() {
       if (formData.method === 'video' && formData.videoLink) {
         updateData.videoLink = formData.videoLink;
       }
-
-      await authenticatedFetch(`http://localhost:3000/interviews/${id}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      await authenticatedFetch(`${URL}/interviews/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -209,7 +210,8 @@ export default function RescheduleInterviewPage() {
       };
 
       // This would call a backend endpoint to send emails/notifications
-      await authenticatedFetch('http://localhost:3000/interviews/reschedule-notify', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      await authenticatedFetch(`${URL}/interviews/reschedule-notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(notificationData),
@@ -222,7 +224,7 @@ export default function RescheduleInterviewPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Reschedule Interview" description="Reschedule interview">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading interview details...</div>
         </div>
@@ -232,7 +234,7 @@ export default function RescheduleInterviewPage() {
 
   if (!interview) {
     return (
-      <RecruitmentLayout title="Interview Not Found" description="The requested interview was not found">
+      <RecruitmentLayout>
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
             <Calendar className="w-8 h-8 text-gray-400" />
@@ -251,7 +253,7 @@ export default function RescheduleInterviewPage() {
   }
 
   return (
-    <RecruitmentLayout title="Reschedule Interview" description={`Reschedule interview with ${interview.applicationId.candidateId.name}`}>
+    <RecruitmentLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">

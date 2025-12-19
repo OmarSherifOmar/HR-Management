@@ -37,15 +37,16 @@ export default function HRDashboard({ userRole, employeeId, onNotify }: HRDashbo
   const fetchCyclesProgress = async () => {
     setLoading(true);
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Try to fetch from progress endpoint, fall back to regular cycles endpoint
-      let response = await fetch('http://localhost:3000/api/performance/cycles/progress', {
+      let response = await fetch(`${URL}/api/performance/cycles/progress`, {
         credentials: 'include',
       }).catch(() => null);
 
       // If progress endpoint doesn't exist, fetch regular cycles and compute progress
       if (!response || !response.ok) {
         console.log('Progress endpoint not available, fetching regular cycles');
-        response = await fetch('http://localhost:3000/api/performance/cycles', {
+        response = await fetch(`${URL}/api/performance/cycles`, {
           credentials: 'include',
         });
       }

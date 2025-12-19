@@ -21,7 +21,7 @@ export default function RequisitionsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    authenticatedFetch('http://localhost:3000/recruitment/job-requisitions')
+    authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recruitment/job-requisitions`)
       .then(res => res.json())
       .then(setData)
       .finally(() => setLoading(false));

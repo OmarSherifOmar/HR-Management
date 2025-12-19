@@ -68,10 +68,11 @@ export default function DisputeDetailPage() {
 
   const fetchDisputeDetail = async (dId: string, isAdminRole: boolean) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const url = isAdminRole
-        ? `http://localhost:3000/payroll-tracking/disputes/${dId}`
-        : `http://localhost:3000/payroll-tracking/disputes/mine/${dId}`;
+        ? `${URL}/payroll-tracking/disputes/${dId}`
+        : `${URL}/payroll-tracking/disputes/mine/${dId}`;
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch dispute details");
       const data = await response.json();

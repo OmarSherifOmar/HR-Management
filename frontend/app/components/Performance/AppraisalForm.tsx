@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Eye, CheckCircle, AlertCircle, Send, FileText } from 'lucide-react';
 import StatusBadge from './Shared/StatusBadge';
 
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 interface Appraisal {
   id: string;
   recordId: string;
@@ -54,7 +56,7 @@ export default function AppraisalForm({ userRole, employeeId, onNotify }: Apprai
     developmentNotes: '',
   });
   const [viewMode, setViewMode] = useState<'list' | 'form' | 'view'>('list');
-
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const isManager = userRole === 'department head';
   const isEmployee = userRole === 'department employee';
   const isHRRole = ['HR Manager', 'HR Admin', 'System Admin'].includes(userRole || '');
@@ -66,7 +68,7 @@ export default function AppraisalForm({ userRole, employeeId, onNotify }: Apprai
   const fetchAppraisals = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/performance/appraisals/my-appraisals', {
+      const response = await fetch(`${URL}/api/performance/appraisals/my-appraisals`, {
         credentials: 'include',
       });
 
@@ -91,7 +93,7 @@ export default function AppraisalForm({ userRole, employeeId, onNotify }: Apprai
     if (!selectedAppraisal) return;
 
     try {
-      const url = `http://localhost:3000/api/performance/appraisals/${selectedAppraisal.recordId}/employee/me/submit`;
+      const url = `${URL}/api/performance/appraisals/${selectedAppraisal.recordId}/employee/me/submit`;
       const response = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -119,7 +121,7 @@ export default function AppraisalForm({ userRole, employeeId, onNotify }: Apprai
 
   const handleAcknowledge = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/performance/appraisals/${id}/employee/me/acknowledge`, {
+      const response = await fetch(`${URL}/api/performance/appraisals/${id}/employee/me/acknowledge`, {
         method: 'PUT',
         credentials: 'include',
       });

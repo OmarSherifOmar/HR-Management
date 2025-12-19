@@ -73,8 +73,9 @@ export default function ApplicationDetailPage() {
 
   const fetchApplication = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/applications/${applicationId}`
+        `${URL}/applications/${applicationId}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -92,8 +93,9 @@ export default function ApplicationDetailPage() {
 
   const fetchInterviews = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/interviews/application/${applicationId}`
+        `${URL}/interviews/application/${applicationId}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -106,8 +108,9 @@ export default function ApplicationDetailPage() {
 
   const handleUpdateStage = async (stage: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/applications/${applicationId}/stage/${stage}`,
+        `${URL}/applications/${applicationId}/stage/${stage}`,
         {
           method: 'PUT',
         }
@@ -125,8 +128,9 @@ export default function ApplicationDetailPage() {
 
   const handleUpdateStatus = async (status: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/applications/${applicationId}/status/${status}`,
+        `${URL}/applications/${applicationId}/status/${status}`,
         {
           method: 'PUT',
         }

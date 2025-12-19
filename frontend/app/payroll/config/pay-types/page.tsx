@@ -5,7 +5,7 @@ import DashboardLayout from '../../../components/DashboardLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 // Inlined API utilities (previously from _shared/http)
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
 
 interface ApiResponse<T = any> {
   ok: boolean;

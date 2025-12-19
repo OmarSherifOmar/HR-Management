@@ -93,9 +93,10 @@ export default function ManagerPendingReviewsPage() {
 
   const fetchPendingRequests = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       setError('');
-      const response = await authenticatedFetch('http://localhost:3000/leave-requests/manager/pending-reviews');
+      const response = await authenticatedFetch(`${URL}/leave-requests/manager/pending-reviews`);
       
       if (response.ok) {
         const result = await response.json();
@@ -114,9 +115,10 @@ export default function ManagerPendingReviewsPage() {
 
   const handleApprove = async (requestId: string, requestComments?: string, flagPattern?: boolean) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        `http://localhost:3000/leave-requests/${requestId}/manager/approve`,
+        `${URL}/leave-requests/${requestId}/manager/approve`,
         {
           method: 'PATCH',
           headers: {
@@ -151,9 +153,10 @@ export default function ManagerPendingReviewsPage() {
 
   const handleReject = async (requestId: string, requestComments?: string, flagPattern?: boolean) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        `http://localhost:3000/leave-requests/${requestId}/manager/reject`,
+        `${URL}/leave-requests/${requestId}/manager/reject`,
         {
           method: 'PATCH',
           headers: {
@@ -362,7 +365,7 @@ export default function ManagerPendingReviewsPage() {
                             </div>
                           </div>
                           <a
-                            href={`http://localhost:3000/attachments/${request.attachmentId._id}/download`}
+                            href={`${URL}/attachments/${request.attachmentId._id}/download`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"

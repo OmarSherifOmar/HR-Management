@@ -39,9 +39,10 @@ export default function DisputesPage() {
 
   const fetchEmployeeDisputes = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/disputes/mine",
+        `${URL}/payroll-tracking/disputes/mine`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch disputes");
@@ -57,13 +58,14 @@ export default function DisputesPage() {
 
   const fetchAllDisputes = async (status?: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const url =
         status && status !== "all"
-          ? `http://localhost:3000/payroll-tracking/disputes?status=${encodeURIComponent(
+          ? `${URL}/payroll-tracking/disputes?status=${encodeURIComponent(
               status
             )}`
-          : "http://localhost:3000/payroll-tracking/disputes";
+          : `${URL}/payroll-tracking/disputes`;
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch disputes");
       const data = await response.json();

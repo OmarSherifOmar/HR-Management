@@ -97,7 +97,8 @@ export default function RoleManagementPage() {
 
   const fetchAllRoles = async () => {
     try {
-      const response = await fetch("http://localhost:3000/leaves/role-management/roles", {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/role-management/roles`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch roles");
@@ -110,7 +111,8 @@ export default function RoleManagementPage() {
 
   const fetchAvailablePermissions = async () => {
     try {
-      const response = await fetch("http://localhost:3000/leaves/role-management/available-permissions", {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/role-management/available-permissions`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch permissions");
@@ -131,7 +133,8 @@ export default function RoleManagementPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch("http://localhost:3000/employees/searchs", {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/employees/searchs`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch employees");
@@ -144,7 +147,8 @@ export default function RoleManagementPage() {
 
   const fetchApprovalChain = async () => {
     try {
-      const response = await fetch("http://localhost:3000/leaves/role-management/approval-chain", {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/role-management/approval-chain`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch approval chain");
@@ -158,7 +162,8 @@ export default function RoleManagementPage() {
   const handleSelectRole = async (role: string) => {
     setSelectedRole(role);
     try {
-      const response = await fetch(`http://localhost:3000/leaves/role-management/roles/${role}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/role-management/roles/${role}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch role details");
@@ -172,7 +177,8 @@ export default function RoleManagementPage() {
   const handleSelectEmployee = async (employeeId: string) => {
     setSelectedEmployee(employeeId);
     try {
-      const response = await fetch(`http://localhost:3000/leaves/role-management/users/${employeeId}/roles`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/role-management/users/${employeeId}/roles`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch employee roles");
@@ -190,12 +196,13 @@ export default function RoleManagementPage() {
     const hasPermission = rolePermissions.permissions.includes(permission);
     
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       setError(null);
       
       const url = hasPermission
-        ? `http://localhost:3000/leaves/role-management/roles/${selectedRole}/permissions/${permission}`
-        : `http://localhost:3000/leaves/role-management/roles/${selectedRole}/permissions`;
+        ? `${URL}/leaves/role-management/roles/${selectedRole}/permissions/${permission}`
+        : `${URL}/leaves/role-management/roles/${selectedRole}/permissions`;
       
       const response = await fetch(url, {
         method: hasPermission ? "DELETE" : "POST",
@@ -236,7 +243,7 @@ export default function RoleManagementPage() {
       setError(null);
       
       const response = await fetch(
-        `http://localhost:3000/leaves/role-management/users/${selectedEmployee}/roles`,
+        `${URL}/leaves/role-management/users/${selectedEmployee}/roles`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -285,7 +292,7 @@ export default function RoleManagementPage() {
       setError(null);
       
       const response = await fetch(
-        `http://localhost:3000/leaves/role-management/users/${selectedEmployee}/roles/${role}`,
+        `${URL}/leaves/role-management/users/${selectedEmployee}/roles/${role}`,
         {
           method: "DELETE",
           credentials: "include",

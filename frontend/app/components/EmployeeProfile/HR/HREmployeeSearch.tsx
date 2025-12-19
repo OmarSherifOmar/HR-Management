@@ -28,6 +28,8 @@ interface Employee {
   status: string;
 }
 
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function HREmployeeSearch() {
   const { canSearchEmployees, canEditEmployee, canDeactivateEmployee, canAssignRoles } = useCanAccess();
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,7 +57,7 @@ export default function HREmployeeSearch() {
       if (status) params.append('status', status);
 
       const response = await fetch(
-        `http://localhost:3000/employees/searchs?${params.toString()}`,
+        `http://${URL}/employees/searchs?${params.toString()}`,
         {
           credentials: 'include',
         }

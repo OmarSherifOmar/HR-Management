@@ -57,9 +57,10 @@ export default function AdminPoliciesPage() {
 
   const fetchPolicies = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:3000/leaves/configuration/policies', {
+      const response = await fetch(`${URL}/leaves/configuration/policies`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -86,7 +87,8 @@ export default function AdminPoliciesPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/leaves/configuration/policies/${policyId}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/configuration/policies/${policyId}`, {
         method: 'DELETE',
         credentials: 'include',
       });

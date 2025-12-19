@@ -41,7 +41,8 @@ export default function AccessRevocationPage() {
 
   const fetchRevocations = async () => {
     try {
-      const response = await fetch('http://localhost:3000/offboarding/access-revocation', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/offboarding/access-revocation`, {
         credentials: 'include',
       });
 
@@ -58,8 +59,9 @@ export default function AccessRevocationPage() {
 
   const revokeAccess = async (revocationId: string, itemType: string, itemName: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/offboarding/access-revocation/${revocationId}/revoke`,
+        `${URL}/offboarding/access-revocation/${revocationId}/revoke`,
         {
           method: 'PATCH',
           headers: {
@@ -80,8 +82,9 @@ export default function AccessRevocationPage() {
 
   const revokeAllAccess = async (revocationId: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/offboarding/access-revocation/${revocationId}/revoke-all`,
+        `${URL}/offboarding/access-revocation/${revocationId}/revoke-all`,
         {
           method: 'PATCH',
           credentials: 'include',

@@ -60,9 +60,10 @@ export default function PayslipDetailPage() {
 
   const fetchPayslipDetail = async (slip: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/me/payslips/${slip}`,
+        `${URL}/payroll-tracking/me/payslips/${slip}`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch payslip details");
@@ -78,8 +79,9 @@ export default function PayslipDetailPage() {
 
   const downloadPayslip = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/me/payslips/${slipId}/download`,
+        `${URL}/payroll-tracking/me/payslips/${slipId}/download`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to download payslip");

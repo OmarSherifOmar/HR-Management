@@ -36,6 +36,7 @@ interface EmployerContributionsData {
 }
 
 export default function EmployerContributionsPage() {
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [data, setData] = useState<EmployerContributionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export default function EmployerContributionsPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/employer-contributions",
+        `${URL}/payroll-tracking/me/employer-contributions`,
         { credentials: "include" }
       );
       if (!response.ok)

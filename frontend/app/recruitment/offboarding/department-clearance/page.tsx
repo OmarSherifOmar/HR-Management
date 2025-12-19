@@ -37,7 +37,8 @@ export default function DepartmentClearancePage() {
 
   const fetchPendingClearances = async () => {
     try {
-      const response = await fetch('http://localhost:3000/offboarding/clearance/my-department', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/offboarding/clearance/my-department`, {
         credentials: 'include',
       });
 
@@ -56,8 +57,9 @@ export default function DepartmentClearancePage() {
     if (!selectedClearance) return;
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/offboarding/clearance/${selectedClearance._id}/sign-off`,
+        `${URL}/offboarding/clearance/${selectedClearance._id}/sign-off`,
         {
           method: 'PATCH',
           headers: {

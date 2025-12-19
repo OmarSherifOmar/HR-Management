@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { authenticatedFetch, useAuth } from '../../../context/AuthContext';
 import { useSearchParams } from 'next/navigation';
 
@@ -10,6 +10,17 @@ interface Props {
 }
 
 export default function EscalationForm({ employeePayrollDetailId = '', onSuccess }: Props) {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <EscalationFormContent
+        employeePayrollDetailId={employeePayrollDetailId}
+        onSuccess={onSuccess}
+      />
+    </Suspense>
+  );
+}
+
+function EscalationFormContent({ employeePayrollDetailId = '', onSuccess }: Props) {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const [detailId, setDetailId] = useState(employeePayrollDetailId);
@@ -25,6 +36,7 @@ export default function EscalationForm({ employeePayrollDetailId = '', onSuccess
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -48,7 +60,7 @@ export default function EscalationForm({ employeePayrollDetailId = '', onSuccess
         escalationNotes: notes.trim() || undefined,
       } as any;
 
-      const res = await authenticatedFetch('http://localhost:3000/payroll-execution/irregularities/escalate', {
+      const res = await authenticatedFetch(`${URL}/payroll-execution/irregularities/escalate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

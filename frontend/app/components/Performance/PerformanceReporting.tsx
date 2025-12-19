@@ -41,8 +41,9 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
   const fetchReports = async () => {
     setLoading(true);
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Always use the employeeId-specific endpoint
-      const url = `http://localhost:3000/api/performance/reporting/history/${employeeId}`;
+      const url = `${URL}/api/performance/reporting/history/${employeeId}`;
       
       const response = await fetch(url, {
         credentials: 'include',
@@ -72,7 +73,8 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
 
   const fetchCycles = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/performance/cycles', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles`, {
         credentials: 'include',
       });
 
@@ -88,8 +90,9 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
   const handleGenerateReport = async (cycleId: string) => {
     try {
       console.log('[handleGenerateReport] Generating report for cycle:', cycleId);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/api/performance/reporting/outcome-report/${cycleId}`,
+        `${URL}/api/performance/reporting/outcome-report/${cycleId}`,
         {
           credentials: 'include',
         }

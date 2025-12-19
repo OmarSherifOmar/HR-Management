@@ -24,6 +24,8 @@ interface ChangeRequest {
   processedAt?: string;
 }
 
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function SelfServiceChangeRequests() {
   const { user } = useAuth();
   const { canRequestDataCorrection } = useCanAccess();
@@ -48,7 +50,7 @@ export default function SelfServiceChangeRequests() {
       setIsFetching(true);
       try {
         console.log('[SelfServiceChangeRequests] Fetching my change requests...');
-        const response = await fetch('http://localhost:3000/employees/me/change-requests', {
+        const response = await fetch(`${URL}/employees/me/change-requests`, {
           credentials: 'include',
         });
 
@@ -130,7 +132,7 @@ export default function SelfServiceChangeRequests() {
       setFetchingCurrentValue(true);
       try {
         console.log('[SelfServiceChangeRequests] Fetching current value for field:', formData.field);
-        const response = await fetch('http://localhost:3000/employees/me', {
+        const response = await fetch(`${URL}/employees/me`, {
           credentials: 'include',
         });
 
@@ -210,7 +212,7 @@ export default function SelfServiceChangeRequests() {
 
     try {
       const response = await fetch(
-        'http://localhost:3000/employees/change-requests',
+        `${URL}/employees/change-requests`,
         {
           method: 'POST',
           credentials: 'include',
@@ -245,7 +247,7 @@ export default function SelfServiceChangeRequests() {
 
       // Refresh the requests list
       try {
-        const refreshResponse = await fetch('http://localhost:3000/employees/me/change-requests', {
+        const refreshResponse = await fetch(`${URL}/employees/me/change-requests`, {
           credentials: 'include',
         });
 
@@ -305,7 +307,7 @@ export default function SelfServiceChangeRequests() {
                   onClick={async () => {
                     setIsFetching(true);
                     try {
-                      const response = await fetch('http://localhost:3000/employees/me/change-requests', {
+                      const response = await fetch(`${URL}/employees/me/change-requests`, {
                         credentials: 'include',
                       });
                       if (response.ok) {

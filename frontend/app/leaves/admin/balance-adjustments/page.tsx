@@ -94,7 +94,8 @@ export default function BalanceAdjustmentsPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch("http://localhost:3000/employees/searchs", {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/employees/searchs`, {
         credentials: "include",
       });
       if (!response.ok) {
@@ -112,7 +113,8 @@ export default function BalanceAdjustmentsPage() {
 
   const fetchLeaveTypes = async () => {
     try {
-      const response = await fetch("http://localhost:3000/leaves/types", {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/types`, {
         credentials: "include",
       });
       if (!response.ok) {
@@ -130,8 +132,9 @@ export default function BalanceAdjustmentsPage() {
 
   const fetchAdjustmentHistory = async (employeeId: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/leaves/balance-adjustments/history/${employeeId}`,
+        `${URL}/leaves/balance-adjustments/history/${employeeId}`,
         {
           credentials: "include",
         }
@@ -160,6 +163,7 @@ export default function BalanceAdjustmentsPage() {
     setLoading(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const payload = {
         employeeId: selectedEmployee,
         leaveTypeId: selectedLeaveType,
@@ -172,7 +176,7 @@ export default function BalanceAdjustmentsPage() {
       };
 
       const response = await fetch(
-        "http://localhost:3000/leaves/balance-adjustments",
+        `${URL}/leaves/balance-adjustments`,
         {
           method: "POST",
           headers: {

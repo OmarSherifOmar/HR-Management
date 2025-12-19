@@ -72,10 +72,11 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
   const fetchMyAppraisals = async () => {
     try {
       console.log('[fetchMyAppraisals] Fetching appraisals for employeeId:', employeeId);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       
       // Use my-appraisals endpoint which uses session
       const response = await fetch(
-        'http://localhost:3000/api/performance/appraisals/my-appraisals',
+        `${URL}/api/performance/appraisals/my-appraisals`,
         { credentials: 'include' }
       );
       
@@ -105,17 +106,18 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
 
       console.log('[fetchDisputes] userRole:', userRole, 'normalizedRole:', normalizedRole, 'isHRRole:', isHRRole, 'isDepartmentHead:', isDepartmentHead);
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       if (isHRRole) {
         // HR can see all disputes
-        url = 'http://localhost:3000/api/performance/disputes';
+        url = `${URL}/api/performance/disputes`;
         console.log('[fetchDisputes] HR role - fetching all disputes');
       } else if (isDepartmentHead && employeeId) {
         // Managers see disputes from their team
-        url = `http://localhost:3000/api/performance/disputes/manager/${employeeId}`;
+        url = `${URL}/api/performance/disputes/manager/${employeeId}`;
         console.log('[fetchDisputes] Department Head - fetching team disputes');
       } else if (employeeId) {
         // Employees see their own disputes
-        url = 'http://localhost:3000/api/performance/disputes/employee/me';
+        url = `${URL}/api/performance/disputes/employee/me`;
         console.log('[fetchDisputes] Employee - fetching own disputes');
       } else {
         setDisputes([]);
@@ -158,7 +160,8 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
     }
     try {
       console.log('[handleSubmit] Submitting dispute:', formData);
-      const url = `http://localhost:3000/api/performance/disputes/employee/${employeeId}`;
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const url = `${URL}/api/performance/disputes/employee/${employeeId}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -205,7 +208,8 @@ export default function DisputeManagement({ userRole, employeeId, onNotify }: Di
     if (!selectedDispute) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/performance/disputes/${selectedDispute.id}/resolve`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/disputes/${selectedDispute.id}/resolve`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

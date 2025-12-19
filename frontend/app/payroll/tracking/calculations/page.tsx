@@ -140,8 +140,9 @@ export default function CalculationsPage() {
 
   const fetchBaseSalary = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/base-salary",
+        `${URL}/payroll-tracking/me/base-salary`,
         { credentials: "include" }
       );
       if (response.ok) {
@@ -155,9 +156,10 @@ export default function CalculationsPage() {
 
   const fetchLeaveCompensation = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const days = parseInt(remainingDays) || 0;
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/me/leave-compensation?remainingDays=${days}`,
+        `${URL}/payroll-tracking/me/leave-compensation?remainingDays=${days}`,
         { credentials: "include" }
       );
       if (response.ok) {
@@ -171,8 +173,9 @@ export default function CalculationsPage() {
 
   const fetchCommuteCompensation = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/commute-compensation",
+        `${URL}/payroll-tracking/me/commute-compensation`,
         { credentials: "include" }
       );
       if (response.ok) {
@@ -186,8 +189,9 @@ export default function CalculationsPage() {
 
   const fetchTaxBreakdown = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/tax-deductions",
+        `${URL}/payroll-tracking/me/tax-deductions`,
         { credentials: "include" }
       );
       if (response.ok) {
@@ -201,8 +205,9 @@ export default function CalculationsPage() {
 
   const fetchInsuranceBreakdown = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/insurance-deductions",
+        `${URL}/payroll-tracking/me/insurance-deductions`,
         { credentials: "include" }
       );
       if (response.ok) {
@@ -216,8 +221,9 @@ export default function CalculationsPage() {
 
   const fetchMisconductDeductions = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/misconduct-deductions",
+        `${URL}/payroll-tracking/me/misconduct-deductions`,
         { credentials: "include" }
       );
       if (response.ok) {
@@ -231,8 +237,9 @@ export default function CalculationsPage() {
 
   const fetchUnpaidLeaveDeductions = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/me/unpaid-leave-deductions",
+        `${URL}/payroll-tracking/me/unpaid-leave-deductions`,
         { credentials: "include" }
       );
       if (response.ok) {

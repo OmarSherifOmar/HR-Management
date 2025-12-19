@@ -1,7 +1,7 @@
 'use client';
 
 import RecruitmentLayout from '../layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Search, Filter, Plus, MoreVertical, FileText, 
@@ -43,6 +43,14 @@ interface Offer {
 }
 
 export default function OffersPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <OffersContent />
+    </Suspense>
+  );
+}
+
+function OffersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -57,7 +65,8 @@ export default function OffersPage() {
 
   const fetchOffers = async () => {
     try {
-      const res = await authenticatedFetch('http://localhost:3000/offers');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/offers`);
       const data = await res.json();
       setOffers(data);
       setLoading(false);
@@ -177,16 +186,16 @@ export default function OffersPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Job Offers" description="Manage and track job offers">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading offers...</div>
         </div>
       </RecruitmentLayout>
-    );
+  );
   }
 
   return (
-    <RecruitmentLayout title="Job Offers" description="Manage and track job offers">
+    <RecruitmentLayout>
       {/* Header with Actions */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
