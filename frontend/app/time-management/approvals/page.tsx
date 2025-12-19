@@ -13,12 +13,13 @@ import {
   Search,
   ArrowUpRight
 } from 'lucide-react';
+import DashboardLayout from '../../components/DashboardLayout';
 
 // Default to a different port than the Next dev server to avoid hitting the frontend itself
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const CORRECTIONS_BASE = `${API_BASE_URL}/time-management/corrections`;
 
-export default function ApprovalsPage() {
+function ApprovalsContent() {
   const [activeTab, setActiveTab] = useState('pending');
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -310,5 +311,13 @@ export default function ApprovalsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ApprovalsPage() {
+  return (
+    <DashboardLayout title="Approvals" description="Review and approve attendance corrections">
+      <ApprovalsContent />
+    </DashboardLayout>
   );
 }

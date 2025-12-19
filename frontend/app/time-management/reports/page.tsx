@@ -11,10 +11,11 @@ import {
   Users,
   User
 } from 'lucide-react';
+import DashboardLayout from '../../components/DashboardLayout';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-export default function ReportsPage() {
+function ReportsContent() {
   const [activeTab, setActiveTab] = useState('summary');
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
@@ -292,5 +293,13 @@ export default function ReportsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <DashboardLayout title="Reports" description="View attendance reports and analytics">
+      <ReportsContent />
+    </DashboardLayout>
   );
 }

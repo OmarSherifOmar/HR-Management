@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock, LogOut, LogIn, AlertCircle, Calendar, FileText, BarChart3, ArrowRight, Plus, Trash2 } from 'lucide-react';
+import DashboardLayout from '../../components/DashboardLayout';
 
 // Default away from the Next dev port so calls hit the backend instead of the frontend app
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const CORRECTIONS_BASE = `${API_BASE_URL}/time-management/corrections`;
 
-export default function AttendancePage() {
+function AttendanceContent() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState('history');
   const [attendanceRecord, setAttendanceRecord] = useState<any>(null);
@@ -706,5 +707,13 @@ export default function AttendancePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AttendancePage() {
+  return (
+    <DashboardLayout title="Attendance" description="Track your daily attendance and work hours">
+      <AttendanceContent />
+    </DashboardLayout>
   );
 }

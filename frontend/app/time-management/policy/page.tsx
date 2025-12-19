@@ -10,7 +10,7 @@ export default function TimeManagementPoliciesPage() {
 
   const api = axios.create({
     // Default away from the Next dev port so calls hit the backend instead of the frontend app
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
     withCredentials: true,
   });
 
