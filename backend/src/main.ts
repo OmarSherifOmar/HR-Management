@@ -34,7 +34,7 @@ async function bootstrap() {
   });
 
   // Serve static files (uploads)
-  const uploadsPath = join(__dirname, '..', 'uploads');
+  const uploadsPath = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
   app.use('/uploads', express.static(uploadsPath));
   console.log(`Static files serving from: ${uploadsPath}`);
 

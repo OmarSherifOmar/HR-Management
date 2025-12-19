@@ -42,8 +42,10 @@ export class AttachmentService {
   // Maximum file size in bytes (5MB)
   private readonly maxFileSize = 5 * 1024 * 1024;
 
-  // Upload directory
-  private readonly uploadDir = './uploads/attachments';
+  // Upload directory (configurable for persistent storage)
+  private readonly uploadDir = process.env.UPLOADS_DIR
+    ? path.join(process.env.UPLOADS_DIR, 'attachments')
+    : path.resolve('uploads', 'attachments');
 
   constructor(
     @InjectModel(Attachment.name) private attachmentModel: Model<AttachmentDocument>,

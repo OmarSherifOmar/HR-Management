@@ -59,6 +59,12 @@ function getUserId(req: AuthenticatedRequest, fallback?: string): string {
   return userId;
 }
 
+function getAttachmentsUploadDir(): string {
+  return process.env.UPLOADS_DIR
+    ? path.join(process.env.UPLOADS_DIR, 'attachments')
+    : path.resolve('uploads', 'attachments');
+}
+
 /**
  * Attachment Controller
  * 
@@ -94,7 +100,11 @@ export class AttachmentController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: './uploads/attachments',
+        destination: (req, file, cb) => {
+          const uploadDir = getAttachmentsUploadDir();
+          fs.mkdirSync(uploadDir, { recursive: true });
+          cb(null, uploadDir);
+        },
         filename: (req, file, cb) => {
           const timestamp = Date.now();
           const random = Math.random().toString(36).substring(2, 8);

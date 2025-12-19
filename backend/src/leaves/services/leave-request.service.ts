@@ -698,10 +698,13 @@ export class LeaveRequestService {
       throw new NotFoundException(`Manager with ID ${managerId} not found`);
     }
 
+    const managerRolesDoc = await this.employeeService.getSystemRoleForEmployee(manager._id);
+    const managerRoles = managerRolesDoc?.roles ?? [];
+
     console.log('[Team Balances] Manager:', {
       _id: manager._id,
       name: `${manager.firstName} ${manager.lastName}`,
-      role: manager.role,
+      roles: managerRoles,
       primaryDepartmentId: manager.primaryDepartmentId,
     });
 
@@ -711,7 +714,7 @@ export class LeaveRequestService {
     const employeeModel = this.employeeService['employeeModel'];
     const teamQuery: any = { status: 'ACTIVE' };
     
-    if (manager.role === 'HR Admin') {
+    if (managerRoles.includes(SystemRole.HR_ADMIN)) {
       // HR Admin sees all departments
       console.log('[Team Balances] HR Admin - viewing all departments');
       if (filters?.departmentId) {
@@ -719,7 +722,7 @@ export class LeaveRequestService {
         teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
       }
       // Otherwise no department filter - show all
-    } else if (manager.role === 'department head') {
+    } else if (managerRoles.includes(SystemRole.DEPARTMENT_HEAD)) {
       // Department Head sees only their department
       if (manager.primaryDepartmentId) {
         const normalizedDeptId = new Types.ObjectId(manager.primaryDepartmentId.toString());
