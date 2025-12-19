@@ -60,7 +60,7 @@ export default function SelfServiceChangeRequests() {
 
         if (response.status === 403) {
           console.warn('[SelfServiceChangeRequests] Access forbidden');
-          setError('You do not have permission to view change requests.');
+          setError('Access Denied: You do not have permission to view change requests. Please contact your administrator.');
           return;
         }
 
@@ -225,6 +225,10 @@ export default function SelfServiceChangeRequests() {
           }),
         }
       );
+
+      if (response.status === 403) {
+        throw new Error('Access Denied: You do not have permission to submit change requests. Please contact your administrator.');
+      }
 
       if (!response.ok) {
         const errorData = await response.json();

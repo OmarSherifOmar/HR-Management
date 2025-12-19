@@ -20,6 +20,18 @@ export default function EmployeesPage() {
     const fetchStats = async () => {
       try {
         const response = await fetch('/api/employees/stats');
+        
+        if (response.status === 403) {
+          console.error('Access Denied: You do not have permission to view employee statistics.');
+          alert('Access Denied: You do not have permission to view employee statistics. Please contact your administrator.');
+          return;
+        }
+        
+        if (response.status === 401) {
+          window.location.href = '/';
+          return;
+        }
+        
         const data = await response.json();
         setStats(data);
       } catch (error) {

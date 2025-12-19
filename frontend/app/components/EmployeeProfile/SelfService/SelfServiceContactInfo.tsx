@@ -59,6 +59,12 @@ export default function SelfServiceContactInfo() {
         return;
       }
       
+      if (response.status === 403) {
+        console.warn('Access denied to profile.');
+        setError('Access Denied: You do not have permission to view this profile. Please contact your administrator.');
+        return;
+      }
+      
       if (response.ok) {
         const data = await response.json();
         console.log('[SelfServiceContactInfo] Fetched profile:', data);

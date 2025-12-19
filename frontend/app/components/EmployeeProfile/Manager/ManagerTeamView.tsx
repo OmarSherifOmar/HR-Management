@@ -64,6 +64,10 @@ export default function ManagerTeamView() {
         credentials: 'include',
       });
 
+      if (response.status === 403) {
+        throw new Error('Access Denied: You do not have permission to view team members. This feature is only available for managers.');
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[ManagerTeamView] Error response:', errorData);
@@ -93,6 +97,10 @@ export default function ManagerTeamView() {
           credentials: 'include',
         }
       );
+
+      if (response.status === 403) {
+        throw new Error('Access Denied: You do not have permission to view team summary. This feature is only available for managers.');
+      }
 
       if (!response.ok) {
         const errorData = await response.json();

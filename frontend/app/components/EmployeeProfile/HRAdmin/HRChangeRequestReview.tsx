@@ -33,7 +33,7 @@ export default function HRChangeRequestReview() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to view change requests');
+        setError('Access Denied: You do not have permission to view change requests. This feature requires HR Admin or HR Manager role.');
         return;
       }
 
@@ -59,6 +59,11 @@ export default function HRChangeRequestReview() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approve }),
       });
+
+      if (response.status === 403) {
+        setError('Access Denied: You do not have permission to review change requests. This action requires HR Admin or HR Manager role.');
+        return;
+      }
 
       if (response.ok) {
         setSuccess(`Change request ${approve ? 'approved' : 'rejected'} successfully`);

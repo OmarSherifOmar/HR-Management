@@ -119,7 +119,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        console.warn('Access denied to departments');
+        onNotify?.('Access Denied: You do not have permission to view departments. Please contact your administrator.', 'error');
         return;
       }
 
@@ -147,7 +147,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        console.warn('Access denied to positions');
+        onNotify?.('Access Denied: You do not have permission to view positions. Please contact your administrator.', 'error');
         setPositions([]);
         return;
       }
@@ -176,7 +176,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        onNotify?.('Access denied to templates', 'error');
+        onNotify?.('Access Denied: You do not have permission to view performance templates. Please contact your administrator.', 'error');
         return;
       }
 
@@ -263,7 +263,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to create/edit templates', 'error');
+        onNotify?.('Access Denied: You do not have permission to create or edit performance templates. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 
@@ -314,7 +314,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to delete templates', 'error');
+        onNotify?.('Access Denied: You do not have permission to delete performance templates. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 

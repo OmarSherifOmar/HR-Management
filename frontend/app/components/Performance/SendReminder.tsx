@@ -18,6 +18,7 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
   const [customMessage, setCustomMessage] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [reminderResult, setReminderResult] = useState<any | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCycles();
@@ -30,6 +31,16 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
       const response = await fetch('http://localhost:3000/api/performance/cycles', {
         credentials: 'include',
       });
+      
+      if (response.status === 403) {
+        console.warn('[SendReminder] Access denied to cycles');
+        const errorMsg = 'Access Denied: You do not have permission to view performance cycles. This feature requires HR Manager or System Admin role.';
+        setAccessError(errorMsg);
+        onNotify?.(errorMsg, 'error');
+        setCycles([]);
+        return;
+      }
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[SendReminder] Backend error:', response.status, errorText);
@@ -55,6 +66,16 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
       const response = await fetch('http://localhost:3000/api/org/departments', {
         credentials: 'include',
       });
+      
+      if (response.status === 403) {
+        console.warn('[SendReminder] Access denied to departments');
+        const errorMsg = 'Access Denied: You do not have permission to view departments.';
+        setAccessError(errorMsg);
+        onNotify?.(errorMsg, 'error');
+        setDepartments([]);
+        return;
+      }
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[SendReminder] Backend error:', response.status, errorText);
@@ -108,6 +129,11 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
         }),
       });
 
+      if (response.status === 403) {
+        onNotify?.('Access Denied: You do not have permission to send reminders. This feature requires HR Manager role.', 'error');
+        return;
+      }
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Backend error:', response.status, errorText);
@@ -131,6 +157,17 @@ export default function SendReminder({ userRole, onNotify }: SendReminderProps) 
         <h2 className="text-xl font-semibold text-white">Send Appraisal Reminders</h2>
         <p className="mt-1 text-sm text-gray-400">Send reminders to department heads for pending appraisals in a cycle</p>
       </div>
+
+      {/* Access Error Display */}
+      {accessError && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 flex items-start gap-3">
+          <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+          <div>
+            <h3 className="text-red-400 font-medium">Access Denied</h3>
+            <p className="text-red-300 text-sm mt-1">{accessError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6 space-y-6">
