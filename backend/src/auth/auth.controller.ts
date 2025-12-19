@@ -60,7 +60,8 @@ export class AuthController {
       
       res.cookie('token', result.access_token, {
         httpOnly: true,
-        secure: isProd, // Keep it simple - use 'lax' for both dev and prod
+        secure: true,
+        sameSite: 'none',
         maxAge: (() => {
           const exp = process.env.JWT_EXPIRES_IN ?? '1h';
           if (/^\d+$/.test(exp)) return Number(exp) * 1000;
