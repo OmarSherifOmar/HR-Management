@@ -87,7 +87,7 @@ export class ReportsService {
     const report: OvertimeReportItem[] = [];
 
     for (const rec of records) {
-      const punches = (rec.punches || []).map((p: any) => ({ type: p.type === PunchType.IN ? 'IN' : 'OUT', time: new Date(p.time) }));
+      const punches = (rec.punches || []).map((p: any) => ({ type: p.type === PunchType.IN ? 'IN' as const : 'OUT' as const, time: new Date(p.time) }));
 
       // choose record date as first punch day OR rec.date if present
       const recordDate = rec.date ? new Date(rec.date) : (punches.length ? new Date(punches[0].time) : null);
@@ -266,7 +266,7 @@ export class ReportsService {
     const employeesWithOvertime = new Set<string>();
 
     for (const rec of attendanceRecords) {
-      const punches = (rec.punches || []).map((p: any) => ({ type: p.type === PunchType.IN ? 'IN' : 'OUT', time: new Date(p.time) }));
+      const punches = (rec.punches || []).map((p: any) => ({ type: p.type === PunchType.IN ? 'IN' as const : 'OUT' as const, time: new Date(p.time) }));
       const recDate = rec.date ? new Date(rec.date) : (punches.length ? punches[0].time : null);
       if (!recDate) continue;
       const { overtimeMinutes } = await this.policyService.calculateOvertimeAndShortTime(rec.employeeId, recDate, punches);

@@ -12,7 +12,7 @@ export class Application {
   @Prop({ type: Types.ObjectId, ref: 'JobRequisition', required: true })
   requisitionId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: Types.ObjectId, ref: 'EmployeeProfile' })
   assignedHr?: Types.ObjectId;
 
   @Prop({
