@@ -14,4 +14,6 @@ export class UpdateContactDto {
   @IsOptional()
   @IsString()
   readonly personalEmail?: string;
+  city: string;
+  country: string;
 }

@@ -32,7 +32,7 @@ export class EmployeeController {
 
   @Get('searchs')
   @UseGuards(AuthGuard,authorizationGuard)
-  @Roles(Role.HR_ADMIN)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
   
   async searchEmployees(@Query() query: SearchEmployeesDto) {
     return this.employeeService.searchEmployees(query);
@@ -45,16 +45,115 @@ export class EmployeeController {
     return this.employeeService.listChangeRequests();
   }
 
+  @Get('me/change-requests')
+  @Roles(
+    Role.DEPARTMENT_EMPLOYEE,
+    Role.HR_EMPLOYEE,
+    Role.HR_MANAGER,
+    Role.DEPARTMENT_HEAD,
+    Role.RECRUITER,
+    Role.FINANCE_STAFF,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+    Role.PAYROLL_SPECIALIST,
+    Role.LEGAL_POLICY_ADMIN,
+  )
+  async getMyChangeRequests(@Req() req: Request) {
+    const payload: any = (req as any).user;
+    const userId = payload?.sub || payload?._id || payload?.id;
+    if (!userId) {
+      throw new BadRequestException('Invalid token payload: missing user id');
+    }
+
+    return this.employeeService.getMyChangeRequests(userId);
+  }
+
+  @Post('change-requests')
+  @Roles(
+    Role.DEPARTMENT_EMPLOYEE,
+    Role.HR_EMPLOYEE,
+    Role.HR_MANAGER,
+    Role.DEPARTMENT_HEAD,
+    Role.RECRUITER,
+    Role.FINANCE_STAFF,
+    Role.Payroll_MANAGER,
+    Role.SYSTEM_ADMIN,
+    Role.HR_ADMIN,
+    Role.PAYROLL_SPECIALIST,
+    Role.LEGAL_POLICY_ADMIN,
+  )
+  async createChangeRequest(@Req() req: Request, @Body() body: any) {
+    const payload: any = (req as any).user;
+    const userId = payload?.sub || payload?._id || payload?.id;
+    if (!userId) {
+      throw new BadRequestException('Invalid token payload: missing user id');
+    }
+
+    console.log('[createChangeRequest] Creating change request for user:', userId);
+    console.log('[createChangeRequest] Body:', body);
+
+    return this.employeeService.createChangeRequest(userId, userId, body);
+  }
+
   @Get('my-team')
   @Roles(Role.HR_MANAGER, Role.DEPARTMENT_HEAD,Role.SYSTEM_ADMIN)
-  async getMyTeam(@Req() req) {
-    return this.employeeService.getManagerTeam(req.user.employeeId);
+  async getMyTeam(@Req() req: Request) {
+    const payload: any = (req as any).user;
+    const userId = payload?.sub || payload?._id || payload?.id || payload?.employeeId;
+    
+    console.log('[getMyTeam] Request payload:', {
+      sub: payload?.sub,
+      _id: payload?._id,
+      id: payload?.id,
+      employeeId: payload?.employeeId,
+      extractedUserId: userId,
+    });
+    
+    if (!userId) {
+      console.error('[getMyTeam] No userId found in token payload');
+      throw new BadRequestException('Invalid token payload: missing user id');
+    }
+
+    console.log('[getMyTeam] Fetching team for manager:', userId);
+    try {
+      const result = await this.employeeService.getManagerTeam(userId);
+      console.log('[getMyTeam] SUCCESS - returning team members');
+      return result;
+    } catch (err) {
+      console.error('[getMyTeam] Service error:', err instanceof Error ? err.message : err);
+      throw err;
+    }
   }
 
   @Get('my-team/summary')
   @Roles(Role.HR_MANAGER, Role.DEPARTMENT_HEAD,Role.SYSTEM_ADMIN)
-  async getMyTeamSummary(@Req() req) {
-    return this.employeeService.getTeamSummary(req.user.employeeId);
+  async getMyTeamSummary(@Req() req: Request) {
+    const payload: any = (req as any).user;
+    const userId = payload?.sub || payload?._id || payload?.id || payload?.employeeId;
+    
+    console.log('[getMyTeamSummary] Request payload:', {
+      sub: payload?.sub,
+      _id: payload?._id,
+      id: payload?.id,
+      employeeId: payload?.employeeId,
+      extractedUserId: userId,
+    });
+    
+    if (!userId) {
+      console.error('[getMyTeamSummary] No userId found in token payload');
+      throw new BadRequestException('Invalid token payload: missing user id');
+    }
+
+    console.log('[getMyTeamSummary] Fetching team summary for manager:', userId);
+    try {
+      const result = await this.employeeService.getTeamSummary(userId);
+      console.log('[getMyTeamSummary] SUCCESS - returning team summary');
+      return result;
+    } catch (err) {
+      console.error('[getMyTeamSummary] Service error:', err instanceof Error ? err.message : err);
+      throw err;
+    }
   }
 
   @Get('me')
@@ -98,9 +197,24 @@ export class EmployeeController {
     Role.PAYROLL_SPECIALIST,
     Role.LEGAL_POLICY_ADMIN,
   )
-  updateMyContact(@Req() req, @Body() dto: UpdateContactDto) {
+  async updateMyContact(@Req() req, @Body() dto: UpdateContactDto) {
     const userId = req.user._id || req.user.id || req.user.sub;
-    return this.employeeService.updateContactInfo(userId, dto);
+    console.log('[updateMyContact] START - userId:', userId);
+    
+    if (!userId) {
+      console.error('[updateMyContact] ERROR: No userId found');
+      throw new BadRequestException('User ID not found in request');
+    }
+    
+    try {
+      const result = await this.employeeService.updateContactInfo(userId, dto);
+      console.log('[updateMyContact] SUCCESS - returning result');
+      return result;
+    } catch (error: any) {
+      console.error('[updateMyContact] SERVICE ERROR:', error?.message || JSON.stringify(error));
+      if (error?.status) throw error;
+      throw new BadRequestException(error?.message || 'Failed to update contact information');
+    }
   }
 
   @Post('me/profile-picture')
@@ -143,10 +257,12 @@ export class EmployeeController {
   }
 
   @Post()
+  @UseGuards(AuthGuard, authorizationGuard)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createDto: CreateEmployeeDto) {
-    const email = (createDto as any).personalEmail ?? (createDto as any).workEmail;
-    if (!email) throw new BadRequestException('personalEmail or workEmail is required');
+    const email = (createDto as any).personalEmail ?? (createDto as any).workEmail ?? (createDto as any).email;
+    if (!email) throw new BadRequestException('personalEmail, workEmail or email is required');
 
     try {
       const created = await this.employeeService.create(createDto as any);
@@ -202,9 +318,46 @@ export class EmployeeController {
     return this.employeeService.deactivateEmployee(req.user._id, id, reason);
   }
 
+  @Patch(':id/activate')
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+  activateEmployee(@Req() req, @Param('id') id: string) {
+    return this.employeeService.activateEmployee(req.user._id, id);
+  }
+
   @Get(':id')
-  @Roles(Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
   getEmployee(@Param('id') id: string) {
     return this.employeeService.getEmployeeById(id);
+  }
+
+
+  @Get('candidates/list/all')
+  @UseGuards(AuthGuard, authorizationGuard)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+  async getAllCandidates() {
+    return this.employeeService.getAllCandidates();
+  }
+
+  @Get('candidates/:id')
+  @UseGuards(AuthGuard, authorizationGuard)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+  async getCandidateById(@Param('id') id: string) {
+    const candidate = await this.employeeService.getCandidateById(id);
+    if (!candidate) {
+      throw new NotFoundException('Candidate not found');
+    }
+    return candidate;
+  }
+
+  @Post('candidates/:id/convert')
+  @UseGuards(AuthGuard, authorizationGuard)
+  @Roles(Role.HR_ADMIN, Role.HR_MANAGER, Role.SYSTEM_ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  async convertCandidateToEmployee(
+    @Param('id') candidateId: string,
+    @Body() employeeData: CreateEmployeeDto,
+  ) {
+    const employee = await this.employeeService.convertCandidateToEmployee(candidateId, employeeData);
+    return new EmployeePublicDto(employee);
   }
 }
