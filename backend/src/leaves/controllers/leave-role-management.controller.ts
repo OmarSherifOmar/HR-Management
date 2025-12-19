@@ -7,7 +7,9 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '../../auth/guards/authentication.guard';
 import { authorizationGuard } from '../../auth/guards/authorization.guard';
@@ -16,6 +18,28 @@ import {
   LeaveRoleManagementService,
   LeavePermission,
 } from '../services/leave-role-management.service';
+
+// Extended Request interface with user property
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    employeeNumber?: string;
+    role?: string;
+    roles?: string[];
+    username?: string;
+  };
+}
+
+/**
+ * Helper to extract and validate HR user ID from request
+ */
+function getHRUserId(req: AuthenticatedRequest): string {
+  const userId = req.user?.sub;
+  if (!userId) {
+    throw new UnauthorizedException('User not authenticated');
+  }
+  return userId;
+}
 
 /**
  * User Story 13: HR Admin Manage Leave Roles & Permissions
@@ -94,6 +118,7 @@ export class LeaveRoleManagementController {
   @Post('users/:userId/roles')
   @Roles(Role.HR_ADMIN)
   assignRoleToUser(
+    @Req() req: AuthenticatedRequest,
     @Param('userId') userId: string,
     @Body()
     body: {
@@ -106,8 +131,7 @@ export class LeaveRoleManagementController {
       validUntil?: string;
     },
   ) {
-    // TODO: Get actual HR user ID from request
-    const assignedBy = '000000000000000000000001';
+    const assignedBy = getHRUserId(req);
 
     return this.roleManagementService.assignLeaveRoleToUser(userId, body.role, assignedBy, {
       scope: body.scope,
@@ -152,6 +176,16 @@ export class LeaveRoleManagementController {
   @Roles(Role.HR_ADMIN)
   getUserEffectivePermissions(@Param('userId') userId: string) {
     return this.roleManagementService.getUserEffectivePermissions(userId);
+  }
+
+  @Get('my-permissions')
+  getMyPermissions(@Req() req: AuthenticatedRequest) {
+    const userId = req.user?.sub;
+    const userRole = req.user?.role;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.roleManagementService.getUserEffectivePermissionsWithRole(userId, userRole);
   }
 
   // ─────────────────────────────────────────────────────────────

@@ -54,7 +54,7 @@ export default function Home() {
 
       if (response.ok) {
         if (data.user) {
-          login(data.user);
+          login(data.user, data.expiresIn || '1h');
         }
         router.push('/dashboard');
       } else {

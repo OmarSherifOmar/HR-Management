@@ -60,6 +60,7 @@ function getUserId(req: AuthenticatedRequest, fallback?: string): string {
  * - View their leave requests and history
  */
 @Controller('leave-requests')
+@UseGuards(AuthGuard)
 export class LeaveRequestController {
   constructor(private readonly leaveRequestService: LeaveRequestService) {}
 
@@ -288,24 +289,6 @@ export class LeaveRequestController {
   }
 
   /**
-   * GET /leave-requests/:id
-   * 
-   * Get a specific leave request by ID
-   * 
-   * @param id - Leave request ID
-   * @returns Leave request details
-   */
-  @Get(':id')
-  async getLeaveRequest(@Param('id') id: string) {
-    const leaveRequest = await this.leaveRequestService.getLeaveRequestById(id);
-
-    return {
-      success: true,
-      data: leaveRequest,
-    };
-  }
-
-  /**
    * GET /leave-requests/employee/:employeeId
    * 
    * Get all leave requests for a specific employee (Admin/HR use)
@@ -365,7 +348,7 @@ export class LeaveRequestController {
    */
   @Get('manager/team-balances')
   @UseGuards(AuthGuard)
-  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER)
+  @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN)
   async getTeamBalancesAndUpcomingLeaves(
     @Query('leaveTypeId') leaveTypeId: string,
     @Query('status') status: LeaveStatus,
@@ -422,6 +405,7 @@ export class LeaveRequestController {
       id,
       managerId,
       decisionDto.comments,
+      decisionDto.irregularPatternFlag,
     );
 
     return {
@@ -455,6 +439,7 @@ export class LeaveRequestController {
       id,
       managerId,
       decisionDto.comments,
+      decisionDto.irregularPatternFlag,
     );
 
     return {
@@ -476,11 +461,33 @@ export class LeaveRequestController {
    */
   @Get('hr/pending-reviews')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_EMPLOYEE, Role.HR_MANAGER, Role.HR_ADMIN)
   async getRequestsForHRReview(@Req() req: AuthenticatedRequest) {
     const hrManagerId = getUserId(req);
 
     const leaveRequests = await this.leaveRequestService.getRequestsForHRReview(hrManagerId);
+
+    return {
+      success: true,
+      data: leaveRequests,
+      count: leaveRequests.length,
+    };
+  }
+
+  /**
+   * GET /leave-requests/hr/rejected-requests
+   * 
+   * Get all leave requests that were rejected by HR
+   * These requests can be overridden by HR Managers/Admins
+   * 
+   * @param req - Request object containing authenticated HR manager
+   * @returns List of rejected leave requests
+   */
+  @Get('hr/rejected-requests')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_EMPLOYEE, Role.HR_MANAGER, Role.HR_ADMIN)
+  async getRejectedRequestsForHR(@Req() req: AuthenticatedRequest) {
+    const leaveRequests = await this.leaveRequestService.getRejectedRequestsForHR();
 
     return {
       success: true,
@@ -502,7 +509,7 @@ export class LeaveRequestController {
    */
   @Patch(':id/hr/finalize')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async hrFinalizeRequest(
     @Param('id') id: string,
     @Body() decisionDto: ManagerDecisionDto,
@@ -535,7 +542,7 @@ export class LeaveRequestController {
    */
   @Patch(':id/hr/reject')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async hrRejectRequest(
     @Param('id') id: string,
     @Body() decisionDto: ManagerDecisionDto,
@@ -570,7 +577,7 @@ export class LeaveRequestController {
    */
   @Patch(':id/hr/override')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async hrOverrideDecision(
     @Param('id') id: string,
     @Body() overrideDto: HROverrideDto,
@@ -584,7 +591,6 @@ export class LeaveRequestController {
       overrideDto.action,
       {
         comments: overrideDto.comments,
-        allowNegativeBalance: overrideDto.allowNegativeBalance,
       },
     );
 
@@ -609,7 +615,7 @@ export class LeaveRequestController {
    */
   @Post('hr/bulk-finalize')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async bulkFinalizeRequests(
     @Body() bulkDto: BulkRequestActionDto,
     @Req() req: AuthenticatedRequest,
@@ -641,7 +647,7 @@ export class LeaveRequestController {
    */
   @Post('hr/bulk-reject')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async bulkRejectRequests(
     @Body() bulkDto: BulkRequestActionDto,
     @Req() req: AuthenticatedRequest,
@@ -673,7 +679,7 @@ export class LeaveRequestController {
    */
   @Post('hr/bulk-override')
   @UseGuards(AuthGuard)
-  @Roles(Role.HR_MANAGER)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
   async bulkOverrideRequests(
     @Body() bulkDto: BulkOverrideActionDto,
     @Req() req: AuthenticatedRequest,
@@ -686,13 +692,44 @@ export class LeaveRequestController {
       bulkDto.action,
       {
         comments: bulkDto.comments,
-        allowNegativeBalance: bulkDto.allowNegativeBalance,
       },
     );
 
     return {
       success: result.failed === 0,
       message: `Processed ${result.total} requests: ${result.successful} ${bulkDto.action === 'approve' ? 'approved' : 'rejected'}, ${result.failed} failed`,
+      data: result,
+    };
+  }
+
+  /**
+   * POST /leave-requests/hr/bulk-confirm-reject
+   * 
+   * HR bulk confirms rejection of previously rejected leave requests
+   * Processes multiple manager-rejected requests at once.
+   * 
+   * @param bulkDto - Array of request IDs and optional comments
+   * @param req - Request object containing authenticated HR manager
+   * @returns Summary of successful and failed operations
+   */
+  @Post('hr/bulk-confirm-reject')
+  @UseGuards(AuthGuard)
+  @Roles(Role.HR_MANAGER, Role.HR_ADMIN)
+  async bulkConfirmRejectRequests(
+    @Body() bulkDto: BulkRequestActionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const hrManagerId = getUserId(req);
+
+    const result = await this.leaveRequestService.bulkConfirmRejectRequests(
+      bulkDto.requestIds,
+      hrManagerId,
+      bulkDto.comments,
+    );
+
+    return {
+      success: result.failed === 0,
+      message: `Processed ${result.total} requests: ${result.successful} rejection confirmed, ${result.failed} failed`,
       data: result,
     };
   }
@@ -772,6 +809,25 @@ export class LeaveRequestController {
       success: true,
       data: leaveRequests,
       count: leaveRequests.length,
+    };
+  }
+
+  /**
+   * GET /leave-requests/:id
+   * 
+   * Get a specific leave request by ID
+   * Must be placed after all specific routes to avoid route conflicts
+   * 
+   * @param id - Leave request ID
+   * @returns Leave request details
+   */
+  @Get(':id')
+  async getLeaveRequest(@Param('id') id: string) {
+    const leaveRequest = await this.leaveRequestService.getLeaveRequestById(id);
+
+    return {
+      success: true,
+      data: leaveRequest,
     };
   }
 }

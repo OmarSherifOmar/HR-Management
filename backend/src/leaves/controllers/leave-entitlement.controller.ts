@@ -71,7 +71,13 @@ export class LeaveEntitlementController {
   async getMyLeaveBalance(@Req() req: AuthenticatedRequest) {
     const employeeId = getUserId(req);
     
+    console.log('=== GET MY BALANCE ===');
+    console.log('Employee ID from request:', employeeId);
+    console.log('Request user object:', req.user);
+    
     const summary = await this.entitlementService.getEmployeeBalanceSummary(employeeId);
+    
+    console.log('Summary from service:', JSON.stringify(summary, null, 2));
     
     // Format for employee dashboard with rounded values as per requirement
     const balances = summary.balances.map((b) => ({
@@ -79,6 +85,8 @@ export class LeaveEntitlementController {
         id: b.leaveTypeId,
         name: b.leaveTypeName,
         code: b.leaveTypeCode,
+        requiresAttachment: b.requiresAttachment,
+        attachmentType: b.attachmentType,
       },
       // "used rounded vacation balance must be displayed"
       accrued: Math.round(b.accrued * 100) / 100,           // Accrued vacation days (rounded)
@@ -88,6 +96,8 @@ export class LeaveEntitlementController {
       carryOver: Math.round(b.carryForward * 100) / 100,    // Carry-over from previous year
       yearlyEntitlement: Math.round(b.yearlyEntitlement * 100) / 100,
     }));
+
+    console.log('Formatted balances for response:', JSON.stringify(balances, null, 2));
 
     return {
       success: true,
@@ -235,4 +245,38 @@ export class LeaveEntitlementController {
   async processExpiredCarryForward() {
     return this.entitlementService.processExpiredCarryForward();
   }
+
+  /**
+   * Fix existing entitlements with zero accrued days
+   * POST /leaves/entitlements/fix-existing
+   */
+  @Post('fix-existing')
+  @Roles(Role.HR_ADMIN)
+  async fixExistingEntitlements() {
+    return this.entitlementService.fixExistingEntitlements();
+  }
+
+  /**
+   * Fix PER_TERM entitlements to grant correct initial half
+   * POST /leaves/entitlements/fix-per-term
+   */
+  @Post('fix-per-term')
+  @Roles(Role.HR_ADMIN)
+  async fixPerTermEntitlements() {
+    return this.entitlementService.fixPerTermEntitlements();
+  }
+
+  /**
+   * Debug endpoint: show policy and entitlement details
+   * GET /leaves/entitlements/debug/:employeeId/:leaveTypeId
+   */
+  @Get('debug/:employeeId/:leaveTypeId')
+  @Roles(Role.HR_ADMIN)
+  async debugEntitlement(
+    @Param('employeeId') employeeId: string,
+    @Param('leaveTypeId') leaveTypeId: string,
+  ) {
+    return this.entitlementService.debugEntitlement(employeeId, leaveTypeId);
+  }
+
 }
