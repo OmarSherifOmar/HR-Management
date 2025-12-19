@@ -31,13 +31,14 @@ export default function EditDepartmentPage() {
     const loadDepartment = async () => {
       try {
         setLoading(true);
+        setError('');
         
         const [departments, posData] = await Promise.all([
           getDepartments(undefined, false),
           getPositions(),
         ]);
         
-        const dept = departments.find((d: Department) => d._id === id);
+        const dept = (Array.isArray(departments) ? departments : []).find((d: Department) => d._id === id);
         
         if (!dept) throw new Error('Department not found');
         
@@ -50,7 +51,12 @@ export default function EditDepartmentPage() {
           headPositionId: dept.headPositionId || '',
         });
       } catch (err: any) {
-        setError(err.message || 'Failed to load department');
+        // Handle 403 errors with descriptive message
+        if (err?.status === 403 || err?.message?.includes('Access Denied') || err?.message?.includes('403')) {
+          setError('Access Denied: You do not have permission to edit departments. This feature requires HR Manager or System Admin role.');
+        } else {
+          setError(err.message || 'Failed to load department');
+        }
       } finally {
         setLoading(false);
       }
@@ -82,7 +88,12 @@ export default function EditDepartmentPage() {
       await updateDepartment(id, formData);
       router.push('/dashboard/organization/departments');
     } catch (err: any) {
-      setError(err.message || 'Failed to update department');
+      // Handle 403 errors with descriptive message
+      if (err?.status === 403 || err?.message?.includes('Access Denied') || err?.message?.includes('403')) {
+        setError('Access Denied: You do not have permission to update departments. This feature requires HR Manager or System Admin role.');
+      } else {
+        setError(err.message || 'Failed to update department');
+      }
     } finally {
       setSubmitting(false);
     }

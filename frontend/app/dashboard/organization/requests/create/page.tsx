@@ -268,8 +268,8 @@ export default function CreateChangeRequestPage() {
       const created = await createChangeRequest(requestData);
 
       // If auto-submit is enabled, submit the request
-      if (autoSubmit && created._id) {
-        await submitChangeRequest(created._id);
+      if (autoSubmit && (created as any)._id) {
+        await submitChangeRequest((created as any)._id);
         alert('Change request created and submitted successfully!');
       } else {
         alert('Change request created successfully!');

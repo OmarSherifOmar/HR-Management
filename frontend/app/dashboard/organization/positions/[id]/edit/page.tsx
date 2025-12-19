@@ -39,12 +39,13 @@ export default function EditPositionPage() {
           getPositions(undefined, {}),
         ]);
         
-        const pos = posList.find((p: Position) => p._id === id);
+        const positions = posList as Position[];
+        const pos = positions.find((p: Position) => p._id === id);
         if (!pos) throw new Error('Position not found');
         
         setPosition(pos);
-        setDepartments(deptList);
-        setPositions(posList);
+        setDepartments(deptList as Department[]);
+        setPositions(positions);
         setFormData({
           code: pos.code,
           title: pos.title,

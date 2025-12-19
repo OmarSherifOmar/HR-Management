@@ -60,12 +60,13 @@ export default function PositionDetailPage() {
         setLoading(true);
         setError(null);
         const data = await getPositionById(posId);
-        setPosition(data);
+        const position = data as Position;
+        setPosition(position);
         setEditFormData({
-          title: data.title,
-          code: data.code,
-          description: data.description || '',
-          departmentId: data.departmentId || '',
+          title: position.title,
+          code: position.code,
+          description: position.description || '',
+          departmentId: position.departmentId || '',
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load position');
@@ -112,7 +113,7 @@ export default function PositionDetailPage() {
 
       // Refresh position data
       const updated = await getPositionById(posId);
-      setPosition(updated);
+      setPosition(updated as Position);
       setIsEditingModal(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update position');
@@ -134,7 +135,7 @@ export default function PositionDetailPage() {
 
       // Refresh position data
       const updated = await getPositionById(posId);
-      setPosition(updated);
+      setPosition(updated as Position);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to deactivate position');
     } finally {
