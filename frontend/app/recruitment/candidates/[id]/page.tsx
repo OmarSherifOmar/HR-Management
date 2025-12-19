@@ -1,75 +1,122 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '@/app/context/AuthContext';
 import { useParams, useRouter } from 'next/navigation';
-
-interface Candidate {
-  _id: string;
-  firstName?: string;
-  lastName?: string;
-  personalEmail?: string;
-  status: string;
-  notes?: string;
-}
+import { authenticatedFetch } from '@/app/context/AuthContext';
 
 export default function CandidateDetailsPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const router = useRouter();
-  const [candidate, setCandidate] = useState<Candidate | null>(null);
+
+  const [form, setForm] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
     loadCandidate();
-  }, [id]);
+  }, []);
 
   async function loadCandidate() {
-    try {
-      const res = await authenticatedFetch(
-        `http://localhost:3000/employees/candidates/${id}`
-      );
-
-      if (!res.ok) {
-        throw new Error('Failed to fetch candidate');
-      }
-
-      const data = await res.json();
-      setCandidate(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    const res = await authenticatedFetch(
+      `http://localhost:3000/employees/candidates/${id}`,
+    );
+    const data = await res.json();
+    setForm(data);
+    setLoading(false);
   }
 
-  if (loading) {
-    return <div className="text-white">Loading candidate...</div>;
+  async function saveChanges() {
+    setSaving(true);
+    await authenticatedFetch(
+      `http://localhost:3000/employees/candidates/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(form),
+      },
+    );
+    setSaving(false);
+    alert('Saved');
   }
 
-  if (!candidate) {
-    return <div className="text-red-400">Candidate not found</div>;
+  async function convertToEmployee() {
+    if (!confirm('Convert this candidate to employee?')) return;
+
+    await authenticatedFetch(
+      `http://localhost:3000/employees/candidates/${id}/convert`,
+      { method: 'POST', body: JSON.stringify({}) },
+    );
+
+    router.push('/employees');
   }
+
+  async function deleteCandidate() {
+    if (!confirm('DELETE candidate permanently?')) return;
+
+    await authenticatedFetch(
+      `http://localhost:3000/employees/candidates/${id}`,
+      { method: 'DELETE' },
+    );
+
+    router.push('/recruitment/candidates');
+  }
+
+  if (loading) return <div className="text-white">Loading…</div>;
+  if (!form) return null;
 
   return (
-    <div className="max-w-3xl">
-      <button
-        onClick={() => router.back()}
-        className="mb-4 text-blue-400 hover:underline"
-      >
-        ← Back
-      </button>
+    <div className="max-w-xl space-y-4">
+      <h1 className="text-2xl font-bold text-white">Candidate Details</h1>
 
-      <h1 className="text-2xl font-bold text-white mb-4">
-        {candidate.firstName} {candidate.lastName}
-      </h1>
+      <input
+        className="w-full p-3 bg-[#1a1a1a] text-white rounded"
+        value={form.firstName}
+        onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+      />
 
-      <div className="space-y-3 text-gray-300">
-        <p><strong>Email:</strong> {candidate.personalEmail}</p>
-        <p><strong>Status:</strong> {candidate.status}</p>
-        {candidate.notes && (
-          <p><strong>Notes:</strong> {candidate.notes}</p>
-        )}
+      <input
+        className="w-full p-3 bg-[#1a1a1a] text-white rounded"
+        value={form.lastName}
+        onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+      />
+
+      <input
+        className="w-full p-3 bg-[#1a1a1a] text-white rounded"
+        value={form.personalEmail || ''}
+        onChange={(e) =>
+          setForm({ ...form, personalEmail: e.target.value })
+        }
+      />
+
+      <textarea
+        className="w-full p-3 bg-[#1a1a1a] text-white rounded"
+        value={form.biography || ''}
+        onChange={(e) =>
+          setForm({ ...form, biography: e.target.value })
+        }
+      />
+
+      <div className="flex gap-3 pt-4">
+        <button
+          onClick={saveChanges}
+          disabled={saving}
+          className="bg-blue-600 px-4 py-2 rounded text-white"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+
+        <button
+          onClick={convertToEmployee}
+          className="bg-green-600 px-4 py-2 rounded text-white"
+        >
+          Convert
+        </button>
+
+        <button
+          onClick={deleteCandidate}
+          className="bg-red-600 px-4 py-2 rounded text-white"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );

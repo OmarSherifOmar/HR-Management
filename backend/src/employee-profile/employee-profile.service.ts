@@ -782,14 +782,24 @@ async reviewChangeRequest(
   // ============= CANDIDATE MANAGEMENT =============
 
   async createCandidate(candidateData: any): Promise<CandidateDocument> {
-    if (candidateData.password) {
-      const hashed = await bcrypt.hash(candidateData.password, this.saltRounds);
-      candidateData.password = hashed;
-    }
-
-    const created = await this.candidateModel.create(candidateData);
-    return created;
+  if (!candidateData.candidateNumber) {
+    candidateData.candidateNumber = `CAND-${Date.now()}`;
   }
+
+  if (candidateData.password) {
+    const hashed = await bcrypt.hash(candidateData.password, this.saltRounds);
+    candidateData.password = hashed;
+  }
+
+  const created = await this.candidateModel.create(candidateData);
+  return created;
+}
+async deleteCandidate(id: string): Promise<boolean> {
+  if (!Types.ObjectId.isValid(id)) return false;
+
+  const res = await this.candidateModel.findByIdAndDelete(id);
+  return !!res;
+}
 
   async findCandidateByEmail(email: string): Promise<CandidateDocument | null> {
     if (!email) return null;

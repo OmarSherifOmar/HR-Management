@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { authenticatedFetch } from '@/app/context/AuthContext';
 import Link from 'next/link';
+import { authenticatedFetch } from '@/app/context/AuthContext';
 
 interface Candidate {
   _id: string;
   firstName: string;
   lastName: string;
-  personalEmail: string;
+  personalEmail?: string;
   status: string;
 }
 
@@ -22,11 +22,14 @@ export default function CandidatesPage() {
 
   async function loadCandidates() {
     try {
-      const res = await authenticatedFetch('http://localhost:3000/employees/candidates/list/all');
+      const res = await authenticatedFetch(
+        'http://localhost:3000/employees/candidates/list/all'
+      );
+
       const data = await res.json();
-      setCandidates(data);
-    } catch (e) {
-      console.error('Failed to load candidates', e);
+      setCandidates(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load candidates', err);
     } finally {
       setLoading(false);
     }
@@ -40,9 +43,10 @@ export default function CandidatesPage() {
     <div>
       <div className="flex justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Candidates</h1>
+
         <Link
-          href="/dashboard/recruitment/candidates/create"
-          className="px-4 py-2 bg-blue-600 rounded"
+          href="/recruitment/candidates/create"
+          className="px-4 py-2 bg-blue-600 rounded text-white"
         >
           Add Candidate
         </Link>
@@ -55,21 +59,26 @@ export default function CandidatesPage() {
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
               <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {candidates.map((c) => (
-              <tr
-                key={c._id}
-                className="hover:bg-[#333] cursor-pointer"
-              >
+              <tr key={c._id} className="hover:bg-[#333]">
                 <td className="p-3">
-                  <Link href={`/dashboard/recruitment/candidates/${c._id}`}>
-                    {c.firstName} {c.lastName}
+                  {c.firstName} {c.lastName}
+                </td>
+                <td className="p-3">{c.personalEmail || '—'}</td>
+                <td className="p-3 capitalize">{c.status}</td>
+                <td className="p-3">
+                  <Link
+                    href={`/recruitment/candidates/${c._id}`}
+                    className="text-blue-400 hover:underline"
+                  >
+                    View
                   </Link>
                 </td>
-                <td className="p-3">{c.personalEmail}</td>
-                <td className="p-3 capitalize">{c.status}</td>
               </tr>
             ))}
           </tbody>
