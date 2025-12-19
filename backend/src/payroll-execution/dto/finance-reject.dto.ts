@@ -7,10 +7,6 @@ export class FinanceRejectDto {
 
   @IsNotEmpty()
   @IsString()
-  financeStaffId: string;
-
-  @IsNotEmpty()
-  @IsString()
   rejectionReason: string;
 }
 

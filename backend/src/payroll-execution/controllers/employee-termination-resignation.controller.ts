@@ -22,7 +22,26 @@ import { Roles, Role } from '../../auth/decorators/roles.decorator';
 export class EmployeeTerminationResignationController {
   constructor(
     private readonly terminationResignationService: EmployeeTerminationResignationService,
-  ) {}
+  ) { }
+
+  /**
+   * Create a new termination/resignation benefit
+   * POST /payroll-execution/termination-resignation
+   */
+  @Post()
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER)
+  async createBenefit(@Body() dto: any, @Request() req) {
+    try {
+      const creatorId = req.user.sub || req.user._id;
+      return await this.terminationResignationService.createBenefit(dto, creatorId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create benefit',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
 
   /**
    * Auto-process termination benefits for a payroll run
@@ -67,7 +86,7 @@ export class EmployeeTerminationResignationController {
    * PATCH /payroll-execution/termination-resignation/:benefitId/edit
    */
   @Patch(':benefitId/edit')
-  @Roles(Role.PAYROLL_SPECIALIST)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.HR_MANAGER)
   async editBenefit(
     @Param('benefitId') benefitId: string,
     @Body() dto: EmployeeTerminationResignationEditDto,

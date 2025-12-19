@@ -16,6 +16,7 @@ import {
 import { PayrollConfigurationModule } from '../payroll-configuration/payroll-configuration.module';
 import { allowance, allowanceSchema } from '../payroll-configuration/models/allowance.schema';
 import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
+import { Department, DepartmentSchema } from '../organization-structure/models/department.schema';
 
 @Module({
   imports: [
@@ -40,6 +41,9 @@ import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.m
       { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
       // allowance (needed by PayrollTrackingService)
       { name: allowance.name, schema: allowanceSchema },
+
+      // organization structure - department (for department payroll reports)
+      { name: Department.name, schema: DepartmentSchema },
     ]),
   ],
   controllers: [PayrollTrackingController],

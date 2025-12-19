@@ -28,7 +28,7 @@ import { authorizationGuard } from '../auth/guards/authorization.guard';
 @Controller('employees')
 @UseGuards(AuthGuard)
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(private readonly employeeService: EmployeeService) { }
 
   @Get('searchs')
   @UseGuards(AuthGuard,authorizationGuard)
@@ -38,6 +38,25 @@ export class EmployeeController {
     return this.employeeService.searchEmployees(query);
   }
 
+  /**
+   * Get list of all employees (for dropdowns, etc.)
+   * Accessible by Payroll staff and HR roles
+   */
+  @Get('list')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
+  async listAllEmployees() {
+    const employees = await this.employeeService.searchEmployees({});
+    // Return simplified data for dropdown use
+    return {
+      employees: employees.map((emp: any) => ({
+        _id: emp._id,
+        name: emp.name || `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+        email: emp.email || emp.workEmail || emp.personalEmail,
+        employeeNumber: emp.employeeNumber,
+        status: emp.status
+      }))
+    };
+  }
 
   @Get('change-requests')
   @Roles(Role.HR_ADMIN, Role.HR_MANAGER)

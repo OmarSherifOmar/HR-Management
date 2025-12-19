@@ -8,7 +8,7 @@ export type taxRulesDocument = HydratedDocument<taxRules>
 
 @Schema({ timestamps: true })
 export class taxRules {
-    @Prop({ required: true, unique: true })
+    @Prop({ required: true })
     name: string;
     @Prop()
     description?: string;
@@ -21,8 +21,6 @@ export class taxRules {
 
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
     createdBy?: mongoose.Types.ObjectId;
-    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
-    updatedBy?: mongoose.Types.ObjectId;
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
     approvedBy?: mongoose.Types.ObjectId;
     @Prop({})

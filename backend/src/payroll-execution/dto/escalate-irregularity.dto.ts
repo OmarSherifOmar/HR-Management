@@ -12,10 +12,6 @@ export class EscalateIrregularityDto {
   @IsOptional()
   @IsString()
   escalationNotes?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  payrollSpecialistId: string;
 }
 
 

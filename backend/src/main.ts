@@ -8,13 +8,12 @@ import { DepartmentSchema } from './organization-structure/models/department.sch
 import { join } from 'path';
 import * as express from 'express';
 
-
 async function printRoutes(app) {
   await app.init(); // ensure adapters mounted
   const adapter = app.getHttpAdapter();
   const instance = adapter.getInstance(); // express app
   const stack = instance._router?.stack ?? [];
-const routes: string[] = [];
+  const routes: string[] = [];
   stack.forEach((layer) => {
     if (layer.route && layer.route.path) {
       const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
@@ -22,7 +21,6 @@ const routes: string[] = [];
     }
   });
 }
-
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

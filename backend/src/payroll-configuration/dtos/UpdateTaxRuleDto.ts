@@ -1,4 +1,5 @@
 import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateTaxRuleDto {
   @IsOptional()
@@ -11,6 +12,7 @@ export class UpdateTaxRuleDto {
 
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   @Min(0)
   rate?: number;
 }
