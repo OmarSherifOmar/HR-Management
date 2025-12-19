@@ -65,17 +65,6 @@ export default function DashboardPage() {
             Quick Actions
           </h3>
           <div className="grid grid-cols-2 gap-3">
-            <button 
-              onClick={() => window.location.href = '/time-management/attendance'}
-              className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left group"
-            >
-              <span className="text-2xl mb-2 block">
-                <Clock size={24} />
-              </span>
-              <span className="text-sm font-medium text-white">
-                Clock In/Out
-              </span>
-            </button>
             <button className="p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#333333] transition-colors text-left group">
               <span className="text-2xl mb-2 block">
                 <UserPlus size={24} />

@@ -90,9 +90,6 @@ export default function ReportsPage() {
     fetchReport(activeTab);
   }, [activeTab, dateRange]);
 
-  const handleExport = (format: 'excel' | 'pdf') => {
-    alert(`Exporting ${activeTab} report as ${format.toUpperCase()}...`);
-  };
 
   const getEmployeeName = (item: any) => {
     // If employeeId is populated (e.g. in exceptions endpoint)
@@ -120,22 +117,6 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Reports & Analytics</h1>
           <p className="text-gray-400 mt-1">Comprehensive time tracking insights and analytics</p>
-        </div>
-        <div className="flex gap-3">
-          <button 
-            onClick={() => handleExport('excel')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export Excel
-          </button>
-          <button 
-            onClick={() => handleExport('pdf')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            Export PDF
-          </button>
         </div>
       </div>
 
@@ -307,16 +288,6 @@ export default function ReportsPage() {
                 </span>
               </div>
             </div>
-          </div>
-
-          <div className="bg-blue-900/20 rounded-xl p-6 border border-blue-800">
-            <h4 className="text-sm font-medium text-blue-300 mb-2">Export Options</h4>
-            <p className="text-xs text-blue-400 mb-4">
-              Download detailed reports for payroll processing and compliance auditing.
-            </p>
-            <button className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-              Generate Monthly Pack
-            </button>
           </div>
         </div>
       </div>
