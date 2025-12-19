@@ -1,10 +1,9 @@
 // update-contact.dto.ts
-import { IsOptional, IsString, IsPhoneNumber } from 'class-validator';
+import { IsOptional, IsString, IsObject } from 'class-validator';
 
 export class UpdateContactDto {
   @IsOptional()
   @IsString()
-  // or @IsPhoneNumber('ZZ') for stricter phone validation if you want
   readonly mobilePhone?: string;
 
   @IsOptional()
@@ -13,5 +12,18 @@ export class UpdateContactDto {
 
   @IsOptional()
   @IsString()
+  readonly city?: string;
+
+  @IsOptional()
+  @IsString()
+  readonly country?: string;
+
+  @IsOptional()
+  @IsString()
+  readonly homePhone?: string;
+
+  @IsOptional()
+  @IsString()
   readonly personalEmail?: string;
 }
+

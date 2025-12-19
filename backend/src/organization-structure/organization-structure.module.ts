@@ -21,6 +21,7 @@ import { PositionAssignment, PositionAssignmentSchema } from './models/position-
 
 import { payGrade, payGradeSchema } from '../payroll-configuration/models/payGrades.schema';
 import { NotificationLog, NotificationLogSchema } from '../time-management/models/notification-log.schema';
+import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/models/employee-profile.schema';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { NotificationLog, NotificationLogSchema } from '../time-management/model
       { name: PositionAssignment.name, schema: PositionAssignmentSchema },
       { name: payGrade.name, schema: payGradeSchema },
       { name: NotificationLog.name, schema: NotificationLogSchema },
+      { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
     ]),
   ],
   controllers: [

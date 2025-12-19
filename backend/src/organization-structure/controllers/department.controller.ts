@@ -5,6 +5,7 @@ import { DepartmentService } from '../services/department.service';
 import { AuthGuard } from '../../auth/./guards/authentication.guard';
 import { authorizationGuard } from '../../auth/./guards/authorization.guard';
 import { Roles, Role } from '../../auth/./decorators/roles.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
 
 
 @UseGuards(AuthGuard)
@@ -20,12 +21,14 @@ export class DepartmentController {
   }
 
   @Get()
+  @Public()
   async list(@Query('active') active = 'true') {
     const activeOnly = active === 'true';
     return this.svc.findAll(activeOnly);
   }
 
   @Get(':id')
+  @Public()
   async get(@Param('id') id: string) {
     return this.svc.findById(id);
   }

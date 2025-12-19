@@ -100,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check if token has expired
     if (now >= expiryTime) {
-      console.log('Token expired, logging out...');
       logout();
       return false;
     }
@@ -143,7 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         // Clear invalid data
-        console.error('Error parsing stored user data:', error);
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('tokenExpiry');
@@ -217,8 +215,6 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 
   // If unauthorized, trigger logout
   if (response.status === 401) {
-    console.error('Authentication failed (401) - logging out');
-    
     // Clear auth data
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');

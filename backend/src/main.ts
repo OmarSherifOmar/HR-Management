@@ -5,6 +5,8 @@ import { AppModule } from './app.module';
 import mongoose from 'mongoose';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { DepartmentSchema } from './organization-structure/models/department.schema';
+import { join } from 'path';
+import * as express from 'express';
 
 
 async function printRoutes(app) {
@@ -32,6 +34,11 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   });
+
+  // Serve static files (uploads)
+  const uploadsPath = join(__dirname, '..', 'uploads');
+  app.use('/uploads', express.static(uploadsPath));
+  console.log(`Static files serving from: ${uploadsPath}`);
 
   // Get the NestJS mongoose connection and register Department model globally
   // This fixes position.schema.ts middleware that uses model(Department.name)

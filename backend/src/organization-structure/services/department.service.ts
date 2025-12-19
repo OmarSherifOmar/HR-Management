@@ -39,9 +39,14 @@ export class DepartmentService {
     return created;
   }
 
-  async findAll(activeOnly = true) {
+  async findAll(activeOnly?: boolean) {
     const filter: any = {};
-    if (activeOnly) filter.isActive = true;
+    if (activeOnly === true) {
+      filter.isActive = true;
+    } else if (activeOnly === false) {
+      filter.isActive = false;
+    }
+    // If activeOnly is undefined, no filter is applied - returns all departments
     return (await this.deptModel.find(filter).lean().exec()) as any;
   }
 
