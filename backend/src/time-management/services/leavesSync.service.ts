@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { AttendanceRecord, AttendanceRecordDocument } from '../models/attendance-record.schema';
 import { ShiftAssignment, ShiftAssignmentDocument } from '../models/shift-assignment.schema';
 import { NotificationService } from './notification.service';
-import { LeaveRequestService } from '../../leaves/services/leave-request.service';
+import { LeaveRequestService } from '../../leaves/leaves.service';
 import { LeaveStatus } from '../../leaves/enums/leave-status.enum';
 import { startOfDay, endOfDay } from '../utils/time.utils';
 

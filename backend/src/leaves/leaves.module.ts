@@ -1,36 +1,45 @@
 import { Module } from '@nestjs/common';
-import { LeaveConfigurationController } from './controllers/leave-configuration.controller';
-import { LeaveTypeController } from './controllers/leave-type.controller';
-import { LeaveEntitlementController } from './controllers/leave-entitlement.controller';
-import { LeaveEligibilityController } from './controllers/leave-eligibility.controller';
-import { PersonalizedEntitlementController } from './controllers/personalized-entitlement.controller';
-import { LeaveParametersController } from './controllers/leave-parameters.controller';
-import { CalendarController } from './controllers/calendar.controller';
-import { SpecialAbsenceController } from './controllers/special-absence.controller';
-import { BalanceAdjustmentController } from './controllers/balance-adjustment.controller';
-import { LeaveRoleManagementController } from './controllers/leave-role-management.controller';
-import { LeaveRequestController } from './controllers/leave-request.controller';
-import { AttachmentController } from './controllers/attachment.controller';
-import { LeavesNotificationController } from './controllers/notification.controller';
-import { LeaveAccrualController } from './controllers/leave-accrual.controller';
-import { AccrualSuspensionController } from './controllers/accrual-suspension.controller';
-import { PayrollSyncController } from './controllers/payroll-sync.controller';
-import { LeaveConfigurationService } from './services/leave-configuration.service';
-import { LeaveTypeService } from './services/leave-type.service';
-import { LeaveEntitlementService } from './services/leave-entitlement.service';
-import { LeaveEligibilityService } from './services/leave-eligibility.service';
-import { PersonalizedEntitlementService } from './services/personalized-entitlement.service';
-import { LeaveParametersService } from './services/leave-parameters.service';
-import { CalendarService } from './services/calendar.service';
-import { SpecialAbsenceService } from './services/special-absence.service';
-import { BalanceAdjustmentService } from './services/balance-adjustment.service';
-import { LeaveRoleManagementService } from './services/leave-role-management.service';
-import { LeaveRequestService } from './services/leave-request.service';
-import { AttachmentService } from './services/attachment.service';
-import { LeavesNotificationService } from './services/leaves-notification.service';
-import { LeaveAccrualService } from './services/leave-accrual.service';
-import { AccrualSuspensionService } from './services/accrual-suspension.service';
-import { PayrollSyncService } from './services/payroll-sync.service';
+// Import all controllers from consolidated file
+import { 
+  LeaveConfigurationController,
+  LeaveTypeController,
+  LeaveEntitlementController,
+  LeaveEligibilityController,
+  PersonalizedEntitlementController,
+  LeaveParametersController,
+  CalendarController,
+  SpecialAbsenceController,
+  BalanceAdjustmentController,
+  LeaveRoleManagementController,
+  LeaveRequestController,
+  AttachmentController,
+  LeavesNotificationController,
+  LeaveAccrualController,
+  AccrualSuspensionController,
+  PayrollSyncController,
+  LeaveYearConfigController,
+} from './leaves.controller';
+// Import all services from consolidated file
+import {
+  LeaveConfigurationService,
+  LeaveTypeService,
+  LeaveEntitlementService,
+  LeaveEligibilityService,
+  PersonalizedEntitlementService,
+  LeaveParametersService,
+  CalendarService,
+  SpecialAbsenceService,
+  BalanceAdjustmentService,
+  LeaveRoleManagementService,
+  LeaveRequestService,
+  AttachmentService,
+  LeavesNotificationService,
+  LeaveAccrualService,
+  AccrualSuspensionService,
+  PayrollSyncService,
+  LeaveYearConfigService,
+  NotificationService,
+} from './leaves.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LeaveType, LeaveTypeSchema } from './models/leave-type.schema';
 import { LeaveRequest, LeaveRequestSchema } from './models/leave-request.schema';
@@ -59,6 +68,7 @@ import { JwtModule } from '@nestjs/jwt';
     {name:Calendar.name, schema:CalendarSchema},
     {name:Attachment.name, schema: AttachmentSchema},
     {name:Holiday.name, schema:HolidaySchema},
+    {name:NotificationLog.name, schema:NotificationLogSchema},
     {name:Department.name, schema:DepartmentSchema},
     {name:Position.name, schema:PositionSchema}
   ]),EmployeeProfileModule,TimeManagementModule,OrganizationStructureModule,
@@ -83,6 +93,7 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveAccrualController,
     AccrualSuspensionController,
     PayrollSyncController,
+    LeaveYearConfigController,
   ],
   providers: [
     LeaveConfigurationService,
@@ -101,6 +112,8 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveAccrualService,
     AccrualSuspensionService,
     PayrollSyncService,
+    LeaveYearConfigService,
+    NotificationService,
   ],
   exports:[
     LeaveConfigurationService,
@@ -119,6 +132,8 @@ import { JwtModule } from '@nestjs/jwt';
     LeaveAccrualService,
     AccrualSuspensionService,
     PayrollSyncService,
+    LeaveYearConfigService,
+    NotificationService,
   ]
 })
 export class LeavesModule {}
