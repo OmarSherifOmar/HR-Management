@@ -8,9 +8,5 @@ export class AutoGeneratePayrollDto {
   @IsNotEmpty()
   @IsString()
   entity: string;
-
-  @IsNotEmpty()
-  @IsString()
-  payrollSpecialistId: string;
 }
 

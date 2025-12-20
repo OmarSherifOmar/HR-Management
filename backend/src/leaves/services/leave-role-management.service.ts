@@ -345,6 +345,58 @@ export class LeaveRoleManagementService {
     };
   }
 
+  getUserEffectivePermissionsWithRole(userId: string, baseRole?: string): {
+    userId: string;
+    permissions: LeavePermission[];
+    roles: Role[];
+  } {
+    const permissionSet = new Set<LeavePermission>();
+    const roles: Role[] = [];
+
+    // Add base role permissions from user's role property
+    if (baseRole) {
+      const normalizedRole = this.normalizeRoleName(baseRole);
+      if (normalizedRole) {
+        roles.push(normalizedRole);
+        const baseRolePerms = this.rolePermissions.get(normalizedRole);
+        baseRolePerms?.permissions.forEach((p) => permissionSet.add(p));
+      }
+    }
+
+    // Add assigned role permissions
+    const userRoles = this.getUserLeaveRoles(userId);
+    for (const userRole of userRoles) {
+      const now = new Date();
+      if (userRole.validFrom && now < userRole.validFrom) continue;
+      if (userRole.validUntil && now > userRole.validUntil) continue;
+
+      if (!roles.includes(userRole.role)) {
+        roles.push(userRole.role);
+      }
+      const rolePerms = this.rolePermissions.get(userRole.role);
+      rolePerms?.permissions.forEach((p) => permissionSet.add(p));
+    }
+
+    return {
+      userId,
+      permissions: Array.from(permissionSet),
+      roles,
+    };
+  }
+
+  // Helper to normalize role names from different formats
+  private normalizeRoleName(roleName: string): Role | null {
+    const roleMap: { [key: string]: Role } = {
+      'department employee': Role.DEPARTMENT_EMPLOYEE,
+      'department head': Role.DEPARTMENT_HEAD,
+      'hr employee': Role.HR_EMPLOYEE,
+      'hr manager': Role.HR_MANAGER,
+      'hr admin': Role.HR_ADMIN,
+      'system admin': Role.SYSTEM_ADMIN,
+    };
+    return roleMap[roleName.toLowerCase()] || null;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // APPROVAL CHAIN MANAGEMENT
   // ─────────────────────────────────────────────────────────────

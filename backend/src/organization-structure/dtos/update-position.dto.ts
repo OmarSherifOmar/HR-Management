@@ -23,7 +23,7 @@ export class UpdatePositionDto {
 
   @IsOptional()
   @IsString() 
-  payGrade?: string;
+  payGradeId?: string;
 
   @IsOptional()
   isActive?: boolean;

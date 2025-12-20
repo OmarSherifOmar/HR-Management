@@ -86,8 +86,42 @@ export class ShiftAssignmentController {
   }
 
   /**
+   * Get assignments expiring soon (for FR-TM-04 notifications)
+   * GET /shift-assignments/expiring-soon
+   * IMPORTANT: Must come BEFORE @Get(':id') to avoid matching as ID
+   */
+  @Get('expiring-soon')
+  findExpiringSoon(@Query('days') days: string = '3') {
+    const daysFromNow = parseInt(days);
+    return this.shiftAssignmentService.findExpiringSoon(daysFromNow);
+  }
+
+  /**
+   * Get active assignments (not expired/cancelled)
+   * GET /shift-assignments/active
+   * IMPORTANT: Must come BEFORE @Get(':id') to avoid matching as ID
+   */
+  @Get('active')
+  findActive() {
+    return this.shiftAssignmentService.findAll({ 
+      status: { $nin: ['EXPIRED', 'CANCELLED'] } 
+    });
+  }
+
+  /**
+   * Get assignments requiring approval
+   * GET /shift-assignments/pending-approval
+   * IMPORTANT: Must come BEFORE @Get(':id') to avoid matching as ID
+   */
+  @Get('pending-approval')
+  findPendingApproval() {
+    return this.shiftAssignmentService.findAll({ status: 'PENDING' });
+  }
+
+  /**
    * Get shift assignment by ID
    * GET /shift-assignments/:id
+   * IMPORTANT: Must come AFTER all specific routes like 'expiring-soon', 'active', etc.
    */
   @Get(':id')
   findOne(@Param('id') id: string) {
@@ -182,33 +216,4 @@ export class ShiftAssignmentController {
     return this.shiftAssignmentService.findAll({ status });
   }
 
-  /**
-   * Get assignments expiring soon (for FR-TM-04 notifications)
-   * GET /shift-assignments/expiring-soon
-   */
-  @Get('expiring-soon')
-  findExpiringSoon(@Query('days') days: string = '3') {
-    const daysFromNow = parseInt(days);
-    return this.shiftAssignmentService.findExpiringSoon(daysFromNow);
-  }
-
-  /**
-   * Get active assignments (not expired/cancelled)
-   * GET /shift-assignments/active
-   */
-  @Get('active')
-  findActive() {
-    return this.shiftAssignmentService.findAll({ 
-      status: { $nin: ['EXPIRED', 'CANCELLED'] } 
-    });
-  }
-
-  /**
-   * Get assignments requiring approval
-   * GET /shift-assignments/pending-approval
-   */
-  @Get('pending-approval')
-  findPendingApproval() {
-    return this.shiftAssignmentService.findAll({ status: 'PENDING' });
-  }
 }

@@ -11,6 +11,9 @@ import { ViewAppraisalDto } from '../dtos/view-appraisal.dto';
 import { AcknowledgeAppraisalDto } from '../dtos/acknowledge-appraisal.dto';
 import { GetAppraisalProgressDto } from '../dtos/get-appraisal-progress.dto';
 import { SendReminderDto } from '../dtos/send-reminder.dto';
+import { NotificationLog } from '../../time-management/models/notification-log.schema';
+import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
+import { Department } from '../../organization-structure/models/department.schema';
 
 const DISPUTE_WINDOW_DAYS = 7;
 
@@ -22,9 +25,9 @@ export class AppraisalService {
     @InjectModel(AppraisalCycle.name) private cycleModel: Model<any>,
     @InjectModel(AppraisalTemplate.name) private templateModel: Model<any>,
     @InjectModel(AppraisalDispute.name) private disputeModel: Model<any>,
-    @InjectModel('NotificationLog') private notificationModel: Model<any>,
-    @InjectModel('EmployeeProfile') private employeeModel: Model<any>,
-    @InjectModel('Department') private departmentModel: Model<any>,
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
+    @InjectModel(EmployeeProfile.name) private employeeModel: Model<any>,
+    @InjectModel(Department.name) private departmentModel: Model<any>,
   ) {}
 
   async view(dto: ViewAppraisalDto) {
@@ -158,12 +161,19 @@ export class AppraisalService {
       startDate: cycle.startDate,
       endDate: cycle.endDate,
       totalAssignments: assignments.length,
-      overallCompletionPercentage: assignments.length > 0
+      pendingCount: assignments.filter(a => a.status !== AppraisalAssignmentStatus.PUBLISHED && a.status !== AppraisalAssignmentStatus.ACKNOWLEDGED).length,
+      submittedCount: assignments.filter(a => a.status === AppraisalAssignmentStatus.SUBMITTED).length,
+      publishedCount: assignments.filter(a => a.status === AppraisalAssignmentStatus.PUBLISHED).length,
+      completionPercentage: assignments.length > 0
         ? Math.round((assignments.filter(a => a.status === AppraisalAssignmentStatus.PUBLISHED || a.status === AppraisalAssignmentStatus.ACKNOWLEDGED).length / assignments.length) * 100)
         : 0,
-      departmentProgress,
-      pendingCount: assignments.filter(a => a.status !== AppraisalAssignmentStatus.PUBLISHED && a.status !== AppraisalAssignmentStatus.ACKNOWLEDGED).length,
-      overdueCount: assignments.filter(a => a.dueDate && new Date(a.dueDate) < now && a.status !== AppraisalAssignmentStatus.PUBLISHED && a.status !== AppraisalAssignmentStatus.ACKNOWLEDGED).length,
+      departments: departmentProgress.map(dp => ({
+        departmentId: dp.departmentId,
+        departmentName: dp.departmentName,
+        pending: dp.notStarted + dp.inProgress,
+        submitted: dp.submitted,
+        published: dp.published,
+      })),
     };
   }
 
@@ -211,53 +221,97 @@ export class AppraisalService {
       }
     }
 
-    if (dto.employeeIds?.length) {
-      for (const empId of dto.employeeIds) {
-        try {
-          await this.notificationModel.create({
-            to: new Types.ObjectId(empId),
-            type: `APPRAISAL_${dto.reminderType}`,
-            message,
-          });
-          employeesNotified.push(empId);
-        } catch (err) {
-          failedNotifications.push(`Error for employee ${empId}: ${err}`);
-        }
-      }
+    // Query pending assignments for reminders based on type
+    const query: any = { cycleId: new Types.ObjectId(dto.cycleId) };
+
+    switch (dto.reminderType) {
+      case 'PENDING_ASSIGNMENT':
+        query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
+        break;
+      case 'OVERDUE_ASSIGNMENT':
+        query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
+        break;
+      case 'CYCLE_ENDING_SOON':
+        query.status = { $ne: AppraisalAssignmentStatus.ACKNOWLEDGED };
+        break;
     }
 
-    if (!dto.departmentIds?.length && !dto.employeeIds?.length) {
-      const query: any = { cycleId: new Types.ObjectId(dto.cycleId) };
+    if (dto.departmentIds?.length) {
+      query.departmentId = { $in: dto.departmentIds.map(id => new Types.ObjectId(id)) };
+    }
 
-      switch (dto.reminderType) {
-        case 'PENDING_SUBMISSION':
-          query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
-          break;
-        case 'PENDING_ACKNOWLEDGEMENT':
-          query.status = AppraisalAssignmentStatus.PUBLISHED;
-          break;
-        case 'OVERDUE':
-          query.status = { $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS] };
-          query.dueDate = { $lt: new Date() };
-          break;
-        case 'CYCLE_ENDING_SOON':
-          query.status = { $ne: AppraisalAssignmentStatus.ACKNOWLEDGED };
-          break;
-      }
+    const assignments = await this.assignmentModel.find(query).lean().exec() as any[];
+    const uniqueManagerIds = [...new Set(assignments.map(a => a.managerProfileId?.toString()).filter(Boolean))];
 
-      const assignments = await this.assignmentModel.find(query).lean().exec() as any[];
-
-      for (const assignment of assignments) {
-        try {
-          const targetId = dto.reminderType === 'PENDING_SUBMISSION' ? assignment.managerProfileId : assignment.employeeProfileId;
-          await this.notificationModel.create({ to: targetId, type: `APPRAISAL_${dto.reminderType}`, message });
-          employeesNotified.push(targetId.toString());
-        } catch {
-          failedNotifications.push(assignment.employeeProfileId?.toString() || 'unknown');
-        }
+    for (const managerId of uniqueManagerIds) {
+      try {
+        await this.notificationModel.create({
+          to: new Types.ObjectId(managerId),
+          type: `APPRAISAL_${dto.reminderType}`,
+          message,
+        });
+        employeesNotified.push(managerId);
+      } catch (err) {
+        failedNotifications.push(`Error notifying manager ${managerId}: ${err}`);
       }
     }
 
     return { remindersSent: employeesNotified.length, employeesNotified, failedNotifications, message: `Sent ${employeesNotified.length} reminders` };
+  }
+
+  async getMyAppraisals(employeeId?: string) {
+    if (!employeeId) throw new BadRequestException('Employee ID is required');
+
+    console.log('[getMyAppraisals] Fetching appraisals for employee:', employeeId);
+
+    const records = await this.recordModel.find({
+      employeeProfileId: new Types.ObjectId(employeeId),
+    }).populate('cycleId').populate('managerProfileId').lean().exec() as any[];
+
+    console.log('[getMyAppraisals] Found records:', records.length);
+
+    return records.map(record => ({
+      _id: record._id.toString(),
+      id: record._id.toString(),
+      cycleId: record.cycleId?._id?.toString() || record.cycleId?.toString(),
+      cycleName: record.cycleId?.name || 'Unknown Cycle',
+      managerId: record.managerProfileId?._id?.toString() || record.managerProfileId?.toString(),
+      managerName: record.managerProfileId?.firstName ? 
+        `${record.managerProfileId.firstName} ${record.managerProfileId.lastName}` : 
+        'Unknown Manager',
+      templateId: record.templateId?.toString(),
+      ratings: record.ratings,
+      comments: record.managerSummary,
+      developmentNotes: record.improvementAreas,
+      publishedAt: record.hrPublishedAt,
+      acknowledgedAt: record.employeeAcknowledgedAt,
+      status: record.status,
+      totalScore: record.totalScore,
+      overallRatingLabel: record.overallRatingLabel,
+      strengths: record.strengths,
+      improvementAreas: record.improvementAreas,
+    }));
+  }
+
+  async acknowledgeAppraisal(appraisalId: string, employeeId?: string, comment?: string) {
+    const record = await this.recordModel.findById(appraisalId).exec() as any;
+    if (!record) throw new NotFoundException('Appraisal record not found');
+
+    if (record.employeeProfileId?.toString() !== employeeId) {
+      throw new BadRequestException('You are not authorized to acknowledge this appraisal');
+    }
+
+    record.employeeAcknowledgedAt = new Date();
+    record.employeeViewedAt = new Date();
+    if (comment) record.employeeAcknowledgementComment = comment;
+    
+    await record.save();
+
+    return {
+      success: true,
+      appraisalId: record._id.toString(),
+      acknowledgedAt: record.employeeAcknowledgedAt,
+      message: 'Appraisal acknowledged successfully',
+    };
   }
 }

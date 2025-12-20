@@ -2,12 +2,12 @@ import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PayrollExecutionController } from './payroll-execution.controller';
 import { PayrollExecutionService } from './payroll-execution.service';
+import { PayrollInitiationController } from './controllers/payroll-initiation.controller';
+import { PayrollInitiationService } from './services/payroll-initiation.service';
 import { EmployeeSigningBonusController } from './controllers/employee-signing-bonus.controller';
 import { EmployeeSigningBonusService } from './services/employee-signing-bonus.service';
 import { EmployeeTerminationResignationController } from './controllers/employee-termination-resignation.controller';
 import { EmployeeTerminationResignationService } from './services/employee-termination-resignation.service';
-import { PayrollInitiationController } from './controllers/payroll-initiation.controller';
-import { PayrollInitiationService } from './services/payroll-initiation.service';
 import { terminationAndResignationBenefits, terminationAndResignationBenefitsSchema } from '../payroll-configuration/models/terminationAndResignationBenefits';
 import { employeePayrollDetails, employeePayrollDetailsSchema } from './models/employeePayrollDetails.schema';
 import { employeePenalties, employeePenaltiesSchema } from './models/employeePenalties.schema';
@@ -48,21 +48,24 @@ import { payrollPolicies, payrollPoliciesSchema } from '../payroll-configuration
   ])],
   controllers: [
     PayrollExecutionController,
+    PayrollInitiationController,
     EmployeeSigningBonusController,
     EmployeeTerminationResignationController,
-    PayrollInitiationController,
+
   ],
   providers: [
     PayrollExecutionService,
+    PayrollInitiationService,
     EmployeeSigningBonusService,
     EmployeeTerminationResignationService,
-    PayrollInitiationService,
+
   ],
   exports: [
     PayrollExecutionService,
+    PayrollInitiationService,
     EmployeeSigningBonusService,
     EmployeeTerminationResignationService,
-    PayrollInitiationService,
+
   ]
 })
-export class PayrollExecutionModule { }
+export class PayrollExecutionModule {}

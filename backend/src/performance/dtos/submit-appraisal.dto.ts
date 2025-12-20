@@ -45,20 +45,48 @@ export class SubmitAppraisalDto {
   improvementAreas?: string;
 }
 
+export class SubmitAndPublishDto {
+  @IsString()
+  assignmentId: string;
+
+  @IsOptional()
+  @IsString()
+  managerId?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RatingEntryDto)
+  ratings: RatingEntryDto[];
+
+  @IsOptional()
+  @IsString()
+  managerSummary?: string;
+
+  @IsOptional()
+  @IsString()
+  strengths?: string;
+
+  @IsOptional()
+  @IsString()
+  improvementAreas?: string;
+}
+
 export class PublishAppraisalDto {
   @IsString()
   recordId: string;
 
+  @IsOptional()
   @IsString()
-  publishedByEmployeeId: string;
+  publishedByEmployeeId?: string;
 }
 
 export class BulkPublishDto {
   @IsString()
   cycleId: string;
 
+  @IsOptional()
   @IsString()
-  publishedByEmployeeId: string;
+  publishedByEmployeeId?: string;
 
   @IsOptional()
   @IsArray()
@@ -69,4 +97,16 @@ export class BulkPublishDto {
   @IsArray()
   @IsString({ each: true })
   excludeRecordIds?: string[];
+}
+export class AcknowledgeAppraisalDto {
+  @IsString()
+  recordId: string;
+
+  @IsOptional()
+  @IsString()
+  acknowledgedByEmployeeId?: string;
+
+  @IsOptional()
+  @IsString()
+  comment?: string;
 }

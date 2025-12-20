@@ -50,6 +50,9 @@ export class AppraisalAssignment {
 
   @Prop({ type: Types.ObjectId, ref: 'AppraisalRecord' })
   latestAppraisalId?: Types.ObjectId;
+
+  @Prop({ type: Date })
+  archivedAt?: Date;
 }
 
 export const AppraisalAssignmentSchema =

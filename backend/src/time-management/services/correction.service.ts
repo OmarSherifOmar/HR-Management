@@ -21,6 +21,65 @@ export class CorrectionService {
     private readonly notificationService: NotificationService,
   ) {}
 
+  async getRequestsForEmployee(employeeIdRaw: string) {
+    const employeeId = new Types.ObjectId(employeeIdRaw);
+    const requests = await this.correctionModel
+      .find({ employeeId })
+      .populate('attendanceRecord')
+      .sort({ _id: -1 })
+      .lean();
+
+    return requests.map((r: any) => {
+      const attendance: any = r.attendanceRecord || {};
+
+      // Try to derive punches from JSON stored in reason (policy submission),
+      // else fall back to punches on the attendance record
+      let punches: { type: 'IN' | 'OUT'; time: string }[] | undefined;
+      if (typeof r.reason === 'string') {
+        try {
+          const parsed = JSON.parse(r.reason);
+          if (Array.isArray(parsed)) {
+            punches = parsed
+              .map((p: any) =>
+                p && p.type && p.time
+                  ? { type: p.type === 'IN' ? 'IN' : 'OUT', time: new Date(p.time).toISOString() }
+                  : null,
+              )
+              .filter((x: any) => x !== null) as any;
+          }
+        } catch {
+          // ignore parse errors; fallback below
+        }
+      }
+
+      if (!punches && Array.isArray(attendance.punches)) {
+        punches = attendance.punches.map((p: any) => ({
+          type: p.type,
+          time: new Date(p.time).toISOString(),
+        }));
+      }
+
+      // derive display date from attendance date, first punch, or createdAt/_id
+      const createdAt: Date = (r.createdAt as Date) ||
+        (r._id instanceof Types.ObjectId ? r._id.getTimestamp() : new Date());
+
+      const dateSource: Date = attendance.date
+        ? new Date(attendance.date)
+        : attendance.punches && attendance.punches[0]
+        ? new Date(attendance.punches[0].time)
+        : createdAt;
+
+      return {
+        id: r._id.toString(),
+        date: dateSource.toISOString(),
+        status: r.status,
+        reason: r.reason,
+        punches,
+        submittedAt: createdAt.toISOString(),
+      };
+    });
+  }
+
   async createRequest(employeeId: string, attendanceRecordId: string, reason?: string) {
     const req = new this.correctionModel({
       employeeId: new Types.ObjectId(employeeId),

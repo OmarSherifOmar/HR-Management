@@ -6,18 +6,22 @@ import {
   Body,
   Param,
   Req,
+  Res,
   HttpStatus,
   HttpCode,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AttachmentService } from '../services/attachment.service';
 import { FileMetadata } from '../dto/attachment/create-attachment.dto';
 import * as path from 'path';
+import type { Response } from 'express';
+import * as fs from 'fs';
 
 // Multer file type
 interface MulterFile {
@@ -55,6 +59,12 @@ function getUserId(req: AuthenticatedRequest, fallback?: string): string {
   return userId;
 }
 
+function getAttachmentsUploadDir(): string {
+  return process.env.UPLOADS_DIR
+    ? path.join(process.env.UPLOADS_DIR, 'attachments')
+    : path.resolve('uploads', 'attachments');
+}
+
 /**
  * Attachment Controller
  * 
@@ -90,7 +100,11 @@ export class AttachmentController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: './uploads/attachments',
+        destination: (req, file, cb) => {
+          const uploadDir = getAttachmentsUploadDir();
+          fs.mkdirSync(uploadDir, { recursive: true });
+          cb(null, uploadDir);
+        },
         filename: (req, file, cb) => {
           const timestamp = Date.now();
           const random = Math.random().toString(36).substring(2, 8);
@@ -158,6 +172,35 @@ export class AttachmentController {
       success: true,
       data: attachment,
     };
+  }
+
+  /**
+   * GET /attachments/:id/download
+   * 
+   * Download attachment file
+   */
+  @Get(':id/download')
+  async downloadAttachment(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const attachment = await this.attachmentService.getAttachmentById(id);
+
+    // Check if file exists
+    if (!fs.existsSync(attachment.filePath)) {
+      throw new NotFoundException('File not found on server');
+    }
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${attachment.originalName}"`,
+    );
+
+    // Stream the file
+    const fileStream = fs.createReadStream(attachment.filePath);
+    fileStream.pipe(res);
   }
 
   /**

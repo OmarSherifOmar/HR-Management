@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { payrollRuns } from '../models/payrollRuns.schema';
 import { EditPayrollInitiationDto } from '../dto/edit-payroll-initiation.dto';
-import { InitiatePayrollDto } from '../dto/initiate-payroll.dto';
+import { InitiatePayrollDto2 } from '../dto/initiate-payroll2.dto';
 import { ValidatePeriodDto } from '../dto/validate-period.dto';
 
 @Injectable()
@@ -77,7 +77,7 @@ export class PayrollInitiationService {
    * Initiate new payroll run
    * Creates a new payroll cycle with initial status
    */
-  async initiatePayrollRun(dto: InitiatePayrollDto) {
+  async initiatePayrollRun(dto: InitiatePayrollDto2) {
     // First validate the period
     await this.validatePayrollPeriod({
       startDate: new Date(dto.periodStart),

@@ -5,10 +5,6 @@ export class FinanceApprovalDto {
   @IsString()
   payrollRunId: string;
 
-  @IsNotEmpty()
-  @IsString()
-  financeStaffId: string;
-
   @IsOptional()
   @IsString()
   comment?: string;

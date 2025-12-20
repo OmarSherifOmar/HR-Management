@@ -3,15 +3,18 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AppraisalCycle } from '../models/appraisal-cycle.schema';
 import { AppraisalAssignment } from '../models/appraisal-assignment.schema';
-import { AppraisalCycleStatus } from '../enums/performance.enums';
+import { AppraisalRecord } from '../models/appraisal-record.schema';
+import { AppraisalCycleStatus, AppraisalRecordStatus } from '../enums/performance.enums';
 import { CreateCycleDto, UpdateCycleDto } from '../dtos/create-cycle.dto';
+import { NotificationLog } from '../../time-management/models/notification-log.schema';
 
 @Injectable()
 export class CycleService {
   constructor(
     @InjectModel(AppraisalCycle.name) private cycleModel: Model<any>,
     @InjectModel(AppraisalAssignment.name) private assignmentModel: Model<any>,
-    @InjectModel('NotificationLog') private notificationModel: Model<any>,
+    @InjectModel(AppraisalRecord.name) private recordModel: Model<any>,
+    @InjectModel(NotificationLog.name) private notificationModel: Model<any>,
   ) {}
 
   private validateObjectIds(fieldName: string, ids?: string[]) {
@@ -142,11 +145,28 @@ export class CycleService {
     (cycle as any).closedAt = new Date();
     await cycle.save();
 
+    // AUTO-ARCHIVE: Automatically archive all appraisal records when cycle is closed
+    const now = new Date();
+    const archivedRecordsResult = await this.recordModel.updateMany(
+      { 
+        cycleId: new Types.ObjectId(id),
+        status: { $ne: AppraisalRecordStatus.ARCHIVED } // Don't re-archive already archived records
+      },
+      { 
+        $set: { 
+          status: AppraisalRecordStatus.ARCHIVED,
+          archivedAt: now 
+        } 
+      }
+    ).exec();
+
+    console.log(`[CycleService.close] Auto-archived ${archivedRecordsResult.modifiedCount} appraisal records for cycle ${id}`);
+
     if (actorId) {
       await this.notificationModel.create({
         to: new Types.ObjectId(actorId),
         type: 'CYCLE_CLOSED',
-        message: `Appraisal cycle "${(cycle as any).name}" has been closed`,
+        message: `Appraisal cycle "${(cycle as any).name}" has been closed and all ${archivedRecordsResult.modifiedCount} appraisal records have been auto-archived`,
       } as any);
     }
 

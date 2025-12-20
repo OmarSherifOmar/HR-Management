@@ -47,8 +47,7 @@ export class InsuranceBracketsService {
   async update(
     id: string,
     updateDto: UpdateInsuranceBracketDto,
-    updatedBy: string,
-  ) {
+     ) {
     const bracket = await this.insuranceBracketsModel.findById(id);
     if (!bracket) throw new NotFoundException('Insurance bracket not found');
 
@@ -64,8 +63,15 @@ export class InsuranceBracketsService {
       throw new Error('Insurance bracket with same name and salary range already exists');
     }
 
-    // Apply update
-    Object.assign(bracket, updateDto);
+    // Only apply provided fields, preserve existing values
+    const updateData: Partial<UpdateInsuranceBracketDto> = {};
+    if (updateDto.name !== undefined) updateData.name = updateDto.name;
+    if (updateDto.minSalary !== undefined) updateData.minSalary = updateDto.minSalary;
+    if (updateDto.maxSalary !== undefined) updateData.maxSalary = updateDto.maxSalary;
+    if (updateDto.employeeRate !== undefined) updateData.employeeRate = updateDto.employeeRate;
+    if (updateDto.employerRate !== undefined) updateData.employerRate = updateDto.employerRate;
+
+    Object.assign(bracket, updateData);
 
     // Keep it in draft if edited (legal flow logic)
     bracket.status =
@@ -73,7 +79,6 @@ export class InsuranceBracketsService {
         ? ConfigStatus.DRAFT
         : bracket.status;
 
-    bracket.updatedBy = new mongoose.Types.ObjectId(updatedBy);
 
     return bracket.save();
   }

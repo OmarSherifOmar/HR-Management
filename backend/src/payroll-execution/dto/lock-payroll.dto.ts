@@ -7,10 +7,6 @@ export class LockPayrollDto {
 
   @IsNotEmpty()
   @IsString()
-  managerId: string;
-
-  @IsNotEmpty()
-  @IsString()
   lockReason: string;
 }
 

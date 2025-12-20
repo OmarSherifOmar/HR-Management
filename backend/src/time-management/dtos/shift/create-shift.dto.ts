@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsNumber, IsBoolean, IsOptional, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsNumber, IsBoolean, IsOptional, Matches, IsMongoId } from 'class-validator';
 import { PunchPolicy } from '../../models/enums/index';
 
 export class CreateShiftDto {
@@ -6,7 +6,7 @@ export class CreateShiftDto {
   @IsNotEmpty()
   name: string;
 
-  @IsString()
+  @IsMongoId()
   @IsNotEmpty()
   shiftType: string; // ObjectId reference to ShiftType
 

@@ -6,11 +6,13 @@ export enum DisputeDecision {
 }
 
 export class ResolveDisputeDto {
+  @IsOptional()
   @IsString()
-  disputeId: string;
+  disputeId?: string;
 
+  @IsOptional()
   @IsString()
-  resolvedByEmployeeId: string;
+  resolvedByEmployeeId?: string;
 
   @IsEnum(DisputeDecision)
   decision: DisputeDecision;

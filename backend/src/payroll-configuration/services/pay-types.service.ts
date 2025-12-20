@@ -2,9 +2,10 @@ import {
     BadRequestException,
     Injectable,
     NotFoundException,
+    ForbiddenException,
   } from '@nestjs/common';
   import { InjectModel } from '@nestjs/mongoose';
-  import { Model, isValidObjectId } from 'mongoose';
+  import mongoose, { Model, isValidObjectId } from 'mongoose';
   import { payType, payTypeDocument } from '../models/payType.schema';
   import { CreatePayTypeDto } from '../dtos/create-pay-type.dto';
   import { UpdatePayTypeDto } from '../dtos/update-pay-type.dto';
@@ -83,5 +84,40 @@ import {
       }
   
       return doc.save();
+    }
+
+    async approve(id: string, approverId: string) {
+      const rule = await this.payTypeModel.findById(id);
+      if (!rule) throw new NotFoundException('Pay type not found');
+      
+      if (rule.status === ConfigStatus.APPROVED || rule.status === ConfigStatus.REJECTED) {
+        throw new ForbiddenException('Approved/rejected pay types cannot be approved');
+      }
+      rule.status = ConfigStatus.APPROVED;
+      rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+      rule.approvedAt = new Date();
+
+      return rule.save();
+    }
+
+    async reject(id: string, approverId: string) {
+      const rule = await this.payTypeModel.findById(id);
+      if (!rule) throw new NotFoundException('Pay type not found');
+      if (rule.status === ConfigStatus.APPROVED || rule.status === ConfigStatus.REJECTED) {
+        throw new ForbiddenException('Approved/Rejected pay types cannot be rejected');
+      }
+
+      rule.status = ConfigStatus.REJECTED;
+      rule.approvedBy = new mongoose.Types.ObjectId(approverId);
+      rule.approvedAt = new Date();
+
+      return rule.save();
+    }
+
+    async delete(id: string) {
+      const rule = await this.payTypeModel.findById(id);
+      if (!rule) throw new NotFoundException('Pay type not found');
+
+      return this.payTypeModel.deleteOne({ _id: id }).exec();
     }
   }

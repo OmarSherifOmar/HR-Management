@@ -16,7 +16,8 @@ import { UpdateLeaveRequestDto } from '../dto/leave-request/update-leave-request
 import { LeaveStatus } from '../enums/leave-status.enum';
 import { EmployeeService } from '../../employee-profile/employee-profile.service';
 import { SystemRole } from '../../employee-profile/enums/employee-profile.enums';
-import { NotificationService } from './notification.service';
+import { LeavesNotificationService } from './leaves-notification.service';
+import { CalendarService } from './calendar.service';
 
 /**
  * Leave Request Service
@@ -46,7 +47,8 @@ export class LeaveRequestService {
     @InjectModel(LeavePolicy.name) private policyModel: Model<LeavePolicyDocument>,
     @InjectModel(Attachment.name) private attachmentModel: Model<AttachmentDocument>,
     private employeeService: EmployeeService,
-    private notificationService: NotificationService,
+    private notificationService: LeavesNotificationService,
+    private calendarService: CalendarService,
   ) {}
 
   // ==================== SUBMIT NEW LEAVE REQUEST (REQ-015) ====================
@@ -96,7 +98,10 @@ export class LeaveRequestService {
       throw new BadRequestException('Start date cannot be after end date');
     }
 
-    // 5. Check retroactive submission limit
+    // 5. Get holidays in the range (for duration calculation, but don't block the request)
+    const holidays = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
+
+    // 6. Check retroactive submission limit
     const daysDiff = Math.floor((today.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
     if (daysDiff > this.maxRetroactiveDays) {
       throw new BadRequestException(
@@ -104,7 +109,7 @@ export class LeaveRequestService {
       );
     }
 
-    // 6. Check minimum notice days (if policy exists and leave is in future)
+    // 7. Check minimum notice days (if policy exists and leave is in future)
     if (policy?.minNoticeDays && fromDate > today) {
       const noticeDays = Math.floor((fromDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       if (noticeDays < policy.minNoticeDays) {
@@ -114,20 +119,20 @@ export class LeaveRequestService {
       }
     }
 
-    // 7. Calculate duration in business days
-    const durationDays = this.calculateBusinessDays(fromDate, toDate);
+    // 8. Calculate duration in business days (excluding weekends and holidays)
+    const durationDays = this.calculateBusinessDaysExcludingHolidays(fromDate, toDate, holidays);
     if (durationDays < 0.5) {
       throw new BadRequestException('Leave duration must be at least half a day');
     }
 
-    // 8. Check maximum consecutive days
+    // 9. Check maximum consecutive days
     if (policy?.maxConsecutiveDays && durationDays > policy.maxConsecutiveDays) {
       throw new BadRequestException(
         `Maximum consecutive days for this leave type is ${policy.maxConsecutiveDays}`,
       );
     }
 
-    // 8. Check for overlapping approved leaves
+    // 10. Check for overlapping approved leaves
     const overlapping = await this.checkOverlappingLeaves(employeeId, fromDate, toDate);
     if (overlapping.length > 0) {
       throw new BadRequestException(
@@ -135,7 +140,7 @@ export class LeaveRequestService {
       );
     }
 
-    // 9. Validate entitlement balance (if leave type is deductible)
+    // 11. Validate entitlement balance (if leave type is deductible)
     if (leaveType.deductible) {
       const entitlement = await this.entitlementModel.findOne({
         employeeId: new Types.ObjectId(employeeId),
@@ -148,23 +153,26 @@ export class LeaveRequestService {
         );
       }
 
-      // remaining already represents available balance (total - taken - pending)
-      const availableBalance = entitlement.remaining;
+      // Calculate available balance based on accrued days (not full yearly entitlement)
+      // Employee can only use what they've accrued so far
+      const accruedBalance = entitlement.accruedRounded + entitlement.carryForward;
+      const availableBalance = accruedBalance - entitlement.taken - entitlement.pending;
+      
       if (durationDays > availableBalance) {
         throw new BadRequestException(
-          `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${durationDays} days`,
+          `Insufficient accrued leave balance. Available: ${availableBalance} days (Accrued: ${entitlement.accruedRounded}, Carry Forward: ${entitlement.carryForward}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending}), Requested: ${durationDays} days`,
         );
       }
     }
 
-    // 10. Validate attachment if required
+    // 12. Validate attachment if required
     if (leaveType.requiresAttachment && !createDto.attachmentId) {
       throw new BadRequestException(
         `This leave type requires an attachment (${leaveType.attachmentType || 'document'})`,
       );
     }
 
-    // 11. Validate attachment exists if provided
+    // 13. Validate attachment exists if provided
     if (createDto.attachmentId) {
       const attachment = await this.attachmentModel.findById(createDto.attachmentId);
       if (!attachment) {
@@ -172,13 +180,82 @@ export class LeaveRequestService {
       }
     }
 
-    // 12. Determine initial approval flow based on employee's manager
-    const approvalFlow = await this.buildApprovalFlow(employeeId);
+    // 14. Enforce special absence rules (cumulative tracking, occurrence tracking)
+    const specialAbsenceRule = policy?.eligibility?.specialAbsenceRule;
+    if (specialAbsenceRule) {
+      // Check cumulative tracking (e.g., sick leave over 3 years: max 360 days)
+      if (specialAbsenceRule.trackCumulatively && specialAbsenceRule.cumulativeMaxDays) {
+        const cumulativePeriodYears = specialAbsenceRule.cumulativePeriodYears || 3;
+        const periodStartDate = new Date();
+        periodStartDate.setFullYear(periodStartDate.getFullYear() - cumulativePeriodYears);
 
-    // 13. Check for irregular pattern (e.g., Friday/Monday pattern)
+        // Count total days taken in the cumulative period
+        const cumulativeTaken = await this.leaveRequestModel.aggregate([
+          {
+            $match: {
+              employeeId: new Types.ObjectId(employeeId),
+              leaveTypeId: new Types.ObjectId(createDto.leaveTypeId),
+              status: { $in: [LeaveStatus.APPROVED, LeaveStatus.PENDING] },
+              'dates.from': { $gte: periodStartDate },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalDays: { $sum: '$durationDays' },
+            },
+          },
+        ]);
+
+        const totalCumulativeDays = (cumulativeTaken[0]?.totalDays || 0) + durationDays;
+        if (totalCumulativeDays > specialAbsenceRule.cumulativeMaxDays) {
+          throw new BadRequestException(
+            `Cumulative limit exceeded: ${specialAbsenceRule.cumulativeMaxDays} days allowed over ${cumulativePeriodYears} years. ` +
+            `You have used ${cumulativeTaken[0]?.totalDays || 0} days, requesting ${durationDays} days.`,
+          );
+        }
+        console.log(`Cumulative tracking: ${totalCumulativeDays}/${specialAbsenceRule.cumulativeMaxDays} days used`);
+      }
+
+      // Check occurrence tracking (e.g., maternity leave: max 3 times)
+      if (specialAbsenceRule.trackOccurrences && specialAbsenceRule.maxOccurrences) {
+        const occurrenceCount = await this.leaveRequestModel.countDocuments({
+          employeeId: new Types.ObjectId(employeeId),
+          leaveTypeId: new Types.ObjectId(createDto.leaveTypeId),
+          status: LeaveStatus.APPROVED,
+        });
+
+        if (occurrenceCount >= specialAbsenceRule.maxOccurrences) {
+          throw new BadRequestException(
+            `Maximum occurrences exceeded: ${specialAbsenceRule.maxOccurrences} times allowed. ` +
+            `You have already used this leave type ${occurrenceCount} times.`,
+          );
+        }
+        console.log(`Occurrence tracking: ${occurrenceCount + 1}/${specialAbsenceRule.maxOccurrences} occurrences`);
+      }
+    }
+
+    // 15. Determine initial approval flow based on policy configuration
+    const approvalFlow = await this.buildApprovalFlow(employeeId, policy);
+
+    // 16. Check for auto-approve threshold
+    const autoApproveUnderDays = policy?.eligibility?.approvalWorkflow?.autoApproveUnderDays;
+    let initialStatus = LeaveStatus.PENDING;
+    
+    if (autoApproveUnderDays && durationDays < autoApproveUnderDays) {
+      console.log(`Auto-approving leave request: ${durationDays} days < ${autoApproveUnderDays} days threshold`);
+      initialStatus = LeaveStatus.APPROVED;
+      // Mark all approval steps as approved
+      approvalFlow.forEach(step => {
+        step.status = 'approved';
+        step.decidedAt = new Date();
+      });
+    }
+
+    // 17. Check for irregular pattern (e.g., Friday/Monday pattern)
     const irregularPatternFlag = this.checkIrregularPattern(fromDate, toDate);
 
-    // 15. Create the leave request
+    // 18. Create the leave request
     const leaveRequest = new this.leaveRequestModel({
       employeeId: new Types.ObjectId(employeeId),
       leaveTypeId: new Types.ObjectId(createDto.leaveTypeId),
@@ -192,7 +269,7 @@ export class LeaveRequestService {
         ? new Types.ObjectId(createDto.attachmentId)
         : undefined,
       approvalFlow,
-      status: LeaveStatus.PENDING,
+      status: initialStatus,
       irregularPatternFlag,
     });
 
@@ -311,6 +388,9 @@ export class LeaveRequestService {
         throw new BadRequestException('Start date cannot be after end date');
       }
 
+      // Get holidays in the range (for duration calculation)
+      const holidays = await this.calendarService.getBlockedDatesInRange(fromDate, toDate);
+
       // Check for overlapping leaves (excluding this request)
       const overlapping = await this.checkOverlappingLeaves(
         leaveRequest.employeeId.toString(),
@@ -326,8 +406,8 @@ export class LeaveRequestService {
 
       leaveRequest.dates = { from: fromDate, to: toDate };
 
-      // Recalculate duration based on new dates
-      newDuration = this.calculateBusinessDays(fromDate, toDate);
+      // Recalculate duration based on new dates (excluding holidays)
+      newDuration = this.calculateBusinessDaysExcludingHolidays(fromDate, toDate, holidays);
       if (newDuration < 0.5) {
         throw new BadRequestException('Leave duration must be at least half a day');
       }
@@ -341,13 +421,14 @@ export class LeaveRequestService {
       });
 
       if (entitlement) {
+        // Calculate available balance based on accrued days (not full yearly entitlement)
         // When modifying, oldDuration is already in pending, so add it back to get actual available
-        // remaining = total - taken - pending (where pending includes oldDuration)
-        // available for new request = remaining + oldDuration
-        const availableBalance = entitlement.remaining + oldDuration;
+        const accruedBalance = entitlement.accruedRounded + entitlement.carryForward;
+        const availableBalance = accruedBalance - entitlement.taken - entitlement.pending + oldDuration;
+        
         if (newDuration > availableBalance) {
           throw new BadRequestException(
-            `Insufficient leave balance. Available: ${availableBalance} days`,
+            `Insufficient accrued leave balance. Available: ${availableBalance} days (Accrued: ${entitlement.accruedRounded}, Carry Forward: ${entitlement.carryForward}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending - oldDuration}), Requested: ${newDuration} days`,
           );
         }
       }
@@ -617,20 +698,64 @@ export class LeaveRequestService {
       throw new NotFoundException(`Manager with ID ${managerId} not found`);
     }
 
-    // Build employee query: team members who have supervisorPositionId == manager.primaryPositionId
+    const managerRolesDoc = await this.employeeService.getSystemRoleForEmployee(manager._id);
+    const managerRoles = managerRolesDoc?.roles ?? [];
+
+    console.log('[Team Balances] Manager:', {
+      _id: manager._id,
+      name: `${manager.firstName} ${manager.lastName}`,
+      roles: managerRoles,
+      primaryDepartmentId: manager.primaryDepartmentId,
+    });
+
+    // Build employee query based on role:
+    // - HR Admin: can view all departments
+    // - Department Head: can only view their department
     const employeeModel = this.employeeService['employeeModel'];
-    const teamQuery: any = { isActive: true };
-    if (manager.primaryPositionId) {
-      teamQuery.supervisorPositionId = manager.primaryPositionId;
+    const teamQuery: any = { status: 'ACTIVE' };
+    
+    if (managerRoles.includes(SystemRole.HR_ADMIN)) {
+      // HR Admin sees all departments
+      console.log('[Team Balances] HR Admin - viewing all departments');
+      if (filters?.departmentId) {
+        // Allow filtering by specific department if provided
+        teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
+      }
+      // Otherwise no department filter - show all
+    } else if (managerRoles.includes(SystemRole.DEPARTMENT_HEAD)) {
+      // Department Head sees only their department
+      if (manager.primaryDepartmentId) {
+        const normalizedDeptId = new Types.ObjectId(manager.primaryDepartmentId.toString());
+        teamQuery.primaryDepartmentId = normalizedDeptId;
+        console.log('[Team Balances] Department Head - viewing department:', normalizedDeptId);
+      } else {
+        console.warn('[Team Balances] Department Head has no primaryDepartmentId - will return no employees');
+      }
+    } else {
+      // HR Manager or other roles: fallback to supervisor-based logic
+      if (manager.primaryPositionId) {
+        const normalizedPositionId = new Types.ObjectId(manager.primaryPositionId.toString());
+        teamQuery.supervisorPositionId = normalizedPositionId;
+        console.log('[Team Balances] Using supervisor-based query for position:', normalizedPositionId);
+      } else {
+        console.warn('[Team Balances] Manager has no primaryPositionId - will return no employees');
+      }
+      if (filters?.departmentId) {
+        teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
+      }
     }
-    if (filters?.departmentId) {
-      teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
-    }
+
+    console.log('[Team Balances] Query for team employees:', teamQuery);
 
     const teamMembers = await employeeModel
       .find(teamQuery)
       .select('_id firstName lastName employeeNumber primaryDepartmentId')
       .exec();
+
+    console.log('[Team Balances] Found team members:', teamMembers.length);
+    teamMembers.forEach((member, idx) => {
+      console.log(`  ${idx + 1}. ${member.firstName} ${member.lastName} (${member._id})`);
+    });
 
     // Default date range for upcoming if not provided: today -> 90 days out
     const today = new Date();
@@ -724,6 +849,7 @@ export class LeaveRequestService {
     requestId: string,
     managerId: string,
     comments?: string,
+    irregularPatternFlag?: boolean,
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(requestId);
     if (!leaveRequest) {
@@ -755,6 +881,11 @@ export class LeaveRequestService {
     leaveRequest.approvalFlow[managerStepIndex].status = 'approved';
     leaveRequest.approvalFlow[managerStepIndex].decidedAt = new Date();
 
+    // Set irregular pattern flag if manager flagged it
+    if (irregularPatternFlag !== undefined) {
+      leaveRequest.irregularPatternFlag = irregularPatternFlag;
+    }
+
     // Manager approved - request stays PENDING until HR also approves
     // No status change here, HR will finalize
 
@@ -778,6 +909,7 @@ export class LeaveRequestService {
     requestId: string,
     managerId: string,
     comments?: string,
+    irregularPatternFlag?: boolean,
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(requestId);
     if (!leaveRequest) {
@@ -809,10 +941,15 @@ export class LeaveRequestService {
     leaveRequest.approvalFlow[managerStepIndex].status = 'rejected';
     leaveRequest.approvalFlow[managerStepIndex].decidedAt = new Date();
 
-    // Mark the entire request as rejected
-    leaveRequest.status = LeaveStatus.REJECTED;
+    // Set irregular pattern flag if manager flagged it
+    if (irregularPatternFlag !== undefined) {
+      leaveRequest.irregularPatternFlag = irregularPatternFlag;
+    }
 
-    // Restore pending balance
+    // Manager rejected - request stays PENDING until HR reviews and confirms rejection
+    // HR will finalize the rejection
+    
+    // Restore pending balance when manager rejects
     const leaveType = await this.leaveTypeModel.findById(leaveRequest.leaveTypeId);
     if (leaveType?.deductible) {
       await this.entitlementModel.updateOne(
@@ -828,19 +965,9 @@ export class LeaveRequestService {
 
     const savedRequest = await leaveRequest.save();
 
-    // REQ-019: Notify employee about rejection
-    const employee = await this.employeeService.findById(leaveRequest.employeeId.toString());
-    if (employee && leaveType) {
-      await this.notificationService.notifyLeaveRequestRejected(
-        leaveRequest.employeeId.toString(),
-        {
-          leaveType: leaveType.name,
-          startDate: leaveRequest.dates.from.toISOString().split('T')[0],
-          endDate: leaveRequest.dates.to.toISOString().split('T')[0],
-          reason: comments,
-        },
-      );
-    }
+    // Note: No notification here - manager rejection is not final
+    // HR will send the final rejection notification when they confirm the rejection
+    // This ensures the employee only gets one rejection notification (the final one from HR)
 
     return savedRequest;
   }
@@ -849,9 +976,13 @@ export class LeaveRequestService {
 
   /**
    * Get leave requests pending HR review
-   * Returns requests where manager has approved but HR hasn't acted yet
+   * Pool system: Returns all requests where manager has approved, any HR can process
+   * The HR user who processes it will be recorded in decidedBy
    */
   async getRequestsForHRReview(hrManagerId: string): Promise<LeaveRequestDocument[]> {
+    // Note: hrManagerId parameter kept for potential future filtering (e.g., by department)
+    // but currently all HR users see the same pool
+
     return this.leaveRequestModel
       .find({
         status: LeaveStatus.PENDING,
@@ -868,6 +999,30 @@ export class LeaveRequestService {
       .populate('leaveTypeId', 'code name')
       .populate('attachmentId')
       .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
+   * Get all leave requests that were rejected by manager but HR step is still pending
+   * These can be overridden by HR Managers/Admins
+   */
+  async getRejectedRequestsForHR(): Promise<LeaveRequestDocument[]> {
+    return this.leaveRequestModel
+      .find({
+        status: LeaveStatus.PENDING,
+        'approvalFlow': {
+          $elemMatch: {
+            role: 'hr_manager',
+            status: 'pending',
+          },
+        },
+        // Manager must have rejected
+        'approvalFlow.0.status': 'rejected',
+      })
+      .populate('employeeId', 'firstName lastName employeeNumber primaryDepartmentId')
+      .populate('leaveTypeId', 'code name')
+      .populate('attachmentId')
+      .sort({ updatedAt: -1 })
       .exec();
   }
 
@@ -905,14 +1060,16 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step
+    // Find HR step (pool system - any HR can process)
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
-      (step) => step.role === 'hr_manager' && step.status === 'pending',
+      (step) =>
+        step.role === 'hr_manager' &&
+        step.status === 'pending',
     );
 
     if (hrStepIndex === -1) {
-      throw new BadRequestException(
-        'This request has already been processed by HR',
+      throw new ForbiddenException(
+        'You are not authorized to finalize this request or it has already been processed',
       );
     }
 
@@ -992,16 +1149,21 @@ export class LeaveRequestService {
       );
     }
 
-    // Find HR step
+    // Find HR step (pool system - any HR can process)
     const hrStepIndex = leaveRequest.approvalFlow.findIndex(
-      (step) => step.role === 'hr_manager',
+      (step) => step.role === 'hr_manager' && step.status === 'pending',
     );
 
-    if (hrStepIndex !== -1) {
-      leaveRequest.approvalFlow[hrStepIndex].status = 'rejected';
-      leaveRequest.approvalFlow[hrStepIndex].decidedBy = new Types.ObjectId(hrManagerId);
-      leaveRequest.approvalFlow[hrStepIndex].decidedAt = new Date();
+    if (hrStepIndex === -1) {
+      throw new BadRequestException(
+        'This request has already been processed by HR',
+      );
     }
+
+    // Update HR rejection step - record who processed it
+    leaveRequest.approvalFlow[hrStepIndex].status = 'rejected';
+    leaveRequest.approvalFlow[hrStepIndex].decidedBy = new Types.ObjectId(hrManagerId);
+    leaveRequest.approvalFlow[hrStepIndex].decidedAt = new Date();
 
     // Mark request as rejected
     leaveRequest.status = LeaveStatus.REJECTED;
@@ -1045,7 +1207,6 @@ export class LeaveRequestService {
    * Can be used to:
    * - Approve a request that was rejected by manager
    * - Approve a request bypassing manager approval
-   * - Allow negative balance (with allowNegativeBalance flag)
    */
   async hrOverrideDecision(
     requestId: string,
@@ -1053,7 +1214,6 @@ export class LeaveRequestService {
     action: 'approve' | 'reject',
     options?: {
       comments?: string;
-      allowNegativeBalance?: boolean;
     },
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(requestId);
@@ -1071,8 +1231,8 @@ export class LeaveRequestService {
     const leaveType = await this.leaveTypeModel.findById(leaveRequest.leaveTypeId);
 
     if (action === 'approve') {
-      // Check balance unless HR explicitly allows negative
-      if (leaveType?.deductible && !options?.allowNegativeBalance) {
+      // Always check balance - negative balance not allowed
+      if (leaveType?.deductible) {
         const entitlement = await this.entitlementModel.findOne({
           employeeId: leaveRequest.employeeId,
           leaveTypeId: leaveRequest.leaveTypeId,
@@ -1085,8 +1245,7 @@ export class LeaveRequestService {
           
           if (leaveRequest.durationDays > availableBalance) {
             throw new BadRequestException(
-              `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${leaveRequest.durationDays} days. ` +
-              `Set allowNegativeBalance=true to override.`,
+              `Insufficient leave balance. Available: ${availableBalance} days, Requested: ${leaveRequest.durationDays} days.`,
             );
           }
         }
@@ -1345,6 +1504,53 @@ export class LeaveRequestService {
     };
   }
 
+  /**
+   * Bulk confirm rejection of manager-rejected requests
+   * 
+   * Processes multiple manager-rejected requests at once.
+   * Finalizes the rejection status for each request.
+   */
+  async bulkConfirmRejectRequests(
+    requestIds: string[],
+    hrManagerId: string,
+    comments?: string,
+  ): Promise<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: { requestId: string; success: boolean; message?: string; error?: string }[];
+  }> {
+    const results: { requestId: string; success: boolean; message?: string; error?: string }[] = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const requestId of requestIds) {
+      try {
+        await this.hrRejectRequest(requestId, hrManagerId, comments);
+        results.push({
+          requestId,
+          success: true,
+          message: 'Rejection confirmed successfully',
+        });
+        successful++;
+      } catch (error) {
+        results.push({
+          requestId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+        failed++;
+      }
+    }
+
+    return {
+      total: requestIds.length,
+      successful,
+      failed,
+      results,
+    };
+  }
+
   // ==================== HELPER METHODS ====================
 
   /**
@@ -1397,9 +1603,9 @@ export class LeaveRequestService {
    * 1. Employee has supervisorPositionId → the position they report to
    * 2. Manager has primaryPositionId → their own position
    * 3. Find employee where primaryPositionId == supervisorPositionId → that's the manager
-   * 4. Find HR Manager from system roles
+   * 4. HR step uses pool system - any HR Manager/Admin can process (decidedBy set when they act)
    */
-  private async buildApprovalFlow(employeeId: string): Promise<{
+  private async buildApprovalFlow(employeeId: string, policy: any): Promise<{
     role: string;
     status: string;
     decidedBy?: Types.ObjectId;
@@ -1412,64 +1618,51 @@ export class LeaveRequestService {
       decidedAt?: Date;
     }[] = [];
 
+    // Get approval workflow configuration from policy
+    const approvalWorkflow = policy?.eligibility?.approvalWorkflow || {};
+    const requiresSupervisorApproval = approvalWorkflow.requiresSupervisorApproval !== false; // default true
+    const requiresHRApproval = approvalWorkflow.requiresHRApproval !== false; // default true
+
     // Get employee to find their supervisor position
     const employee = await this.employeeService.findById(employeeId);
     console.log('Employee:', employeeId, 'supervisorPositionId:', employee?.supervisorPositionId);
 
-    // 1. Find Direct Manager
-    let directManagerId: Types.ObjectId | undefined;
+    // 1. Find Direct Manager (if supervisor approval is required)
+    if (requiresSupervisorApproval) {
+      let directManagerId: Types.ObjectId | undefined;
 
-    if (employee?.supervisorPositionId) {
-      // Find the employee whose primaryPositionId matches this supervisorPositionId
-      const positionIdStr = employee.supervisorPositionId.toString();
-      console.log('Looking for manager with primaryPositionId:', positionIdStr);
-      
-      const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
-      console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
+      if (employee?.supervisorPositionId) {
+        // Find the employee whose primaryPositionId matches this supervisorPositionId
+        const positionIdStr = employee.supervisorPositionId.toString();
+        console.log('Looking for manager with primaryPositionId:', positionIdStr);
+        
+        const manager = await this.employeeService.findByPrimaryPositionId(positionIdStr);
+        console.log('Found manager:', manager?._id, manager?.firstName, manager?.lastName);
 
-      if (manager?._id) {
-        directManagerId = manager._id as Types.ObjectId;
+        if (manager?._id) {
+          directManagerId = manager._id as Types.ObjectId;
+        }
       }
+
+      approvalFlow.push({
+        role: 'direct_manager',
+        status: 'pending',
+        decidedBy: directManagerId,
+      });
     }
 
-    approvalFlow.push({
-      role: 'direct_manager',
-      status: 'pending',
-      decidedBy: directManagerId,
-    });
-
-    // 2. Find HR Manager
-    const hrManager = await this.findHRManager();
-    approvalFlow.push({
-      role: 'hr_manager',
-      status: 'pending',
-      decidedBy: hrManager || undefined,
-    });
+    // 2. HR Manager - not pre-assigned, any HR can pick it up from the pool (if HR approval is required)
+    if (requiresHRApproval) {
+      approvalFlow.push({
+        role: 'hr_manager',
+        status: 'pending',
+        decidedBy: undefined, // Will be set when HR actually processes the request
+      });
+    }
 
     return approvalFlow;
   }
 
-  /**
-   * Find an active HR Manager from system roles
-   */
-  private async findHRManager(): Promise<Types.ObjectId | null> {
-    try {
-      // Query the employee_system_roles collection for HR Manager role
-      const hrManagerRole = await this.employeeService['systemRoleModel']?.findOne({
-        roles: { $in: [SystemRole.HR_MANAGER, 'HR Manager'] },
-        isActive: true,
-      });
-
-      if (hrManagerRole?.employeeProfileId) {
-        return hrManagerRole.employeeProfileId;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error finding HR Manager:', error);
-      return null;
-    }
-  }
 
   /**
    * Check for irregular leave patterns (e.g., Friday-Monday pattern)
@@ -1511,6 +1704,43 @@ export class LeaveRequestService {
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         count++;
       }
+      current.setDate(current.getDate() + 1);
+    }
+
+    return count;
+  }
+
+  /**
+   * Calculate business days between two dates, excluding weekends AND holidays
+   * This is used to determine how many days to deduct from leave balance
+   * Holidays within the leave period are not deducted from the employee's balance
+   */
+  private calculateBusinessDaysExcludingHolidays(
+    fromDate: Date,
+    toDate: Date,
+    holidays: Array<{ date: Date; reason: string }>,
+  ): number {
+    let count = 0;
+    const current = new Date(fromDate);
+    
+    // Create a set of holiday dates for quick lookup (normalize to date string)
+    const holidayDates = new Set(
+      holidays.map(h => {
+        const d = new Date(h.date);
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString().split('T')[0];
+      })
+    );
+
+    while (current <= toDate) {
+      const dayOfWeek = current.getDay();
+      const currentDateStr = current.toISOString().split('T')[0];
+      
+      // Count only if it's a weekday AND not a holiday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDates.has(currentDateStr)) {
+        count++;
+      }
+      
       current.setDate(current.getDate() + 1);
     }
 
