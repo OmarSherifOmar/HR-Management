@@ -1,9 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-
-import { RecruitmentController } from './recruitment.controller';
-import { RecruitmentService } from './recruitment.service';
-
 // Models
 import { JobTemplate, JobTemplateSchema } from './models/job-template.schema';
 import { JobRequisition, JobRequisitionSchema } from './models/job-requisition.schema';
@@ -23,38 +19,36 @@ import { OffboardingProcess, OffboardingProcessSchema } from './models/offboardi
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 
 // Controllers
-import { ApplicationStatusHistoryController } from '../recruitment/controllers/application-status-history.controller';
-import { ApplicationController } from './controllers/application.controller';
-import { InterviewController } from './controllers/interview.controller';
-import { JobTemplateController } from './controllers/job-template.controller';
-import { OfferController } from './controllers/offer.controller';
+import { ApplicationStatusHistoryController } from './recruitment.controller';
+import { ApplicationController } from './recruitment.controller';
+import { InterviewController } from './recruitment.controller';
+import { JobTemplateController } from './recruitment.controller';
+import { OfferController } from './recruitment.controller';
+import { JobRequisitionController } from './recruitment.controller';
+import { AssessmentResultController } from './recruitment.controller';
+import { ContractController } from './recruitment.controller';
+import { DocumentController } from './recruitment.controller';
+import { ReferralController } from './recruitment.controller'; 
+import { ResignationRequestController } from './recruitment.controller';
+import { TerminationRequestController } from './recruitment.controller';
+import { ClearanceChecklistController } from './recruitment.controller';
+import { OffboardingProcessController } from './recruitment.controller';
 
-import { ResignationRequestController } from './controllers/resignation-request.controller';
-import { TerminationRequestController } from './controllers/termination-request.controller';
-import { ClearanceChecklistController } from './controllers/clearance-checklist.controller';
-import { OffboardingProcessController } from './controllers/offboarding-process.controller';
-
-// Services
-import { ApplicationStatusHistoryService } from './services/application-status-history.service';
-import { ApplicationService } from './services/application.service';
-import { InterviewService } from './services/interview.service';
-import { JobTemplateService } from './services/job-template.service';
-import { OfferService } from './services/offer.service';
-
-import { ResignationRequestService } from './services/resignation-request.service';
-import { TerminationRequestService } from './services/termination-request.service';
-import { ClearanceChecklistService } from './services/clearance-checklist.service';
-import { OffboardingProcessService } from './services/offboarding-process.service';
-import { AssessmentResultController } from './controllers/assessment-result.controller';
-import { AssessmentResultService } from './services/assessment-result.service';
-import { ContractController } from './controllers/contract.controller';
-import { ContractService } from './services/contract.service';
-import { DocumentController } from './controllers/document.controller';
-import { DocumentService } from './services/document.service';
-import { JobRequisitionService } from './services/job-requisition.service';
-import { JobRequisitionController } from './controllers/job-requisition.controller';
-import { ReferralController } from './controllers/referral.controller';
-import { ReferralService } from './services/referral.service';
+// Services 
+import {ApplicationStatusHistoryService} from './recruitment.service';
+import {ApplicationService } from './recruitment.service';
+import {AssessmentResultService} from './recruitment.service';
+import {ClearanceChecklistService} from './recruitment.service';
+import {ContractService} from './recruitment.service';
+import {DocumentService} from './recruitment.service';
+import {InterviewService} from './recruitment.service';
+import {JobRequisitionService} from './recruitment.service';
+import {JobTemplateService} from './recruitment.service';
+import {OfferService} from './recruitment.service';
+import {OffboardingProcessService} from './recruitment.service';
+import {ReferralService} from './recruitment.service';
+import {ResignationRequestService} from './recruitment.service';
+import {TerminationRequestService} from './recruitment.service';
 
 @Module({
   imports: [
@@ -79,7 +73,6 @@ import { ReferralService } from './services/referral.service';
   ],
 
   controllers: [
-    RecruitmentController,
     ApplicationStatusHistoryController,
     ApplicationController,
     AssessmentResultController,
@@ -97,39 +90,37 @@ import { ReferralService } from './services/referral.service';
   ],
 
   providers: [
-    RecruitmentService,
     ApplicationStatusHistoryService,
     ApplicationService,
     AssessmentResultService,
+    ClearanceChecklistService,
     ContractService,
     DocumentService,
     InterviewService,
-    JobTemplateService,
     JobRequisitionService,
+    JobTemplateService,
     OfferService,
+    OffboardingProcessService,
     ReferralService,
     ResignationRequestService,
     TerminationRequestService,
-    ClearanceChecklistService,
-    OffboardingProcessService,
   ],
 
   exports: [
-    RecruitmentService,
     ApplicationStatusHistoryService,
     ApplicationService,
     AssessmentResultService,
+    ClearanceChecklistService,
     ContractService,
     DocumentService,
     InterviewService,
-    JobTemplateService,
     JobRequisitionService,
+    JobTemplateService,
     OfferService,
+    OffboardingProcessService,
     ReferralService,
     ResignationRequestService,
     TerminationRequestService,
-    ClearanceChecklistService,
-    OffboardingProcessService,
   ],
 })
 export class RecruitmentModule {}

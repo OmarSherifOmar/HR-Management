@@ -18,8 +18,9 @@ export type EmployeeProfileDocument = HydratedDocument<EmployeeProfile>;
 
 @Schema({ collection: 'employee_profiles', timestamps: true })
 export class EmployeeProfile extends UserProfileBase {
+  // Core IDs
   @Prop({ type: String, required: true, unique: true })
-  employeeNumber: string; 
+  employeeNumber: string; // HR/Payroll number
 
   @Prop({ type: Date, required: true })
   dateOfHire: Date;
@@ -36,12 +37,13 @@ export class EmployeeProfile extends UserProfileBase {
   @Prop({ type: Date })
   contractEndDate?: Date;
 
-    // Banking details
+  // Banking details
   @Prop({ type: String })
   bankName?: string;
 
   @Prop({ type: String })
   bankAccountNumber?: string;
+
   
   @Prop({
     type: String,
@@ -95,9 +97,6 @@ export class EmployeeProfile extends UserProfileBase {
 
   @Prop({ type: Number })
   lastAppraisalScore?: number;
-  
-  @Prop({ type: Number })
-  Bankaccount?: number;
 
   @Prop({ type: String })
   lastAppraisalRatingLabel?: string;
