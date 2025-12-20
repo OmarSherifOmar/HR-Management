@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import mongoose from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { taxRules, taxRulesDocument } from '../models/taxRules.schema';
 import { CreateTaxRuleDto } from '../dtos/CreateTaxRuleDto';
 import { UpdateTaxRuleDto } from '../dtos/UpdateTaxRuleDto';
@@ -40,7 +39,7 @@ export class TaxRulesService {
     return rule.save();
   }
 
-  async findById(id: string) {
+  async findByTaxRuleId(id: string) {
     const rule = await this.taxRulesModel
       .findById(id)
       .populate('createdBy', 'fullName email')

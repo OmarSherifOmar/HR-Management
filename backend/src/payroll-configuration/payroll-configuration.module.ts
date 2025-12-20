@@ -20,7 +20,7 @@ import { SigningBonusesService } from './services/signing-bonuses.service';
 import { TerminationBenefitsController } from './controllers/termination-benefits.controller';
 import { TerminationBenefitsService } from './services/termination-benefits.service';
 import { AllowancesController } from './controllers/allowances.controller';
-import { AllowancesService } from './services/allowances.service';
+import { ConfigurationService } from './payroll-configuration.service';
 import { PayTypesController } from './controllers/pay-types.controller';
 import { PayTypesService } from './services/pay-types.service';
 import { PayGradesController } from './controllers/pay-grades.controller';
@@ -56,7 +56,7 @@ import { ConfigurationApprovalsController } from './controllers/configuration-ap
   controllers: [TaxRulesController, InsuranceBracketsController, CompanyWideSettingsController, BackupController, ConfigurationApprovalsController,  AllowancesController,
     PayTypesController,
     PayGradesController,PayrollPoliciesController, SigningBonusesController, TerminationBenefitsController],
-  providers: [TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService, AllowancesService,
+  providers: [TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService, ConfigurationService,
     PayTypesService,
     PayGradesService,PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService],
   exports:[
@@ -67,7 +67,7 @@ import { ConfigurationApprovalsController } from './controllers/configuration-ap
     CompanyWideSettingsService,
     BackupService,
     ConfigurationApprovalService,
-    AllowancesService,
+    ConfigurationService,
     PayTypesService,
     PayGradesService,PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService]
 

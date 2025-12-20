@@ -28,7 +28,7 @@ export class TaxRulesController {
   @Get(':id')
   @Roles(Role.LEGAL_POLICY_ADMIN, Role.Payroll_MANAGER)
   async findById(@Param('id') id: string) {
-    return this.taxRulesService.findById(id);
+    return this.taxRulesService.findByTaxRuleId(id);
   }
 
   @Patch(':id')
