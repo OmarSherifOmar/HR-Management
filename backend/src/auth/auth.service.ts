@@ -15,6 +15,7 @@ import { Types } from 'mongoose';
 export type SignInResult = {
   access_token: string;
   payload: { sub: string; employeeNumber?: string; roles: string[]; username?: string };
+  isCandidate?: boolean;
 };
 
 
@@ -30,44 +31,75 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterRequestDto) {
-  console.log("REGISTER DTO RECEIVED:", dto);
+    console.log("REGISTER DTO RECEIVED:", dto);
 
-  try {
-    const [firstName, ...rest] = dto.name.split(" ");
-    const lastName = rest.join(" ") || "Unknown";
+    // Check if user already exists
+    const existingUser = await this.usersService.findByEmail(dto.email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
 
-    const employeeNumber = "EMP-" + Date.now();
-    const nationalId = String(Math.floor(Math.random() * 1e14));
-    const dateOfHire = new Date();
+    let candidate;
+    try {
+      const [firstName, ...rest] = dto.name.split(" ");
+      const lastName = rest.join(" ") || "Unknown";
 
-    const employee = await this.usersService.create({
-      firstName,
-      lastName,
-      nationalId,
-      password:  dto.password,
-      personalEmail: dto.email,
-      employeeNumber,
-      dateOfHire,
-    });
+      const candidateNumber = "CAND-" + Date.now();
+      const nationalId = String(Math.floor(Math.random() * 1e14));
+      const applicationDate = new Date();
 
-    
-await this.usersService.assignRole(employee._id, dto.role);
+      // Create candidate instead of employee with all provided fields
+      candidate = await this.usersService.createCandidate({
+        firstName,
+        lastName,
+        nationalId,
+        password: dto.password,
+        personalEmail: dto.email,
+        candidateNumber,
+        applicationDate,
+        // Candidate-specific fields from registration
+        departmentId: dto.departmentId ? new Types.ObjectId(dto.departmentId) : (dto.primaryPositionId ? new Types.ObjectId(dto.primaryPositionId) : undefined),
+        positionId: dto.positionId ? new Types.ObjectId(dto.positionId) : (dto.supervisorPositionId ? new Types.ObjectId(dto.supervisorPositionId) : undefined),
+        resumeUrl: dto.resumeUrl,
+        notes: dto.notes,
+        status: dto.status || 'APPLIED',
+      });
 
-    return employee;
-  } catch (err) {
-    console.error("REGISTRATION ERROR:", err);
-    throw new InternalServerErrorException("An error occurred during registration");
+      return candidate;
+    } catch (err) {
+      console.error("REGISTRATION ERROR:", err);
+      
+      // Re-throw known exceptions
+      if (err instanceof ConflictException || err instanceof BadRequestException) {
+        throw err;
+      }
+      
+      throw new InternalServerErrorException("An error occurred during registration");
+    }
   }
-}
 
  async signIn(email: string, password: string): Promise<SignInResult> {
   if (!email || !password) {
     throw new BadRequestException('Email and password are required');
   }
 
-  const user = await this.usersService.findByEmail(email);
+  // Check both employees and candidates
+  let user: any = await this.usersService.findByEmail(email);
+  let isCandidate = false;
+
+  if (!user) {
+    // Check if it's a candidate
+    user = await this.usersService.findCandidateByEmail(email);
+    isCandidate = true;
+  }
+
   if (!user) {
     throw new UnauthorizedException('Invalid credentials');
+  }
+
+  // Block candidates from logging in
+  if (isCandidate) {
+    throw new UnauthorizedException('Your application is pending review. Please wait for the HR team to process your registration before you can access the system.');
   }
 
   if (!user.password) {
@@ -82,15 +114,15 @@ await this.usersService.assignRole(employee._id, dto.role);
   const sub = user._id.toString();
 
   let roles: string[] = [];
-try {
-  const sysRole = await this.usersService.getSystemRoleForEmployee(sub);
-  if (sysRole && Array.isArray(sysRole.roles)) {
-    roles = sysRole.roles;
+  
+  try {
+    const sysRole = await this.usersService.getSystemRoleForEmployee(sub);
+    if (sysRole && Array.isArray(sysRole.roles)) {
+      roles = sysRole.roles;
+    }
+  } catch (err) {
+    console.error("ROLE FETCH ERROR:", err);
   }
-} catch (err) {
-  console.error("ROLE FETCH ERROR:", err);
-}
-
 
   const username =
     user.fullName ||
@@ -114,5 +146,4 @@ try {
     payload,
   };
 }
-
 }

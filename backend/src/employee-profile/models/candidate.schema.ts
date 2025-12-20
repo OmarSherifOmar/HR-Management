@@ -9,6 +9,7 @@ export type CandidateDocument = HydratedDocument<Candidate>;
 
 @Schema({ collection: 'candidates', timestamps: true })
 export class Candidate extends UserProfileBase {
+  
   @Prop({ type: String, required: true, unique: true })
   candidateNumber: string;
 
@@ -33,6 +34,7 @@ export class Candidate extends UserProfileBase {
 
   @Prop({ type: String })
   notes?: string;
+  
 }
 
 export const CandidateSchema = SchemaFactory.createForClass(Candidate);

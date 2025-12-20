@@ -3,34 +3,34 @@ import { IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min
 import { Type } from 'class-transformer';
 
 export class UpdateInsuranceBracketDto {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
-  amount: number;
+  minSalary?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  minSalary: number;
+  maxSalary?: number;
 
-  @Type(() => Number)
-  @IsNumber()
-  maxSalary: number;
-
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  employeeRate: number;
-
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(100)
-  employerRate: number;
+  employeeRate?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  employerRate?: number;
 
   @IsMongoId()
   @IsOptional()

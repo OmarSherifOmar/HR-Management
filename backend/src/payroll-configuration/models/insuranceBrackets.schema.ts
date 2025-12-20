@@ -8,15 +8,14 @@ export type insuranceBracketsDocument = HydratedDocument<insuranceBrackets>
 
 @Schema({ timestamps: true })
 export class insuranceBrackets {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   name: string; // insurance name like: social, health insurance
  
   @Prop({ required: true, type: String, enum: ConfigStatus,default:ConfigStatus.DRAFT })
   status: ConfigStatus;// draft, approved, rejected
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
   createdBy?: mongoose.Types.ObjectId;
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
-  updatedBy?: mongoose.Types.ObjectId;
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
   approvedBy?: mongoose.Types.ObjectId;
   @Prop({})
@@ -31,8 +30,8 @@ export class insuranceBrackets {
   @Prop({ required: true,min:0,max:100 })
   employeeRate: number;    // percentage
 
-  @Prop({ required: true ,min:0,max:100})
-  employerRate: number;    // percentage
+  @Prop({ required: true,min:0,max:100 })
+  employerRate: number;
 
 }
 

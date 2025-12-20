@@ -8,8 +8,4 @@ export class CreatePayGradeDto {
   @IsNumber()
   @Min(6000)
   baseSalary: number;
-
-  @IsNumber()
-  @Min(6000)
-  grossSalary: number;
 }

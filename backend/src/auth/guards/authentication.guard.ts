@@ -3,61 +3,52 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { JwtService } from '@nestjs/jwt';
-import { ROLES_KEY } from '../decorators/roles.decorator';
+import { verify } from 'jsonwebtoken';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private jwtService: JwtService,
   ) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
+    // Check if route is marked as @Public()
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
+    if (isPublic) {
+      return true;
+    }
 
     const req = context.switchToHttp().getRequest();
-    
-    // Extract token from cookie or Authorization header
     const token = req.cookies?.token || req.headers['authorization']?.split(' ')[1];
-    
+
     if (!token) {
       throw new UnauthorizedException('Authentication token missing');
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token);
-      req['user'] = payload; // Attach decoded payload to request
+      const decoded: any = verify(token, String(process.env.JWT_SECRET));
+      // Set user properties that controllers expect
+      req['user'] = {
+        _id: decoded.sub,
+        sub: decoded.sub,
+        id: decoded.sub,
+        employeeId: decoded.sub,
+        employeeNumber: decoded.employeeNumber,
+        roles: decoded.roles,
+        role: decoded.roles?.[0],
+        username: decoded.username,
+      };
+      return true;
     } catch (err) {
       throw new UnauthorizedException('Invalid or expired token');
     }
-
-    // Check roles if required
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (!requiredRoles || requiredRoles.length === 0) return true;
-
-    const user = req['user'];
-    const userRoles: string[] = Array.isArray(user.roles)
-      ? user.roles
-      : user.role
-      ? [user.role]
-      : [];
-
-    const allowed = userRoles.some((r) => requiredRoles.includes(r));
-    if (!allowed) throw new ForbiddenException('User does not have required role(s)');
-    
-    return true;
   }
 }

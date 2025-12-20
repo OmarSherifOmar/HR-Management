@@ -6,6 +6,8 @@ import {
   Patch,
   Post,
   UseGuards,
+  Req,
+  Delete,
 } from '@nestjs/common';
 import { TerminationBenefitsService } from '../services/termination-benefits.service';
 import { CreateTerminationBenefitsDto } from '../dtos/create-termination-benefits.dto';
@@ -22,16 +24,21 @@ export class TerminationBenefitsController {
   ) {}
 
   @Post()
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST)
   async createTerminationBenefit(
     @Body() createTerminationBenefitsDto: CreateTerminationBenefitsDto,
+    @Req() req: Request,
   ): Promise<terminationAndResignationBenefitsDocument> {
+    const user = req['user'];
+    const createdById = user.sub;
     return this.terminationBenefitsService.createTerminationBenefit(
       createTerminationBenefitsDto,
+      createdById,
     );
   }
 
   @Get()
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async getAllTerminationBenefits(): Promise<
     terminationAndResignationBenefitsDocument[]
   > {
@@ -39,6 +46,7 @@ export class TerminationBenefitsController {
   }
 
   @Get(':id')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async getTerminationBenefitById(
     @Param('id') id: string,
   ): Promise<terminationAndResignationBenefitsDocument> {
@@ -46,7 +54,7 @@ export class TerminationBenefitsController {
   }
 
   @Patch(':id')
-  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.SYSTEM_ADMIN)
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
   async updateTerminationBenefit(
     @Param('id') id: string,
     @Body() updateTerminationBenefitsDto: UpdateTerminationBenefitsDto,
@@ -55,5 +63,25 @@ export class TerminationBenefitsController {
       id,
       updateTerminationBenefitsDto,
     );
+  }
+
+  @Post(':id/approve')
+  @Roles(Role.Payroll_MANAGER)
+  async approve(@Param('id') id: string, @Req() req: any) {
+    const approverId = req.user?._id;
+    return this.terminationBenefitsService.approve(id, approverId);
+  }
+
+  @Post(':id/reject')
+  @Roles(Role.Payroll_MANAGER)
+  async reject(@Param('id') id: string, @Req() req: any) {
+    const approverId = req.user?._id;
+    return this.terminationBenefitsService.reject(id, approverId);
+  }
+
+  @Delete(':id')
+  @Roles(Role.Payroll_MANAGER)
+  async delete(@Param('id') id: string) {
+    return this.terminationBenefitsService.delete(id);
   }
 }
