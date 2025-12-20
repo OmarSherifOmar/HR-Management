@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException,ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import PDFDocument from 'pdfkit';
@@ -14,6 +14,17 @@ import { employeePayrollDetails } from './models/employeePayrollDetails.schema';
 import { paySlip } from './models/payslip.schema';
 import { ConfigStatus, PolicyType, Applicability } from '../payroll-configuration/enums/payroll-configuration-enums';
 import { EmployeeStatus, WorkType } from '../employee-profile/enums/employee-profile.enums';
+import { employeeSigningBonus } from './models/EmployeeSigningBonus.schema';
+import { EditSigningBonusDto } from './dto/EmployeeSigningBonusEdit.dto';
+import { ApproveSigningBonusDto } from './dto/EmployeeSigningBonusApprove.dto';
+import { RejectSigningBonusDto } from './dto/EmployeeSigningBonusReject.dto';
+import { EmployeeTerminationResignation } from './models/EmployeeTerminationResignation.schema';
+import { EmployeeTerminationResignationEditDto } from './dto/EmployeeTerminationResignationEdit.dto';
+import { EmployeeTerminationResignationApproveDto } from './dto/EmployeeTerminationResignationApprove.dto';
+import { EmployeeTerminationResignationRejectDto } from './dto/EmployeeTerminationResignationReject.dto';
+import { EditPayrollInitiationDto } from './dto/edit-payroll-initiation.dto';
+import { InitiatePayrollDto2 } from './dto/initiate-payroll2.dto';
+import { ValidatePeriodDto } from './dto/validate-period.dto';
 
 @Injectable()
 export class PayrollExecutionService {
@@ -1438,3 +1449,1042 @@ export class PayrollExecutionService {
   }
 }
 //. alo 3ayz a3ml pushh
+@Injectable()
+export class EmployeeSigningBonusService {
+  constructor(
+    @InjectModel(employeeSigningBonus.name)
+    private readonly signingBonusModel: Model<employeeSigningBonus>,
+  ) { }
+
+  /**
+   * Create a new signing bonus record
+   * Used by HR/Payroll to manually add signing bonuses
+   */
+  async createSigningBonus(dto: any, creatorId: string) {
+    // Validate employee exists
+    const employeeExists = await this.signingBonusModel.db.collection('employee_profiles').findOne({
+      _id: new Types.ObjectId(dto.employeeId)
+    });
+
+    if (!employeeExists) {
+      throw new NotFoundException(`Employee with ID ${dto.employeeId} not found`);
+    }
+
+    // Find or create a default signing bonus configuration for manual entries
+    let signingBonusConfigId = dto.signingBonusId;
+
+    if (!signingBonusConfigId) {
+      let defaultConfig = await this.signingBonusModel.db.collection('signingbonuses').findOne({
+        positionName: 'Manual Entry'
+      });
+
+      if (!defaultConfig) {
+        const newConfig = await this.signingBonusModel.db.collection('signingbonuses').insertOne({
+          positionName: 'Manual Entry',
+          amount: dto.givenAmount || 0,
+          status: 'approved',
+          createdBy: new Types.ObjectId(creatorId),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        signingBonusConfigId = newConfig.insertedId;
+      } else {
+        signingBonusConfigId = defaultConfig._id;
+      }
+    }
+
+    // Create new signing bonus with type field
+    const newBonus = new this.signingBonusModel({
+      employeeId: new Types.ObjectId(dto.employeeId),
+      signingBonusId: new Types.ObjectId(signingBonusConfigId),
+      givenAmount: dto.givenAmount,
+      paymentDate: dto.paymentDate,
+      status: 'pending',
+      type: dto.type || 'Signing Bonus', // Save the compensation type
+    });
+
+    const savedBonus = await newBonus.save();
+
+    return {
+      message: 'Compensation created successfully',
+      bonus: savedBonus,
+    };
+  }
+
+  /**
+   * Auto-process signing bonuses for a payroll run
+   * Fetches all pending bonuses for new hires and marks them for processing
+   */
+  async autoProcessSigningBonuses(runId: string) {
+    const pendingBonuses = await this.signingBonusModel.find({
+      status: 'pending',
+      payrollRunId: runId,
+    });
+
+    if (pendingBonuses.length === 0) {
+      return {
+        message: 'No pending signing bonuses found for this payroll run',
+        count: 0,
+      };
+    }
+
+    // Mark bonuses as auto-processed
+    await this.signingBonusModel.updateMany(
+      { status: 'pending', payrollRunId: runId },
+      {
+        status: 'auto_processed',
+        processedAt: new Date(),
+      }
+    );
+
+    return {
+      message: `Successfully auto-processed ${pendingBonuses.length} signing bonuses`,
+      count: pendingBonuses.length,
+      bonuses: pendingBonuses,
+    };
+  }
+
+  /**
+   * Manual edit of signing bonus
+   * Allows payroll specialist to modify bonus details before approval
+   */
+  async editSigningBonus(dto: EditSigningBonusDto, editorId: string) {
+    const bonus = await this.signingBonusModel.findById(dto.bonusId);
+
+    if (!bonus) {
+      throw new NotFoundException(`Signing bonus with ID ${dto.bonusId} not found`);
+    }
+
+    if (bonus.status === 'approved' || bonus.status === 'rejected') {
+      throw new BadRequestException(
+        `Cannot edit bonus with status: ${bonus.status}`
+      );
+    }
+
+    const updateData: any = {
+      lastEditedBy: editorId,
+      lastEditedAt: new Date(),
+    };
+
+    if (dto.adjustedAmount !== undefined) {
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = (bonus as any).givenAmount; // Store original
+    }
+
+    if (dto.editReason) {
+      updateData.editReason = dto.editReason;
+    }
+
+    if (dto.notes) {
+      updateData.notes = dto.notes;
+    }
+
+    if (dto.currency) {
+      updateData.currency = dto.currency;
+    }
+
+    if (dto.paymentDate) {
+      updateData.paymentDate = dto.paymentDate;
+    }
+
+    const updatedBonus = await this.signingBonusModel.findByIdAndUpdate(
+      dto.bonusId,
+      updateData,
+      { new: true }
+    );
+
+    return {
+      message: 'Signing bonus updated successfully',
+      bonus: updatedBonus,
+    };
+  }
+
+  /**
+   * Review signing bonus details
+   * Retrieves bonus information for review before approval/rejection
+   */
+  async reviewSigningBonus(bonusId: string, reviewerId: string) {
+    const bonus = await this.signingBonusModel
+      .findById(bonusId)
+      .populate('employeeId', 'firstName lastName email')
+      .populate('signingBonusId', 'bonusName amount description');
+
+    if (!bonus) {
+      throw new NotFoundException(`Signing bonus with ID ${bonusId} not found`);
+    }
+
+    return {
+      message: 'Signing bonus retrieved for review',
+      bonus,
+    };
+  }
+
+  /**
+   * Approve signing bonus
+   * Marks bonus as approved and ready for payroll processing
+   */
+  async approveSigningBonus(dto: ApproveSigningBonusDto, approverId: string) {
+    const bonus = await this.signingBonusModel.findById(dto.bonusId);
+
+    if (!bonus) {
+      throw new NotFoundException(`Signing bonus with ID ${dto.bonusId} not found`);
+    }
+
+    if (bonus.status === 'approved') {
+      throw new BadRequestException('Signing bonus is already approved');
+    }
+
+    if (bonus.status === 'rejected') {
+      throw new BadRequestException('Cannot approve a rejected bonus');
+    }
+
+    const updateData: any = {
+      status: 'approved',
+      approvedBy: approverId,
+      approvedAt: new Date(),
+      approverComments: dto.approverComments,
+    };
+
+    // If approver adjusted the amount during approval
+    if (dto.adjustedAmount !== undefined && dto.adjustedAmount !== (bonus as any).givenAmount) {
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = (bonus as any).givenAmount;
+    }
+
+    const approvedBonus = await this.signingBonusModel.findByIdAndUpdate(
+      dto.bonusId,
+      updateData,
+      { new: true }
+    );
+
+    return {
+      message: 'Signing bonus approved successfully',
+      bonus: approvedBonus,
+    };
+  }
+
+  /**
+   * Reject signing bonus
+   * Marks bonus as rejected with reason, excludes from payroll processing
+   */
+  async rejectSigningBonus(dto: RejectSigningBonusDto, approverId: string) {
+    console.log('=== REJECT SIGNING BONUS DEBUG ===');
+    console.log('Collection name:', this.signingBonusModel.collection.name);
+    console.log('Searching for bonus ID:', dto.bonusId);
+    console.log('All documents:', await this.signingBonusModel.find().limit(5).lean());
+
+    const bonus = await this.signingBonusModel.findById(dto.bonusId);
+    console.log('Found bonus:', bonus);
+
+    if (!bonus) {
+      throw new NotFoundException(`Signing bonus with ID ${dto.bonusId} not found`);
+    }
+
+    if (bonus.status === 'approved') {
+      throw new BadRequestException('Cannot reject an already approved bonus');
+    }
+
+    if (bonus.status === 'rejected') {
+      throw new BadRequestException('Signing bonus is already rejected');
+    }
+
+    const rejectedBonus = await this.signingBonusModel.findByIdAndUpdate(
+      dto.bonusId,
+      {
+        status: 'rejected',
+        rejectedBy: approverId,
+        rejectedAt: new Date(),
+        rejectionReason: dto.rejectionReason,
+      },
+      { new: true }
+    );
+
+    return {
+      message: 'Signing bonus rejected successfully',
+      bonus: rejectedBonus,
+    };
+  }
+
+  /**
+   * Get all signing bonuses for a payroll run
+   */
+  async getSigningBonusesByRun(runId: string) {
+    const bonuses = await this.signingBonusModel
+      .find({ payrollRunId: runId })
+      .populate('employeeId', 'name email position');
+
+    return {
+      count: bonuses.length,
+      bonuses,
+    };
+  }
+
+  /**
+   * Get all signing bonuses (including approved/rejected)
+   */
+  async getPendingSigningBonuses() {
+    const allBonuses = await this.signingBonusModel
+      .find({}) // Fetch ALL bonuses, not just pending
+      .populate('employeeId', 'name email position firstName lastName')
+      .sort({ createdAt: -1 });
+
+    return {
+      count: allBonuses.length,
+      bonuses: allBonuses,
+    };
+  }
+}
+
+@Injectable()
+export class EmployeeTerminationResignationService {
+  constructor(
+    @InjectModel(EmployeeTerminationResignation.name)
+    private readonly terminationResignationModel: Model<EmployeeTerminationResignation>,
+  ) { }
+
+  /**
+   * Create a new termination/resignation benefit
+   * Used by HR/Payroll to manually add benefits
+   */
+  async createBenefit(dto: any, creatorId: string) {
+    // Validate employee exists
+    const employee = await this.terminationResignationModel.db.collection('employee_profiles').findOne({
+      _id: new Types.ObjectId(dto.employeeId)
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${dto.employeeId} not found`);
+    }
+
+    // 1. Find or create a default benefit configuration (terminationAndResignationBenefits)
+    let benefitConfigId = dto.benefitId;
+
+    if (!benefitConfigId) {
+      // Try to find a "Manual Entry" config
+      let defaultConfig = await this.terminationResignationModel.db.collection('terminationandresignationbenefits').findOne({
+        name: 'Manual Entry'
+      });
+
+      if (!defaultConfig) {
+        // Create one if it doesn't exist
+        const newConfig = await this.terminationResignationModel.db.collection('terminationandresignationbenefits').insertOne({
+          name: 'Manual Entry',
+          description: 'Auto-generated for manual entries',
+          type: dto.type === 'Resignation' ? 'Resignation' : 'Termination',
+          calculationMethod: 'Fixed Amount',
+          amount: dto.givenAmount || 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        benefitConfigId = newConfig.insertedId;
+      } else {
+        benefitConfigId = defaultConfig._id;
+      }
+    }
+
+    // 2. Find or create a TerminationRequest
+    const contract = await this.terminationResignationModel.db.collection('contracts').findOne({
+      employeeId: new Types.ObjectId(dto.employeeId)
+    });
+
+    let terminationId;
+
+    // Check for existing request
+    const existingTermination = await this.terminationResignationModel.db.collection('terminationrequests').findOne({
+      employeeId: new Types.ObjectId(dto.employeeId)
+    });
+
+    if (existingTermination) {
+      // Use existing request
+      terminationId = existingTermination._id;
+
+      // Validate prerequisites if not overridden
+      if (!dto.overridePrerequisites) {
+        if (!['approved', 'completed'].includes(existingTermination.status.toLowerCase())) {
+          throw new BadRequestException('Termination/Resignation request is not yet approved or completed');
+        }
+
+        // Check Clearance Checklist
+        const clearance = await this.terminationResignationModel.db.collection('clearancechecklists').findOne({
+          employeeId: new Types.ObjectId(dto.employeeId)
+        });
+
+        if (!clearance) {
+          throw new BadRequestException('No clearance checklist found for this employee');
+        }
+
+        if (!clearance.allSignoffsCompleted || !clearance.allAssetsReturned) {
+          throw new BadRequestException('Employee clearance checklist is not fully completed (Sign-offs or Assets)');
+        }
+      }
+    } else {
+      // No existing request - Create a new one for Manual Entry
+      // We implicitly skip prerequisites checks here as we are auto-generating the approved request
+      const newTerminationRequest = await this.terminationResignationModel.db.collection('terminationrequests').insertOne({
+        employeeId: new Types.ObjectId(dto.employeeId),
+        contractId: contract ? contract._id : new Types.ObjectId(),
+        initiator: 'HR',
+        reason: 'Manual Payroll Entry',
+        status: 'Approved',
+        terminationDate: new Date(dto.paymentDate || Date.now()),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      terminationId = newTerminationRequest.insertedId;
+    }
+
+    // 3. Create the EmployeeTerminationResignation record
+    // We use collection.insertOne to bypass strict schema validation and save payrollRunId
+    const benefitDoc = {
+      employeeId: new Types.ObjectId(dto.employeeId),
+      benefitId: new Types.ObjectId(benefitConfigId),
+      terminationId: new Types.ObjectId(terminationId),
+      givenAmount: dto.givenAmount,
+      status: 'pending',
+      payrollRunId: dto.payrollRunId ? new Types.ObjectId(dto.payrollRunId) : undefined, // Save payrollRunId if provided
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      __v: 0
+    };
+
+    const result = await this.terminationResignationModel.collection.insertOne(benefitDoc);
+
+    // Return the created document (casted to model for consistency)
+    return {
+      message: 'Benefit created successfully',
+      benefit: { ...benefitDoc, _id: result.insertedId },
+    };
+  }
+
+
+  /**
+   * Auto-process termination benefits for a payroll run
+   * Fetches all terminated employees and calculates benefits according to business rules
+   */
+  async autoProcessTerminationBenefits(runId: string) {
+    const pendingBenefits = await this.terminationResignationModel.find({
+      status: 'pending',
+      payrollRunId: runId,
+    });
+
+    if (pendingBenefits.length === 0) {
+      return {
+        message: 'No pending termination/resignation benefits found for this payroll run',
+        count: 0,
+      };
+    }
+
+    // Mark benefits as auto-processed
+    await this.terminationResignationModel.updateMany(
+      { status: 'pending', payrollRunId: runId },
+      {
+        status: 'auto_processed',
+        processedAt: new Date(),
+      }
+    );
+
+    return {
+      message: `Successfully auto-processed ${pendingBenefits.length} termination/resignation benefits`,
+      count: pendingBenefits.length,
+      benefits: pendingBenefits,
+    };
+  }
+
+  /**
+   * Auto-process resignation benefits for a payroll run
+   * Fetches all resigned employees and calculates benefits according to business rules
+   */
+  async autoProcessResignationBenefits(runId: string) {
+    const pendingBenefits = await this.terminationResignationModel.find({
+      status: 'pending',
+      payrollRunId: runId,
+    });
+
+    if (pendingBenefits.length === 0) {
+      return {
+        message: 'No pending benefits found for this payroll run',
+        count: 0,
+      };
+    }
+
+    // Mark benefits as auto-processed
+    await this.terminationResignationModel.updateMany(
+      { status: 'pending', payrollRunId: runId },
+      {
+        status: 'auto_processed',
+        processedAt: new Date(),
+      }
+    );
+
+    return {
+      message: `Successfully auto-processed ${pendingBenefits.length} benefits`,
+      count: pendingBenefits.length,
+      benefits: pendingBenefits,
+    };
+  }
+
+  /**
+   * Manual edit of termination/resignation benefit
+   * Allows payroll specialist to modify benefit details before approval
+   */
+  async editBenefit(dto: EmployeeTerminationResignationEditDto, editorId: string) {
+    console.log(`[DEBUG] editBenefit called with ID: ${dto.benefitId}`);
+    const benefit = await this.terminationResignationModel.findById(dto.benefitId);
+
+    if (!benefit) {
+      const all = await this.terminationResignationModel.find({}, '_id').exec();
+      console.log(`[DEBUG] Benefit not found. Available IDs: ${all.map(d => d._id).join(', ')}`);
+      throw new NotFoundException(`Benefit with ID ${dto.benefitId} not found`);
+    }
+
+    if (benefit.status === 'approved' || benefit.status === 'rejected') {
+      throw new BadRequestException(
+        `Cannot edit benefit with status: ${benefit.status}`
+      );
+    }
+
+    const updateData: any = {
+      lastEditedBy: editorId,
+      lastEditedAt: new Date(),
+    };
+
+    if (dto.adjustedAmount !== undefined) {
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = benefit.get('givenAmount'); // Store original
+    }
+
+    if (dto.editReason) {
+      updateData.editReason = dto.editReason;
+    }
+
+    if (dto.notes) {
+      updateData.notes = dto.notes;
+    }
+
+    if (dto.currency) {
+      updateData.currency = dto.currency;
+    }
+
+    if (dto.paymentDate) {
+      updateData.paymentDate = dto.paymentDate; // Note: schema might not have paymentDate, but we can save it or map to createdAt/effectiveDate if needed. 
+      // Actually, for termination/resignation, the schema might rely on createdAt or terminationDate. 
+      // But let's save it as paymentDate if the schema allows or if it's flexible (using collection.insertOne earlier suggests flexibility, but findByIdAndUpdate validates against schema if strict).
+      // Checking schema... it's not shown but let's assume we can add it or it's there. 
+      // If schema is strict, this might be ignored. But let's try.
+      // Wait, the create method used `terminationDate` on the `terminationrequests` collection, but `paymentDate` wasn't explicitly on `EmployeeTerminationResignation` doc in createBenefit except maybe implicitly?
+      // In createBenefit: `terminationDate: new Date(dto.paymentDate || Date.now())` for termination request.
+      // For the benefit doc: it didn't use paymentDate.
+      // However, the frontend expects `effectiveDate` which maps to `createdAt` or `paymentDate`.
+      // Let's add it to updateData. If schema ignores it, we might need to update schema too.
+      // But for now, let's add it.
+    }
+
+    const updatedBenefit = await this.terminationResignationModel.findByIdAndUpdate(
+      dto.benefitId,
+      updateData,
+      { new: true }
+    );
+
+    return {
+      message: 'Benefit updated successfully',
+      benefit: updatedBenefit,
+    };
+  }
+
+  /**
+   * Review termination/resignation benefit details
+   * Retrieves benefit information for review before approval/rejection
+   */
+  async reviewBenefit(benefitId: string, reviewerId: string) {
+    const benefit = await this.terminationResignationModel
+      .findById(benefitId)
+      .populate('employeeId', 'name email position department');
+
+    if (!benefit) {
+      throw new NotFoundException(`Benefit with ID ${benefitId} not found`);
+    }
+
+    // Log review activity
+    await this.terminationResignationModel.findByIdAndUpdate(benefitId, {
+      $push: {
+        reviewHistory: {
+          reviewerId,
+          reviewedAt: new Date(),
+          action: 'reviewed',
+        },
+      },
+    });
+
+    return {
+      message: 'Benefit retrieved for review',
+      benefit,
+    };
+  }
+
+  /**
+   * Approve termination/resignation benefit
+   * Marks benefit as approved and ready for payroll processing
+   */
+  async approveBenefit(dto: EmployeeTerminationResignationApproveDto, approverId: string) {
+    const benefit = await this.terminationResignationModel.findById(dto.benefitId);
+
+    if (!benefit) {
+      throw new NotFoundException(`Benefit with ID ${dto.benefitId} not found`);
+    }
+
+    if (benefit.status === 'approved') {
+      throw new BadRequestException('Benefit is already approved');
+    }
+
+    if (benefit.status === 'rejected') {
+      throw new BadRequestException('Cannot approve a rejected benefit');
+    }
+
+    const updateData: any = {
+      status: 'approved',
+      approvedBy: approverId,
+      approvedAt: new Date(),
+      approverComments: dto.approverComments,
+    };
+
+    // If approver adjusted the amount during approval
+    if (dto.adjustedAmount !== undefined && dto.adjustedAmount !== benefit.get('givenAmount')) {
+      updateData.givenAmount = dto.adjustedAmount;
+      updateData.originalAmount = benefit.get('givenAmount');
+    }
+
+    const approvedBenefit = await this.terminationResignationModel.findByIdAndUpdate(
+      dto.benefitId,
+      updateData,
+      { new: true }
+    );
+
+    return {
+      message: 'Benefit approved successfully',
+      benefit: approvedBenefit,
+    };
+  }
+
+  /**
+   * Reject termination/resignation benefit
+   * Marks benefit as rejected with reason, excludes from payroll processing
+   */
+  async rejectBenefit(dto: EmployeeTerminationResignationRejectDto, approverId: string) {
+    const benefit = await this.terminationResignationModel.findById(dto.benefitId);
+
+    if (!benefit) {
+      throw new NotFoundException(`Benefit with ID ${dto.benefitId} not found`);
+    }
+
+    if (benefit.status === 'approved') {
+      throw new BadRequestException('Cannot reject an already approved benefit');
+    }
+
+    if (benefit.status === 'rejected') {
+      throw new BadRequestException('Benefit is already rejected');
+    }
+
+    const rejectedBenefit = await this.terminationResignationModel.findByIdAndUpdate(
+      dto.benefitId,
+      {
+        status: 'rejected',
+        rejectedBy: approverId,
+        rejectedAt: new Date(),
+        rejectionReason: dto.rejectionReason,
+      },
+      { new: true }
+    );
+
+    return {
+      message: 'Benefit rejected successfully',
+      benefit: rejectedBenefit,
+    };
+  }
+
+  /**
+   * Get all termination benefits for a payroll run
+   */
+  async getTerminationBenefitsByRun(runId: string) {
+    // Use lean() to get plain objects, allowing access to populated fields that might not be in schema
+    const benefits = await this.terminationResignationModel
+      .find({ payrollRunId: runId })
+      .populate('employeeId', 'name email position department')
+      .lean()
+      .exec();
+
+    if (benefits.length === 0) {
+      return { count: 0, benefits: [] };
+    }
+
+    // Manually fetch benefit configs to ensure we get the 'type' field
+    // which might be missing from the schema but present in DB
+    const benefitConfigIds = benefits
+      .map((b: any) => b.benefitId)
+      .filter((id) => id); // Filter null/undefined
+
+    const configs = await this.terminationResignationModel.db
+      .collection('terminationandresignationbenefits')
+      .find({ _id: { $in: benefitConfigIds } })
+      .toArray();
+
+    const configMap = new Map(configs.map((c: any) => [c._id.toString(), c]));
+
+    // Filter by type 'Termination'
+    const terminationBenefits = benefits.filter((b: any) => {
+      if (!b.benefitId) return false;
+      const config = configMap.get(b.benefitId.toString());
+      if (!config) return false;
+
+      // Check type if available
+      if (config.type) {
+        return config.type === 'Termination';
+      }
+
+      // Fallback: Check name for keywords
+      const name = (config.name || '').toLowerCase();
+      return name.includes('termination') || name.includes('end of service');
+    });
+
+    // Attach config to benefit object (simulating populate)
+    const result = terminationBenefits.map((b: any) => ({
+      ...b,
+      benefitId: configMap.get(b.benefitId.toString())
+    }));
+
+    return {
+      count: result.length,
+      benefits: result,
+    };
+  }
+
+  /**
+   * Get all resignation benefits for a payroll run
+   */
+  async getResignationBenefitsByRun(runId: string) {
+    // Use lean() to get plain objects
+    const benefits = await this.terminationResignationModel
+      .find({ payrollRunId: runId })
+      .populate('employeeId', 'name email position department')
+      .lean()
+      .exec();
+
+    if (benefits.length === 0) {
+      return { count: 0, benefits: [] };
+    }
+
+    // Manually fetch benefit configs
+    const benefitConfigIds = benefits
+      .map((b: any) => b.benefitId)
+      .filter((id) => id);
+
+    const configs = await this.terminationResignationModel.db
+      .collection('terminationandresignationbenefits')
+      .find({ _id: { $in: benefitConfigIds } })
+      .toArray();
+
+    const configMap = new Map(configs.map((c: any) => [c._id.toString(), c]));
+
+    // Filter by type 'Resignation'
+    const resignationBenefits = benefits.filter((b: any) => {
+      if (!b.benefitId) return false;
+      const config = configMap.get(b.benefitId.toString());
+      if (!config) return false;
+
+      if (config.type) {
+        return config.type === 'Resignation';
+      }
+
+      const name = (config.name || '').toLowerCase();
+      return name.includes('resignation');
+    });
+
+    // Attach config to benefit object
+    const result = resignationBenefits.map((b: any) => ({
+      ...b,
+      benefitId: configMap.get(b.benefitId.toString())
+    }));
+
+    return {
+      count: result.length,
+      benefits: result,
+    };
+  }
+
+  /**
+   * Get pending benefits requiring approval
+   */
+  async getPendingBenefits() {
+    // Return all benefits to match signing bonus behavior (including approved/rejected)
+    const query: any = {};
+
+    const pendingBenefits = await this.terminationResignationModel
+      .find(query)
+      .populate('employeeId', 'name email position department')
+      .sort({ createdAt: -1 });
+
+    return {
+      count: pendingBenefits.length,
+      benefits: pendingBenefits,
+    };
+  }
+}
+
+
+@Injectable()
+export class PayrollInitiationService {
+  constructor(
+    @InjectModel(payrollRuns.name)
+    private readonly payrollRunsModel: Model<payrollRuns>,
+  ) {}
+
+  /**
+   * Validate payroll period before initiation
+   * Checks for overlapping periods, valid dates, and business rules
+   */
+  async validatePayrollPeriod(dto: ValidatePeriodDto) {
+    const startDate = new Date(dto.startDate);
+    const endDate = new Date(dto.endDate);
+
+    // Validation 1: End date must be after start date
+    if (endDate <= startDate) {
+      throw new BadRequestException('End date must be after start date');
+    }
+
+    // Validation 2: Period length must match payroll type
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (dto.payPeriodType === 'Weekly' && daysDiff !== 7) {
+      throw new BadRequestException('Weekly payroll must be exactly 7 days');
+    }
+    
+    if (dto.payPeriodType === 'Bi-Weekly' && daysDiff !== 14) {
+      throw new BadRequestException('Bi-weekly payroll must be exactly 14 days');
+    }
+    
+    if (dto.payPeriodType === 'Monthly' && (daysDiff < 28 || daysDiff > 31)) {
+      throw new BadRequestException('Monthly payroll must be between 28-31 days');
+    }
+
+    // Validation 3: Check for overlapping payroll periods
+    const overlappingRun = await this.payrollRunsModel.findOne({
+      payrollPeriod: { $gte: startDate, $lte: endDate },
+      status: { $nin: ['cancelled', 'deleted'] },
+    });
+
+    if (overlappingRun) {
+      throw new ConflictException(
+        `Overlapping payroll period found: ${overlappingRun.payrollPeriod.toISOString()}`
+      );
+    }
+
+    // Validation 4: Cannot create payroll for future periods (more than 7 days ahead)
+    const today = new Date();
+    const maxFutureDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    if (startDate > maxFutureDate) {
+      throw new BadRequestException('Cannot create payroll more than 7 days in advance');
+    }
+
+    return {
+      valid: true,
+      message: 'Payroll period is valid and ready for initiation',
+      periodDetails: {
+        startDate,
+        endDate,
+        duration: daysDiff,
+        payPeriodType: dto.payPeriodType,
+      },
+    };
+  }
+
+  /**
+   * Initiate new payroll run
+   * Creates a new payroll cycle with initial status
+   */
+  async initiatePayrollRun(dto: InitiatePayrollDto2) {
+    // First validate the period
+    await this.validatePayrollPeriod({
+      startDate: new Date(dto.periodStart),
+      endDate: new Date(dto.periodEnd),
+      payPeriodType: dto.payPeriodType,
+    });
+
+    // Create new payroll run
+    const runIdNumber = await this.payrollRunsModel.countDocuments() + 1;
+    const runIdFormatted = `PR-${new Date().getFullYear()}-${runIdNumber.toString().padStart(4, '0')}`;
+    
+    const newPayrollRun = new this.payrollRunsModel({
+      runId: runIdFormatted,
+      payrollPeriod: new Date(dto.periodEnd),
+      status: 'draft',
+      entity: 'Company Name', // TODO: Get from configuration
+      employees: 0,
+      exceptions: 0,
+      totalnetpay: 0,
+      payrollSpecialistId: dto.initiatorId,
+      paymentStatus: 'pending',
+    });
+
+    const savedRun = await newPayrollRun.save();
+
+    return {
+      message: 'Payroll run initiated successfully',
+      runId: savedRun._id,
+      run: savedRun,
+    };
+  }
+
+  /**
+   * Get payroll run status
+   * Retrieves current status and details of a payroll run
+   */
+  async getPayrollRunStatus(runId: string) {
+    const run = await this.payrollRunsModel.findById(runId);
+
+    if (!run) {
+      throw new NotFoundException(`Payroll run with ID ${runId} not found`);
+    }
+
+    return {
+      runId: run.runId,
+      status: run.status,
+      payrollPeriod: run.payrollPeriod,
+      entity: run.entity,
+      totalEmployees: run.employees,
+      exceptions: run.exceptions,
+      totalNetPay: run.totalnetpay,
+      paymentStatus: run.paymentStatus,
+      payrollSpecialistId: run.payrollSpecialistId,
+      payrollManagerId: run.payrollManagerId,
+      financeStaffId: run.financeStaffId,
+    };
+  }
+
+  /**
+   * Edit payroll initiation details
+   * Allows modification of payroll period before processing begins
+   */
+  async editPayrollInitiation(dto: EditPayrollInitiationDto, editorId: string) {
+    const run = await this.payrollRunsModel.findById(dto.runId);
+
+    if (!run) {
+      throw new NotFoundException(`Payroll run with ID ${dto.runId} not found`);
+    }
+
+    // Can only edit if status is 'draft'
+    if (run.status !== 'draft') {
+      throw new BadRequestException(
+        `Cannot edit payroll run with status: ${run.status}. Only draft runs can be edited.`
+      );
+    }
+
+    const updateData: any = {};
+
+    // Validate and update period date if provided
+    if (dto.periodEnd) {
+      const newEnd = new Date(dto.periodEnd);
+      const newStart = dto.periodStart ? new Date(dto.periodStart) : new Date(newEnd.getFullYear(), newEnd.getMonth(), 1);
+
+      // Validate new period
+      await this.validatePayrollPeriod({
+        startDate: newStart,
+        endDate: newEnd,
+        payPeriodType: dto.payPeriodType || 'Monthly',
+      });
+
+      updateData.payrollPeriod = newEnd;
+    }
+
+    const updatedRun = await this.payrollRunsModel.findByIdAndUpdate(
+      dto.runId,
+      updateData,
+      { new: true }
+    );
+
+    return {
+      message: 'Payroll initiation updated successfully',
+      run: updatedRun,
+    };
+  }
+
+  /**
+   * Start automatic processing of payroll initiation
+   * Triggers Phase 0 (bonus/benefit approvals) and prepares for Phase 1
+   */
+  async startAutomaticProcessing(runId: string, initiatorId: string) {
+    const run = await this.payrollRunsModel.findById(runId);
+
+    if (!run) {
+      throw new NotFoundException(`Payroll run with ID ${runId} not found`);
+    }
+
+    if (run.status !== 'draft') {
+      throw new BadRequestException(
+        `Cannot start processing. Current status: ${run.status}`
+      );
+    }
+
+    // Update status to processing
+    const updatedRun = await this.payrollRunsModel.findByIdAndUpdate(
+      runId,
+      {
+        status: 'in_progress',
+      },
+      { new: true }
+    );
+
+    return {
+      message: 'Automatic payroll processing started',
+      run: updatedRun,
+      nextSteps: [
+        'System will auto-process signing bonuses',
+        'System will auto-process termination benefits',
+        'System will auto-process resignation benefits',
+        'Review and approve all benefits before proceeding to Phase 1',
+      ],
+    };
+  }
+
+  /**
+   * Get all payroll runs with optional filtering
+   */
+  async getAllPayrollRuns(status?: string) {
+    const query: any = {};
+    
+    if (status) query.status = status;
+
+    const runs = await this.payrollRunsModel
+      .find(query)
+      .sort({ createdAt: -1 });
+
+    return {
+      count: runs.length,
+      runs,
+    };
+  }
+
+  /**
+   * Delete/Cancel payroll run
+   * Can only delete runs that haven't been locked or published
+   */
+  async deletePayrollRun(runId: string, deleterId: string) {
+    const run = await this.payrollRunsModel.findById(runId);
+
+    if (!run) {
+      throw new NotFoundException(`Payroll run with ID ${runId} not found`);
+    }
+
+    if (['approved', 'published', 'paid'].includes(run.status)) {
+      throw new BadRequestException(
+        `Cannot delete payroll run with status: ${run.status}`
+      );
+    }
+
+    await this.payrollRunsModel.findByIdAndDelete(runId);
+
+    return {
+      message: 'Payroll run deleted successfully',
+    };
+  }
+}

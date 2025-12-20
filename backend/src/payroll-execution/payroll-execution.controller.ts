@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, Res, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch,Delete ,  Query,Res, UseGuards, Req, HttpException,HttpStatus,Request, } from '@nestjs/common';
 import type { Response } from 'express';
 import { PayrollExecutionService } from './payroll-execution.service';
 import { InitiatePayrollDto } from './dto/initiate-payroll.dto';
@@ -14,10 +14,20 @@ import { LockPayrollDto } from './dto/lock-payroll.dto';
 import { UnlockPayrollDto } from './dto/unlock-payroll.dto';
 import { EscalateIrregularityDto } from './dto/escalate-irregularity.dto';
 import { ResolveIrregularityDto } from './dto/resolve-irregularity.dto';
-import { AuthGuard } from '../auth/guards/authentication.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from '../auth/decorators/roles.decorator';
-
+import { EmployeeSigningBonusService } from './payroll-execution.service';
+import { EditSigningBonusDto } from './dto/EmployeeSigningBonusEdit.dto';
+import { ApproveSigningBonusDto } from './dto/EmployeeSigningBonusApprove.dto';
+import { RejectSigningBonusDto } from './dto/EmployeeSigningBonusReject.dto';
+import { EmployeeTerminationResignationService } from './payroll-execution.service';
+import { EmployeeTerminationResignationEditDto } from './dto/EmployeeTerminationResignationEdit.dto';
+import { EmployeeTerminationResignationApproveDto } from './dto/EmployeeTerminationResignationApprove.dto';
+import { EmployeeTerminationResignationRejectDto } from './dto/EmployeeTerminationResignationReject.dto';
+import { PayrollInitiationService } from './payroll-execution.service';
+import { EditPayrollInitiationDto } from './dto/edit-payroll-initiation.dto';
+import { InitiatePayrollDto2 } from './dto/initiate-payroll2.dto';
+import { ValidatePeriodDto } from './dto/validate-period.dto';
+import { AuthGuard } from './../auth/guards/authentication.guard';
+import { Roles, Role } from './../auth/decorators/roles.decorator';
 
 @Controller('payroll-execution')
 @UseGuards(AuthGuard)
@@ -266,5 +276,579 @@ export class PayrollExecutionController {
       resolveDto.resolutionNotes,
       resolveDto.status,
     );
+  }
+}
+
+@Controller('payroll-execution/signing-bonus')
+@UseGuards(AuthGuard)
+export class EmployeeSigningBonusController {
+  constructor(
+    private readonly signingBonusService: EmployeeSigningBonusService,
+  ) { }
+
+  /**
+   * Create a new signing bonus
+   * POST /payroll-execution/signing-bonus
+   */
+  @Post()
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER)
+  async createSigningBonus(@Body() dto: any, @Request() req) {
+    try {
+      const creatorId = req.user.sub || req.user._id;
+      return await this.signingBonusService.createSigningBonus(dto, creatorId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all pending signing bonuses requiring approval
+   * GET /payroll-execution/signing-bonus/pending
+   * NOTE: Must be placed BEFORE generic parameter routes to prevent route collision
+   */
+  @Get('pending')
+  async getPendingSigningBonuses() {
+    try {
+      return await this.signingBonusService.getPendingSigningBonuses();
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve pending signing bonuses',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Auto-process signing bonuses for a payroll run
+   * POST /payroll-execution/signing-bonus/run/:runId/auto-process
+   */
+  @Post('run/:runId/auto-process')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async autoProcessSigningBonuses(@Param('runId') runId: string) {
+    try {
+      return await this.signingBonusService.autoProcessSigningBonuses(runId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to auto-process signing bonuses',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all signing bonuses for a payroll run
+   * GET /payroll-execution/signing-bonus/run/:runId
+   */
+  @Get('run/:runId')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getSigningBonusesByRun(@Param('runId') runId: string) {
+    try {
+      return await this.signingBonusService.getSigningBonusesByRun(runId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve signing bonuses',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Edit signing bonus manually
+   * PATCH /payroll-execution/signing-bonus/:bonusId/edit
+   */
+  @Patch(':bonusId/edit')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async editSigningBonus(
+    @Param('bonusId') bonusId: string,
+    @Body() dto: EditSigningBonusDto,
+    @Request() req,
+  ) {
+    try {
+      const editorId = req.user.sub || req.user._id;
+      return await this.signingBonusService.editSigningBonus(
+        { ...dto, bonusId },
+        editorId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to edit signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Review signing bonus before approval
+   * GET /payroll-execution/signing-bonus/:bonusId/review
+   */
+  @Get(':bonusId/review')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async reviewSigningBonus(@Param('bonusId') bonusId: string, @Request() req) {
+    try {
+      const reviewerId = req.user.sub || req.user._id;
+      return await this.signingBonusService.reviewSigningBonus(
+        bonusId,
+        reviewerId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to review signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Approve signing bonus
+   * POST /payroll-execution/signing-bonus/:bonusId/approve
+   */
+  @Post(':bonusId/approve')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async approveSigningBonus(
+    @Param('bonusId') bonusId: string,
+    @Body() dto: ApproveSigningBonusDto,
+    @Request() req,
+  ) {
+    try {
+      const approverId = req.user.sub || req.user._id;
+      return await this.signingBonusService.approveSigningBonus(
+        { ...dto, bonusId },
+        approverId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to approve signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Reject signing bonus
+   * POST /payroll-execution/signing-bonus/:bonusId/reject
+   */
+  @Post(':bonusId/reject')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async rejectSigningBonus(
+    @Param('bonusId') bonusId: string,
+    @Body() dto: RejectSigningBonusDto,
+    @Request() req,
+  ) {
+    try {
+      const approverId = req.user.sub || req.user._id;
+      return await this.signingBonusService.rejectSigningBonus(
+        { ...dto, bonusId },
+        approverId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to reject signing bonus',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+}
+
+@Controller('payroll-execution/termination-resignation')
+@UseGuards(AuthGuard)
+export class EmployeeTerminationResignationController {
+  constructor(
+    private readonly terminationResignationService: EmployeeTerminationResignationService,
+  ) { }
+
+  /**
+   * Create a new termination/resignation benefit
+   * POST /payroll-execution/termination-resignation
+   */
+  @Post()
+  @Roles(Role.PAYROLL_SPECIALIST, Role.HR_MANAGER, Role.Payroll_MANAGER)
+  async createBenefit(@Body() dto: any, @Request() req) {
+    try {
+      const creatorId = req.user.sub || req.user._id;
+      return await this.terminationResignationService.createBenefit(dto, creatorId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create benefit',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+
+  /**
+   * Auto-process termination benefits for a payroll run
+   * POST /payroll-execution/termination-resignation/run/:runId/auto-process-termination
+   */
+  @Post('run/:runId/auto-process-termination')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async autoProcessTerminationBenefits(@Param('runId') runId: string) {
+    try {
+      return await this.terminationResignationService.autoProcessTerminationBenefits(
+        runId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to auto-process termination benefits',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Auto-process resignation benefits for a payroll run
+   * POST /payroll-execution/termination-resignation/run/:runId/auto-process-resignation
+   */
+  @Post('run/:runId/auto-process-resignation')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async autoProcessResignationBenefits(@Param('runId') runId: string) {
+    try {
+      return await this.terminationResignationService.autoProcessResignationBenefits(
+        runId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to auto-process resignation benefits',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Edit termination/resignation benefit manually
+   * PATCH /payroll-execution/termination-resignation/:benefitId/edit
+   */
+  @Patch(':benefitId/edit')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.HR_MANAGER)
+  async editBenefit(
+    @Param('benefitId') benefitId: string,
+    @Body() dto: EmployeeTerminationResignationEditDto,
+    @Request() req,
+  ) {
+    try {
+      const editorId = req.user.sub || req.user._id;
+      return await this.terminationResignationService.editBenefit(
+        { ...dto, benefitId },
+        editorId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to edit benefit',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Review benefit before approval
+   * GET /payroll-execution/termination-resignation/:benefitId/review
+   */
+  @Get(':benefitId/review')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async reviewBenefit(@Param('benefitId') benefitId: string, @Request() req) {
+    try {
+      const reviewerId = req.user.sub || req.user._id;
+      return await this.terminationResignationService.reviewBenefit(
+        benefitId,
+        reviewerId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to review benefit',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Approve termination/resignation benefit
+   * POST /payroll-execution/termination-resignation/:benefitId/approve
+   */
+  @Post(':benefitId/approve')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async approveBenefit(
+    @Param('benefitId') benefitId: string,
+    @Body() dto: EmployeeTerminationResignationApproveDto,
+    @Request() req,
+  ) {
+    try {
+      const approverId = req.user.sub || req.user._id;
+      return await this.terminationResignationService.approveBenefit(
+        { ...dto, benefitId },
+        approverId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to approve benefit',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Reject termination/resignation benefit
+   * POST /payroll-execution/termination-resignation/:benefitId/reject
+   */
+  @Post(':benefitId/reject')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async rejectBenefit(
+    @Param('benefitId') benefitId: string,
+    @Body() dto: EmployeeTerminationResignationRejectDto,
+    @Request() req,
+  ) {
+    try {
+      const approverId = req.user.sub || req.user._id;
+      return await this.terminationResignationService.rejectBenefit(
+        { ...dto, benefitId },
+        approverId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to reject benefit',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all termination benefits for a payroll run
+   * GET /payroll-execution/termination-resignation/run/:runId/termination
+   */
+  @Get('run/:runId/termination')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getTerminationBenefitsByRun(@Param('runId') runId: string) {
+    try {
+      return await this.terminationResignationService.getTerminationBenefitsByRun(
+        runId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve termination benefits',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all resignation benefits for a payroll run
+   * GET /payroll-execution/termination-resignation/run/:runId/resignation
+   */
+  @Get('run/:runId/resignation')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getResignationBenefitsByRun(@Param('runId') runId: string) {
+    try {
+      return await this.terminationResignationService.getResignationBenefitsByRun(
+        runId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve resignation benefits',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all pending benefits requiring approval
+   * GET /payroll-execution/termination-resignation/pending
+   */
+  @Get('pending')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getPendingBenefits() {
+    try {
+      return await this.terminationResignationService.getPendingBenefits();
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve pending benefits',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+}
+
+@Controller('payroll-execution/initiation')
+@UseGuards(AuthGuard)
+export class PayrollInitiationController {
+  constructor(
+    private readonly payrollInitiationService: PayrollInitiationService,
+  ) {}
+
+  /**
+   * Validate payroll period before initiation
+   * POST /payroll-execution/initiation/validate-period
+   */
+  @Post('validate-period')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async validatePeriod(@Body() dto: ValidatePeriodDto) {
+    try {
+      return await this.payrollInitiationService.validatePayrollPeriod(dto);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to validate payroll period',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Initiate new payroll run
+   * POST /payroll-execution/initiation/initiate
+   */
+  @Post('initiate')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async initiateRun(@Body() dto: InitiatePayrollDto2, @Request() req) {
+    try {
+      const initiatorId = req.user.sub || req.user._id;
+      return await this.payrollInitiationService.initiatePayrollRun({
+        ...dto,
+        initiatorId,
+      });
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to initiate payroll run',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get payroll run status
+   * GET /payroll-execution/initiation/run/:runId/status
+   */
+  @Get('run/:runId/status')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF)
+  async getRunStatus(@Param('runId') runId: string) {
+    try {
+      return await this.payrollInitiationService.getPayrollRunStatus(runId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve payroll run status',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Edit payroll initiation details
+   * PATCH /payroll-execution/initiation/run/:runId/edit
+   */
+  @Patch('run/:runId/edit')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async editPayrollInitiation(
+    @Param('runId') runId: string,
+    @Body() dto: EditPayrollInitiationDto,
+    @Request() req,
+  ) {
+    try {
+      const editorId = req.user.sub || req.user._id;
+      const editDto = { ...dto, runId };
+      return await this.payrollInitiationService.editPayrollInitiation(
+        editDto,
+        editorId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to edit payroll initiation',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Start automatic processing of payroll initiation
+   * POST /payroll-execution/initiation/run/:runId/start-processing
+   */
+  @Post('run/:runId/start-processing')
+  @Roles(Role.PAYROLL_SPECIALIST)
+  async startAutomaticProcessing(
+    @Param('runId') runId: string,
+    @Request() req,
+  ) {
+    try {
+      const initiatorId = req.user.sub || req.user._id;
+      return await this.payrollInitiationService.startAutomaticProcessing(
+        runId,
+        initiatorId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to start automatic processing',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all payroll runs with optional filtering
+   * GET /payroll-execution/initiation/runs
+   */
+  @Get('runs')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER, Role.FINANCE_STAFF)
+  async getAllPayrollRuns(@Query('status') status?: string) {
+    try {
+      return await this.payrollInitiationService.getAllPayrollRuns(status);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve payroll runs',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get active payroll runs
+   * GET /payroll-execution/initiation/runs/active
+   */
+  @Get('runs/active')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getActiveRuns() {
+    try {
+      return await this.payrollInitiationService.getAllPayrollRuns('in_progress');
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve active payroll runs',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get draft payroll runs
+   * GET /payroll-execution/initiation/runs/draft
+   */
+  @Get('runs/draft')
+  @Roles(Role.PAYROLL_SPECIALIST, Role.Payroll_MANAGER)
+  async getDraftRuns() {
+    try {
+      return await this.payrollInitiationService.getAllPayrollRuns('draft');
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve draft payroll runs',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Delete/Cancel payroll run
+   * DELETE /payroll-execution/initiation/run/:runId
+   */
+  @Delete('run/:runId')
+  @Roles(Role.Payroll_MANAGER)
+  async deletePayrollRun(@Param('runId') runId: string, @Request() req) {
+    try {
+      const deleterId = req.user.sub || req.user._id;
+      return await this.payrollInitiationService.deletePayrollRun(
+        runId,
+        deleterId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to delete payroll run',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
