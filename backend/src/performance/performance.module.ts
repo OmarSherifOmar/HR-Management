@@ -1,22 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PerformanceController } from './performance.controller';
+import { PerformanceController, TemplateController, CycleController, AssignmentController, AppraisalController, DisputeController, ReportingController } from './performance.controller';
 import { PerformanceService } from './performance.service';
-// Modular Services
-import { TemplateService } from './services/template.service';
-import { CycleService } from './services/cycle.service';
-import { AssignmentService } from './services/assignment.service';
-import { AppraisalService } from './services/appraisal.service';
-import { DisputeService } from './services/dispute.service';
-import { ReportingService } from './services/reporting.service';
-// Modular Controllers
-import { TemplateController } from './controllers/template.controller';
-import { CycleController } from './controllers/cycle.controller';
-import { AssignmentController } from './controllers/assignment.controller';
-import { AppraisalController } from './controllers/appraisal.controller';
-import { DisputeController } from './controllers/dispute.controller';
-import { ReportingController } from './controllers/reporting.controller';
-// Schemas
+
 import {
   AppraisalTemplate,
   AppraisalTemplateSchema,
@@ -79,21 +65,11 @@ import {
   ],
   providers: [
     PerformanceService,
-    TemplateService,
-    CycleService,
-    AssignmentService,
-    AppraisalService,
-    DisputeService,
-    ReportingService,
+    
   ],
   exports: [
     PerformanceService,
-    TemplateService,
-    CycleService,
-    AssignmentService,
-    AppraisalService,
-    DisputeService,
-    ReportingService,
+    
   ],
 })
 export class PerformanceModule {}

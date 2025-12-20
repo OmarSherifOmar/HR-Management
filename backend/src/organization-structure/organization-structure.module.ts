@@ -1,15 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import { OrganizationStructureController } from './organization-structure.controller';
-import { DepartmentController } from './controllers/department.controller';
-import { PositionController } from './controllers/position.controller';
-import { ChangeRequestController } from './controllers/change-request.controller';
-
-import { OrganizationStructureService } from './organization-structure.service';
-import { DepartmentService } from './services/department.service';
-import { PositionService } from './services/position.service';
-import { ChangeRequestService } from './services/change-request.service';
+import { OrganizationStructureController, DepartmentController, PositionController, ChangeRequestController } from './organization-structure.controller';
+import { DepartmentService, PositionService, ChangeRequestService } from './organization-structure.service';
 
 import { Department, DepartmentSchema } from './models/department.schema';
 import { Position, PositionSchema } from './models/position.schema';
@@ -17,7 +10,6 @@ import { StructureChangeRequest, StructureChangeRequestSchema } from './models/s
 import { StructureApproval, StructureApprovalSchema } from './models/structure-approval.schema';
 import { StructureChangeLog, StructureChangeLogSchema } from './models/structure-change-log.schema';
 import { PositionAssignment, PositionAssignmentSchema } from './models/position-assignment.schema';
-
 
 import { payGrade, payGradeSchema } from '../payroll-configuration/models/payGrades.schema';
 import { NotificationLog, NotificationLogSchema } from '../time-management/models/notification-log.schema';
@@ -44,7 +36,6 @@ import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/mode
     ChangeRequestController,
   ],
   providers: [
-    OrganizationStructureService,
     DepartmentService,
     PositionService,
     ChangeRequestService,
