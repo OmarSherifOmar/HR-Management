@@ -17,8 +17,9 @@ export default function CandidateDetailsPage() {
   }, []);
 
   async function loadCandidate() {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     const res = await authenticatedFetch(
-      `http://localhost:3000/employees/candidates/${id}`,
+      `${URL}/employees/candidates/${id}`,
     );
     const data = await res.json();
     setForm(data);
@@ -26,9 +27,10 @@ export default function CandidateDetailsPage() {
   }
 
   async function saveChanges() {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     setSaving(true);
     await authenticatedFetch(
-      `http://localhost:3000/employees/candidates/${id}`,
+      `${URL}/employees/candidates/${id}`,
       {
         method: 'PUT',
         body: JSON.stringify(form),
@@ -41,8 +43,9 @@ export default function CandidateDetailsPage() {
   async function convertToEmployee() {
     if (!confirm('Convert this candidate to employee?')) return;
 
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     await authenticatedFetch(
-      `http://localhost:3000/employees/candidates/${id}/convert`,
+      `${URL}/employees/candidates/${id}/convert`,
       { method: 'POST', body: JSON.stringify({}) },
     );
 
@@ -52,8 +55,9 @@ export default function CandidateDetailsPage() {
   async function deleteCandidate() {
     if (!confirm('DELETE candidate permanently?')) return;
 
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     await authenticatedFetch(
-      `http://localhost:3000/employees/candidates/${id}`,
+      `${URL}/employees/candidates/${id}`,
       { method: 'DELETE' },
     );
 

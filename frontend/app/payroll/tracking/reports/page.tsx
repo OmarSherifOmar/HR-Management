@@ -92,13 +92,14 @@ export default function ReportsPage() {
       }
 
       setLoading(true);
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       const params = new URLSearchParams();
       if (selectedMonth) params.append("month", selectedMonth);
       if (selectedYear) params.append("year", selectedYear);
 
       const url = params.toString()
-        ? `http://localhost:3000/payroll-tracking/reports/payroll?${params.toString()}`
-        : "http://localhost:3000/payroll-tracking/reports/payroll";
+        ? `${URL_BACKEND}/payroll-tracking/reports/payroll?${params.toString()}`
+        : `${URL_BACKEND}/payroll-tracking/reports/payroll`;
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch payroll reports");
       const data = await response.json();
@@ -113,9 +114,10 @@ export default function ReportsPage() {
 
   const fetchDepartmentReport = async (departmentId: string) => {
     try {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/reports/department/${departmentId}`,
+        `${URL_BACKEND}/payroll-tracking/reports/department/${departmentId}`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch department report");
@@ -146,13 +148,14 @@ export default function ReportsPage() {
       }
 
       setLoading(true);
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       const params = new URLSearchParams();
       if (selectedMonth) params.append("month", selectedMonth);
       if (selectedYear) params.append("year", selectedYear);
 
       const url = params.toString()
-        ? `http://localhost:3000/payroll-tracking/reports/finance/tax-benefits?${params.toString()}`
-        : "http://localhost:3000/payroll-tracking/reports/finance/tax-benefits";
+        ? `${URL_BACKEND}/payroll-tracking/reports/finance/tax-benefits?${params.toString()}`
+        : `${URL_BACKEND}/payroll-tracking/reports/finance/tax-benefits`;
 
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok)
@@ -184,13 +187,14 @@ export default function ReportsPage() {
         }
       }
 
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       const params = new URLSearchParams();
       if (selectedMonth) params.append("month", selectedMonth);
       if (selectedYear) params.append("year", selectedYear);
 
       const url = params.toString()
-        ? `http://localhost:3000/payroll-tracking/reports/payroll/export/csv?${params.toString()}`
-        : "http://localhost:3000/payroll-tracking/reports/payroll/export/csv";
+        ? `${URL_BACKEND}/payroll-tracking/reports/payroll/export/csv?${params.toString()}`
+        : `${URL_BACKEND}/payroll-tracking/reports/payroll/export/csv`;
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to export CSV");
       const blob = await response.blob();
@@ -217,7 +221,7 @@ export default function ReportsPage() {
           return;
         }
       }
-
+const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       let url = "";
       let filename = "report.pdf";
 
@@ -227,8 +231,8 @@ export default function ReportsPage() {
         if (selectedYear) params.append("year", selectedYear);
 
         url = params.toString()
-          ? `http://localhost:3000/payroll-tracking/reports/payroll/export/pdf?${params.toString()}`
-          : "http://localhost:3000/payroll-tracking/reports/payroll/export/pdf";
+          ? `${URL_BACKEND}/payroll-tracking/reports/payroll/export/pdf?${params.toString()}`
+          : `${URL_BACKEND}/payroll-tracking/reports/payroll/export/pdf`;
 
         let suffix = "";
         if (selectedYear) suffix += `_${selectedYear}`;
@@ -240,8 +244,8 @@ export default function ReportsPage() {
         if (selectedYear) params.append("year", selectedYear);
 
         url = params.toString()
-          ? `http://localhost:3000/payroll-tracking/reports/finance/tax-benefits/export/pdf?${params.toString()}`
-          : "http://localhost:3000/payroll-tracking/reports/finance/tax-benefits/export/pdf";
+          ? `${URL_BACKEND}/payroll-tracking/reports/finance/tax-benefits/export/pdf?${params.toString()}`
+          : `${URL_BACKEND}/payroll-tracking/reports/finance/tax-benefits/export/pdf`;
 
         let suffix = "";
         if (selectedYear) suffix += `_${selectedYear}`;
@@ -252,7 +256,7 @@ export default function ReportsPage() {
           alert("Please enter a department ID before exporting.");
           return;
         }
-        url = `http://localhost:3000/payroll-tracking/reports/department/${selectedDepartment}/export/pdf`;
+        url = `${URL_BACKEND}/payroll-tracking/reports/department/${selectedDepartment}/export/pdf`;
         filename = `department_${selectedDepartment}_report.pdf`;
       }
 

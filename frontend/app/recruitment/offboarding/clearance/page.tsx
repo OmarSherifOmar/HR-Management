@@ -46,7 +46,8 @@ export default function ClearanceTrackingPage() {
 
   const fetchClearances = async () => {
     try {
-      const response = await fetch('http://localhost:3000/offboarding/clearance', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/offboarding/clearance`, {
         credentials: 'include',
       });
 

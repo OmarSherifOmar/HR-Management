@@ -65,12 +65,13 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
   const fetchCycles = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/performance/cycles', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles`, {
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        onNotify?.('Access denied to cycles', 'error');
+        onNotify?.('Access Denied: You do not have permission to view performance cycles. Please contact your administrator.', 'error');
         return;
       }
 
@@ -88,12 +89,13 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const response = await fetch('http://localhost:3000/api/performance/templates', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/templates`, {
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        console.warn('Access denied to templates');
+        onNotify?.('Access Denied: You do not have permission to view templates.', 'error');
         setTemplates([]);
         return;
       }
@@ -167,10 +169,11 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
 
       console.log('Cycle payload being sent:', JSON.stringify(payload, null, 2));
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId 
-        ? `http://localhost:3000/api/performance/cycles/${editingId}`
-        : 'http://localhost:3000/api/performance/cycles';
+        ? `${URL}/api/performance/cycles/${editingId}`
+        : `${URL}/api/performance/cycles`;
 
       const response = await fetch(url, {
         method,
@@ -180,7 +183,7 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
       });
 
       if (response.status === 403) {
-        onNotify?.(`You do not have permission to ${editingId ? 'update' : 'create'} cycles`, 'error');
+        onNotify?.(`Access Denied: You do not have permission to ${editingId ? 'update' : 'create'} performance cycles. This action requires HR Manager or System Admin role.`, 'error');
         return;
       }
 
@@ -216,13 +219,14 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
 
   const handleActivate = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/performance/cycles/${id}/activate`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles/${id}/activate`, {
         method: 'PUT',
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to activate cycles', 'error');
+        onNotify?.('Access Denied: You do not have permission to activate performance cycles. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 
@@ -240,13 +244,14 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
     if (!confirm('Close this cycle? This cannot be undone.')) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/performance/cycles/${id}/close`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles/${id}/close`, {
         method: 'PUT',
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to close cycles', 'error');
+        onNotify?.('Access Denied: You do not have permission to close performance cycles. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 
@@ -269,8 +274,9 @@ export default function PerformanceCycles({ userRole, employeeId, onNotify }: Pe
     if (!archivingCycleId) return;
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/api/performance/assignments/cycles/${archivingCycleId}/archive-all`,
+        `${URL}/api/performance/assignments/cycles/${archivingCycleId}/archive-all`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

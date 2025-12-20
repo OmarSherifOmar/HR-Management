@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
@@ -22,6 +22,14 @@ interface Refund {
 }
 
 export default function RefundsPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <RefundsPageContent />
+    </Suspense>
+  );
+}
+
+function RefundsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -59,9 +67,10 @@ export default function RefundsPage() {
       const isAdminRole =
         adminOverride !== undefined ? adminOverride : normalizedRole === "finance staff";
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const url = isAdminRole
-        ? "http://localhost:3000/payroll-tracking/refunds/pending"
-        : "http://localhost:3000/payroll-tracking/me/refunds";
+        ? `${URL}/payroll-tracking/refunds/pending`
+        : `${URL}/payroll-tracking/me/refunds`;
 
       const response = await fetch(
         url,
@@ -96,8 +105,9 @@ export default function RefundsPage() {
     try {
       setSubmitting(true);
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        "http://localhost:3000/payroll-tracking/refunds",
+        `${URL}/payroll-tracking/refunds`,
         {
           method: "POST",
           headers: {
@@ -133,8 +143,9 @@ export default function RefundsPage() {
     if (!payrollRunId) return;
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/refunds/${refundId}/mark-paid`,
+        `${URL}/payroll-tracking/refunds/${refundId}/mark-paid`,
         {
           method: "POST",
           headers: {

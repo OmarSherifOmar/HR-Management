@@ -114,12 +114,13 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/departments', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/org/departments`, {
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        console.warn('Access denied to departments');
+        onNotify?.('Access Denied: You do not have permission to view departments. Please contact your administrator.', 'error');
         return;
       }
 
@@ -139,7 +140,8 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
     }
 
     try {
-      const url = `http://localhost:3000/api/org/positions?departmentId=${departmentId}`;
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const url = `${URL}/api/org/positions?departmentId=${departmentId}`;
       console.log('Fetching positions from:', url);
       
       const response = await fetch(url, {
@@ -147,7 +149,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        console.warn('Access denied to positions');
+        onNotify?.('Access Denied: You do not have permission to view positions. Please contact your administrator.', 'error');
         setPositions([]);
         return;
       }
@@ -171,12 +173,13 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/performance/templates', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/templates`, {
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        onNotify?.('Access denied to templates', 'error');
+        onNotify?.('Access Denied: You do not have permission to view performance templates. Please contact your administrator.', 'error');
         return;
       }
 
@@ -249,11 +252,11 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       }
 
       console.log('Template payload being sent:', JSON.stringify(payload, null, 2));
-
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId
-        ? `http://localhost:3000/api/performance/templates/${editingId}`
-        : 'http://localhost:3000/api/performance/templates';
+        ? `${URL}/api/performance/templates/${editingId}`
+        : `${URL}/api/performance/templates`;
 
       const response = await fetch(url, {
         method,
@@ -263,7 +266,7 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to create/edit templates', 'error');
+        onNotify?.('Access Denied: You do not have permission to create or edit performance templates. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 
@@ -308,13 +311,14 @@ export default function PerformanceTemplates({ userRole, employeeId, onNotify }:
     if (!confirm('Delete this template?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/performance/templates/${id}/deactivate`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/templates/${id}/deactivate`, {
         method: 'PUT',
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to delete templates', 'error');
+        onNotify?.('Access Denied: You do not have permission to delete performance templates. This action requires HR Manager or System Admin role.', 'error');
         return;
       }
 

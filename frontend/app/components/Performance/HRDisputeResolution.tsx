@@ -56,8 +56,9 @@ export default function HRDisputeResolution({
   const fetchDisputes = async () => {
     try {
       setLoading(true);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        'http://localhost:3000/api/performance/disputes/manager/me',
+        `${URL}/api/performance/disputes/manager/me`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -91,8 +92,9 @@ export default function HRDisputeResolution({
 
     try {
       setResolvingId(disputeId);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/api/performance/disputes/${disputeId}/resolve`,
+        `${URL}/api/performance/disputes/${disputeId}/resolve`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { authenticatedFetch } from '../../../context/AuthContext';
@@ -69,6 +69,14 @@ const commonQualifications = [
 ];
 
 export default function CreateJobTemplatePage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <CreateJobTemplateContent />
+    </Suspense>
+  );
+}
+
+function CreateJobTemplateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -99,7 +107,8 @@ export default function CreateJobTemplatePage() {
 
   const fetchTemplate = async (id: string) => {
     try {
-      const response = await authenticatedFetch(`http://localhost:3000/job-templates/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/job-templates/${id}`);
       if (response.ok) {
         const template: JobTemplate = await response.json();
         setFormData({
@@ -137,10 +146,10 @@ export default function CreateJobTemplatePage() {
     }
 
     try {
-      const url = editId 
-        ? `http://localhost:3000/job-templates/${editId}`
-        : 'http://localhost:3000/job-templates';
-      
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const url = editId
+        ? `${URL}/job-templates/${editId}`
+        : `${URL}/job-templates`;
       const method = editId ? 'PATCH' : 'POST';
 
       const response = await authenticatedFetch(url, {

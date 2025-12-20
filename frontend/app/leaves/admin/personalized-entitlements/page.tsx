@@ -120,7 +120,8 @@ export default function PersonalizedEntitlementsPage() {
 
   const fetchLeaveTypes = async () => {
     try {
-      const response = await fetch('http://localhost:3000/leaves/types', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/types`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -134,7 +135,8 @@ export default function PersonalizedEntitlementsPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('http://localhost:3000/employees/searchs', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/employees/searchs`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -148,7 +150,8 @@ export default function PersonalizedEntitlementsPage() {
 
   const fetchEligibilityOptions = async () => {
     try {
-      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/eligibility-options', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/eligibility-options`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -162,8 +165,9 @@ export default function PersonalizedEntitlementsPage() {
 
   const fetchEntitlements = async (employeeId: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/leaves/personalized-entitlements/employee/${employeeId}`, {
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/employee/${employeeId}`, {
         credentials: 'include',
       });
       
@@ -204,7 +208,8 @@ export default function PersonalizedEntitlementsPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/assign', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/assign`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -250,7 +255,8 @@ export default function PersonalizedEntitlementsPage() {
         return;
       }
       
-      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/bulk-assign', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/bulk-assign`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -294,7 +300,8 @@ export default function PersonalizedEntitlementsPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/adjustment', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/adjustment`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -319,7 +326,8 @@ export default function PersonalizedEntitlementsPage() {
     if (!confirm('Reset this entitlement to policy default?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/leaves/personalized-entitlements/reset/${employeeId}/${leaveTypeId}`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/reset/${employeeId}/${leaveTypeId}`, {
         method: 'PUT',
         credentials: 'include',
       });
@@ -351,7 +359,8 @@ export default function PersonalizedEntitlementsPage() {
       // Note: If no eligibility criteria are defined, entitlements will be assigned to ALL employees
       // This is intentional - "no restrictions" = "all employees"
 
-      const response = await fetch('http://localhost:3000/leaves/personalized-entitlements/add-with-eligibility', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/personalized-entitlements/add-with-eligibility`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

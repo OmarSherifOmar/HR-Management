@@ -43,8 +43,9 @@ export default function ResignationPage() {
 
   const fetchResignations = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // First get user's employee ID
-      const userResponse = await fetch('http://localhost:3000/employee-profile/me', {
+      const userResponse = await fetch(`${URL}/employee-profile/me`, {
         credentials: 'include',
       });
 
@@ -53,7 +54,7 @@ export default function ResignationPage() {
         const employeeId = userData._id;
 
         // Then fetch their resignation requests
-        const response = await fetch(`http://localhost:3000/resignation-requests/employee/${employeeId}`, {
+        const response = await fetch(`${URL}/resignation-requests/employee/${employeeId}`, {
           credentials: 'include',
         });
 
@@ -75,8 +76,9 @@ export default function ResignationPage() {
     setSubmitting(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // First get user's employee ID and contract ID
-      const userResponse = await fetch('http://localhost:3000/employee-profile/me', {
+      const userResponse = await fetch(`${URL}/employee-profile/me`, {
         credentials: 'include',
       });
 
@@ -96,7 +98,7 @@ export default function ResignationPage() {
         contractId: userData.contractId || '000000000000000000000000', // Placeholder
       };
 
-      const response = await fetch('http://localhost:3000/resignation-requests', {
+      const response = await fetch(`${URL}/resignation-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

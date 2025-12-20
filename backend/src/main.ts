@@ -27,14 +27,14 @@ async function bootstrap() {
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'], // Your frontend URL and same origin
+    origin: ['http://localhost:3000', 'http://localhost:3001','https://hr-management-1-lim3.onrender.com','https://hr-management-3boc.onrender.com'], // Your frontend URL and same origin
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   });
 
   // Serve static files (uploads)
-  const uploadsPath = join(__dirname, '..', 'uploads');
+  const uploadsPath = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
   app.use('/uploads', express.static(uploadsPath));
   console.log(`Static files serving from: ${uploadsPath}`);
 

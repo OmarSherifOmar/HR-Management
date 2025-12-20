@@ -70,7 +70,8 @@ export default function ManagerApprovalPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/manager/pending', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/payroll-execution/manager/pending`, {
         method: 'GET',
       });
 
@@ -91,7 +92,8 @@ export default function ManagerApprovalPage() {
     try {
       setApprovedLoading(true);
       setApprovedError(null);
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/approved-locked', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/payroll-execution/approved-locked`, {
         method: 'GET',
       });
 
@@ -155,8 +157,8 @@ export default function ManagerApprovalPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/manager/approve', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/payroll-execution/manager/approve`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -195,8 +197,8 @@ export default function ManagerApprovalPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/manager/reject', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/payroll-execution/manager/reject`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -237,8 +239,8 @@ export default function ManagerApprovalPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/lock', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/payroll-execution/lock`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -279,8 +281,8 @@ export default function ManagerApprovalPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/unlock', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/payroll-execution/unlock`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -5,7 +5,7 @@ import { Clock, LogOut, LogIn, AlertCircle, Calendar, FileText, BarChart3, Arrow
 import DashboardLayout from '../../components/DashboardLayout';
 
 // Default away from the Next dev port so calls hit the backend instead of the frontend app
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 const CORRECTIONS_BASE = `${API_BASE_URL}/time-management/corrections`;
 
 function AttendanceContent() {

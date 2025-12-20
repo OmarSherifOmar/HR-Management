@@ -13,7 +13,7 @@ export default function RequisitionDetailsPage() {
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
     authenticatedFetch(
-      `http://localhost:3000/recruitment/job-requisitions/${id}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/recruitment/job-requisitions/${id}`,
     )
       .then(res => res.json())
       .then(setData);
@@ -38,7 +38,7 @@ export default function RequisitionDetailsPage() {
 
     try {
       await authenticatedFetch(
-        `http://localhost:3000/recruitment/job-requisitions/${id}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/recruitment/job-requisitions/${id}`,
         {
           method: 'PATCH',
           body: JSON.stringify({ publishStatus }),

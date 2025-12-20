@@ -1,7 +1,7 @@
 'use client';
 
 import RecruitmentLayout from '../../layout';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Save } from 'lucide-react';
 import { authenticatedFetch } from '@/app/context/AuthContext';
@@ -25,6 +25,14 @@ type Employee = {
 };
 
 export default function CreateInterviewPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <CreateInterviewContent />
+    </Suspense>
+  );
+}
+
+function CreateInterviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const applicationIdFromUrl = searchParams.get('applicationId') || '';
@@ -48,9 +56,10 @@ export default function CreateInterviewPage() {
   /* ---------------- FETCH DATA ---------------- */
 
   useEffect(() => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     Promise.all([
-      authenticatedFetch('http://localhost:3000/applications'),
-      authenticatedFetch('http://localhost:3000/employees'),
+      authenticatedFetch(`${URL}/applications`),
+      authenticatedFetch(`${URL}/employees`),
     ])
       .then(async ([appsRes, empRes]) => {
         const apps = await appsRes.json();
@@ -83,8 +92,9 @@ export default function CreateInterviewPage() {
         status: 'scheduled',
       };
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const res = await authenticatedFetch(
-        'http://localhost:3000/interviews',
+        `${URL}/interviews`,
         {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -106,17 +116,14 @@ export default function CreateInterviewPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Schedule Interview" description="">
+      <RecruitmentLayout>
         <div className="text-white">Loading...</div>
       </RecruitmentLayout>
     );
   }
 
   return (
-    <RecruitmentLayout
-      title="Schedule Interview"
-      description="Create interview for application"
-    >
+    <RecruitmentLayout>
       <div className="max-w-xl">
         {error && (
           <div className="mb-4 text-red-400 bg-red-900/20 p-3 rounded">

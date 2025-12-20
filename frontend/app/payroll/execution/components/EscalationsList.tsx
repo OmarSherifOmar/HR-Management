@@ -24,12 +24,13 @@ export default function EscalationsList({ payrollRunId }: { payrollRunId?: strin
   const [resolveLoading, setResolveLoading] = useState(false);
 
   const fetchEscalations = async () => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     try {
       setLoading(true);
       setError(null);
       const endpoint = payrollRunId
-        ? `http://localhost:3000/payroll-execution/irregularities/escalated/${payrollRunId}`
-        : 'http://localhost:3000/payroll-execution/irregularities/escalated';
+        ? `${URL}/payroll-execution/irregularities/escalated/${payrollRunId}`
+        : `${URL}/payroll-execution/irregularities/escalated`;
 
       const res = await authenticatedFetch(endpoint, { method: 'GET' });
       if (!res.ok) throw new Error(`Failed to fetch escalations: ${res.status}`);
@@ -55,6 +56,7 @@ export default function EscalationsList({ payrollRunId }: { payrollRunId?: strin
   };
 
   const submitResolution = async () => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     if (!resolvingId) return setResolveError('No escalation selected');
     if (!resolutionNotes || resolutionNotes.trim().length < 10) {
       return setResolveError('Resolution notes must be at least 10 characters');
@@ -70,7 +72,7 @@ export default function EscalationsList({ payrollRunId }: { payrollRunId?: strin
         status: resolutionStatus,
       };
 
-      const res = await authenticatedFetch('http://localhost:3000/payroll-execution/irregularities/resolve', {
+      const res = await authenticatedFetch(`${URL}/payroll-execution/irregularities/resolve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -38,6 +38,7 @@ interface Notification {
   message: string;
   createdAt: string;
 }
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function DashboardLayout({ children, title, description }: DashboardLayoutProps) {
   const { user, isLoggedIn, isLoading, logout, permissions, hasPermission } = useAuth();
@@ -75,7 +76,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
   const fetchNotifications = async () => {
     try {
       setLoadingNotifications(true);
-      const response = await authenticatedFetch('http://localhost:3000/notifications?limit=20');
+      const response = await authenticatedFetch(`${URL}/notifications?limit=20`);
       
       if (response.ok) {
         const result = await response.json();
@@ -127,7 +128,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3000/auth/logout', {
+      await fetch(`${URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -153,7 +154,7 @@ export default function DashboardLayout({ children, title, description }: Dashbo
 
   // Role-based permission checks
   const canViewPayroll = () => {
-    const payrollRoles = ['Payroll Specialist', 'Payroll Manager', 'Legal & Policy Admin', 'HR Manager', 'System Admin'];
+    const payrollRoles = ['Payroll Specialist', 'Payroll Manager','Finance Staff', 'Legal & Policy Admin', 'HR Manager', 'System Admin'];
     return payrollRoles.includes(user?.role || '');
   };
 
@@ -162,16 +163,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
       name: "Dashboard",
       icon: <LayoutDashboard size={20} />,
       href: "/dashboard",
-    },
-    {
-      name: "Employees",
-      icon: <Users size={20} />,
-      subItems: [
-        { name: "View All", href: "/dashboard/employees" },
-        { name: "Add New", href: "/dashboard/employees/add" },
-        { name: "Departments", href: "/dashboard/employees/departments" },
-        { name: "Positions", href: "/dashboard/employees/positions" },
-      ],
     },
     {
       name: "Organization",
@@ -253,15 +244,6 @@ export default function DashboardLayout({ children, title, description }: Dashbo
         { name: "Tracking", href: "/payroll/tracking" }
       ],
     }] : []),
-    {
-      name: "Performance",
-      icon: <TrendingUp size={20} />,
-      subItems: [
-        { name: "Reviews", href: "/dashboard/performance" },
-        { name: "Goals", href: "/dashboard/performance/goals" },
-        { name: "Feedback", href: "/dashboard/performance/feedback" },
-      ],
-    },
     {
       name: "Recruitment",
       icon: <Target size={20} />,

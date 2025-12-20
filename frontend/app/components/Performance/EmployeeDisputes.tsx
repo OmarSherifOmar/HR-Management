@@ -41,8 +41,9 @@ export default function EmployeeDisputes({
   const fetchDisputes = async () => {
     try {
       setLoading(true);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        'http://localhost:3000/api/performance/disputes/employee/me',
+        `${URL}/api/performance/disputes/employee/me`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },

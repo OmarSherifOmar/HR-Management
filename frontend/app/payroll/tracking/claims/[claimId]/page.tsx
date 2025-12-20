@@ -50,9 +50,10 @@ export default function ClaimDetailPage() {
 
   const fetchClaimDetail = async (cId: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/claims/${cId}`,
+        `${URL}/payroll-tracking/claims/${cId}`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch claim details");
@@ -413,10 +414,11 @@ export default function ClaimDetailPage() {
                 setSubmitting(true);
                 setSubmitError(null);
                 try {
+                  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
                   const isManagerFlow = isManager;
                   const url = isManagerFlow
-                    ? `http://localhost:3000/payroll-tracking/claims/${claim.claimId}/manager-decision`
-                    : `http://localhost:3000/payroll-tracking/claims/${claim.claimId}/specialist-decision`;
+                    ? `${URL}/payroll-tracking/claims/${claim.claimId}/manager-decision`
+                    : `${URL}/payroll-tracking/claims/${claim.claimId}/specialist-decision`;
 
                   const payload: {
                     action: "approve" | "reject";

@@ -63,7 +63,7 @@ type ScheduleRule = {
   active: boolean;
 };
 
-const API_BASE_URL = "http://localhost:3000/time-management";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/time-management` : "http://localhost:3000/time-management";
 
 export default function ShiftManagement() {
   const [activeTab, setActiveTab] = useState<"assignments" | "shifts" | "types" | "rules">("assignments");

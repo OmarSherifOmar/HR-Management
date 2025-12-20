@@ -96,7 +96,8 @@ export default function PayrollReviewPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/review', {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/review`, {
         method: 'GET',
       });
 
@@ -117,7 +118,8 @@ export default function PayrollReviewPage() {
     try {
       setApprovedLoading(true);
       setApprovedError(null);
-      const resp = await authenticatedFetch('http://localhost:3000/payroll-execution/approved-locked', { method: 'GET' });
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const resp = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/approved-locked`, { method: 'GET' });
       if (!resp.ok) throw new Error('Failed to fetch approved runs');
       const data = await resp.json();
       // Only include runs that are explicitly 'approved' or 'locked'
@@ -135,10 +137,11 @@ export default function PayrollReviewPage() {
 
   const fetchCompensations = async () => {
     try {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       // fetch signing bonuses and termination/resignation pending compensations
       const [signingResp, termResp] = await Promise.all([
-        authenticatedFetch('http://localhost:3000/payroll-execution/signing-bonus/pending', { method: 'GET' }),
-        authenticatedFetch('http://localhost:3000/payroll-execution/termination-resignation/pending', { method: 'GET' }),
+        authenticatedFetch(`${URL_BACKEND}/payroll-execution/signing-bonus/pending`, { method: 'GET' }),
+        authenticatedFetch(`${URL_BACKEND}/payroll-execution/termination-resignation/pending`, { method: 'GET' }),
       ]);
 
       let signing = [] as any[];
@@ -175,7 +178,8 @@ export default function PayrollReviewPage() {
     try {
       setFinanceLoading(true);
       setFinanceError(null);
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/finance/pending', {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/finance/pending`, {
         method: 'GET',
       });
 
@@ -245,8 +249,8 @@ export default function PayrollReviewPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-      
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/approve', {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/approve`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -300,8 +304,8 @@ export default function PayrollReviewPage() {
       // payPeriodType removed per request
       if (editForm.editReason) payload.editReason = editForm.editReason;
       if (editForm.notes) payload.notes = editForm.notes;
-
-      const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/initiation/run/${selectedRun._id}/edit`, {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/initiation/run/${selectedRun._id}/edit`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -330,8 +334,8 @@ export default function PayrollReviewPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-      
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/reject', {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/reject`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -371,8 +375,8 @@ export default function PayrollReviewPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-      
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/finance/approve', {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/finance/approve`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -408,9 +412,9 @@ export default function PayrollReviewPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       // First fetch payslips for the payroll run to get a payslip id
-      const listRes = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/run/${runId}`, { method: 'GET' });
+      const listRes = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/payslips/run/${runId}`, { method: 'GET' });
       if (!listRes.ok) {
         const txt = await listRes.text();
         throw new Error(txt || `Error ${listRes.status}`);
@@ -428,7 +432,7 @@ export default function PayrollReviewPage() {
 
       const payslipId = payslips[0]._id;
 
-      const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
+      const res = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/payslips/${payslipId}/pdf`, { method: 'GET' });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
@@ -456,8 +460,8 @@ export default function PayrollReviewPage() {
     try {
       setActionLoading(true);
       setActionError(null);
-      
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/finance/reject', {
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/finance/reject`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -517,9 +521,9 @@ export default function PayrollReviewPage() {
     try {
       setCreateLoading(true);
       setCreateError(null);
-      
+      const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Refresh the list to get the latest payroll runs before checking for duplicates
-      const refreshResponse = await authenticatedFetch('http://localhost:3000/payroll-execution/review', {
+      const refreshResponse = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/review`, {
         method: 'GET',
       });
       
@@ -550,8 +554,8 @@ export default function PayrollReviewPage() {
       
       // Use auto-generate endpoint if autoGenerate is true, otherwise use initiate
       const endpoint = createData.autoGenerate 
-        ? 'http://localhost:3000/payroll-execution/auto-generate'
-        : 'http://localhost:3000/payroll-execution/initiate';
+        ? `${URL_BACKEND}/payroll-execution/auto-generate`
+        : `${URL_BACKEND}/payroll-execution/initiate`;
       
       // Build request body - only include payrollPeriod if provided
       const requestBody: any = {
@@ -1347,7 +1351,8 @@ export default function PayrollReviewPage() {
                   setPayslipLoading(true);
                   setActionError(null);
                   try {
-                    const res = await authenticatedFetch(`http://localhost:3000/payroll-execution/payslips/generate/${selectedRun._id}`, { method: 'POST' });
+                    const URL_BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+                    const res = await authenticatedFetch(`${URL_BACKEND}/payroll-execution/payslips/generate/${selectedRun._id}`, { method: 'POST' });
                     if (!res.ok) {
                       const txt = await res.text();
                       throw new Error(txt || `Error ${res.status}`);

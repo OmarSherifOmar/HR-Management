@@ -43,6 +43,7 @@ interface PayrollRun {
 }
 
 export default function FinanceApprovalPage() {
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const router = useRouter();
   const { user } = useAuth();
   const userRoles = Array.isArray(user?.roles)
@@ -67,7 +68,7 @@ export default function FinanceApprovalPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/finance/pending', {
+      const response = await authenticatedFetch(`${URL}/payroll-execution/finance/pending`, {
         method: 'GET',
       });
 
@@ -131,7 +132,7 @@ export default function FinanceApprovalPage() {
       setActionLoading(true);
       setActionError(null);
 
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/finance/approve', {
+      const response = await authenticatedFetch(`${URL}/payroll-execution/finance/approve`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +170,7 @@ export default function FinanceApprovalPage() {
       setActionLoading(true);
       setActionError(null);
 
-      const response = await authenticatedFetch('http://localhost:3000/payroll-execution/finance/reject', {
+      const response = await authenticatedFetch(`${URL}/payroll-execution/finance/reject`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

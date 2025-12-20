@@ -67,11 +67,12 @@ export default function AuditLogPage() {
 
   const fetchAllAdjustments = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       // Note: This endpoint would need to be created in the backend
       // For now, we'll use a placeholder approach
       const response = await fetch(
-        "http://localhost:3000/leaves/balance-adjustments/all",
+        `${URL}/leaves/balance-adjustments/all`,
         {
           credentials: "include",
         }

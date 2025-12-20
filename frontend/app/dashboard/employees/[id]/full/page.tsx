@@ -48,6 +48,19 @@ export default function EmployeeFullDetailPage() {
     const fetchEmployee = async () => {
       try {
         const response = await fetch(`/api/employees/${employeeId}`);
+        
+        if (response.status === 403) {
+          console.error('Access Denied: You do not have permission to view this employee profile.');
+          alert('Access Denied: You do not have permission to view this employee profile. Please contact your administrator.');
+          setLoading(false);
+          return;
+        }
+        
+        if (response.status === 401) {
+          window.location.href = '/';
+          return;
+        }
+        
         const data = await response.json();
         setEmployee(data);
         setFormData(data);
@@ -79,6 +92,11 @@ export default function EmployeeFullDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+
+      if (response.status === 403) {
+        alert('Access Denied: You do not have permission to update employee profiles. Please contact your administrator.');
+        return;
+      }
 
       if (response.ok) {
         const updatedEmployee = await response.json();

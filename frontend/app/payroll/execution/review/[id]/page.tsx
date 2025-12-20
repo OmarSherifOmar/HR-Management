@@ -50,10 +50,11 @@ export default function PayrollDetailPage() {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
+        const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
         setLoading(true);
         setError(null);
 
-        const response = await authenticatedFetch(`http://localhost:3000/payroll-execution/review/${id}`, {
+        const response = await authenticatedFetch(`${URL}/payroll-execution/review/${id}`, {
           method: 'GET',
         });
 
@@ -114,10 +115,11 @@ export default function PayrollDetailPage() {
 
   const handleCalculatePayroll = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setCalculatingPayroll(true);
       setCalculateError(null);
 
-      const response = await authenticatedFetch(`http://localhost:3000/payroll-execution/calculate/${id}`, {
+      const response = await authenticatedFetch(`${URL}/payroll-execution/calculate/${id}`, {
         method: 'POST',
       });
 
@@ -133,7 +135,7 @@ export default function PayrollDetailPage() {
       }
 
       // Refresh the data after successful calculation
-      const updatedResponse = await authenticatedFetch(`http://localhost:3000/payroll-execution/review/${id}`, {
+      const updatedResponse = await authenticatedFetch(`${URL}/payroll-execution/review/${id}`, {
         method: 'GET',
       });
 

@@ -2,7 +2,7 @@
 
 import { useAuth } from '../../../../context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { ArrowLeft, Save, Shield } from 'lucide-react';
 
 type LeaveType = {
@@ -15,6 +15,14 @@ type AccrualMethod = 'monthly' | 'yearly' | 'per-term';
 type RoundingRule = 'none' | 'round' | 'round_up' | 'round_down';
 
 export default function CreatePolicyPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <CreatePolicyContent />
+    </Suspense>
+  );
+}
+
+function CreatePolicyContent() {
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,7 +66,8 @@ export default function CreatePolicyPage() {
 
   const fetchLeaveTypes = async () => {
     try {
-      const response = await fetch('http://localhost:3000/leaves/types', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/types`, {
         credentials: 'include',
       });
 
@@ -73,8 +82,9 @@ export default function CreatePolicyPage() {
 
   const fetchExistingPolicy = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/leaves/configuration/policies/${editId}`, {
+      const response = await fetch(`${URL}/leaves/configuration/policies/${editId}`, {
         credentials: 'include',
       });
 
@@ -121,9 +131,10 @@ export default function CreatePolicyPage() {
         maxConsecutiveDays: maxConsecutiveDays !== '' ? Number(maxConsecutiveDays) : undefined,
       };
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const url = editId 
-        ? `http://localhost:3000/leaves/configuration/policies/${editId}`
-        : 'http://localhost:3000/leaves/configuration/policies';
+        ? `${URL}/leaves/configuration/policies/${editId}`
+        : `${URL}/leaves/configuration/policies`;
       
       const method = editId ? 'PUT' : 'POST';
 

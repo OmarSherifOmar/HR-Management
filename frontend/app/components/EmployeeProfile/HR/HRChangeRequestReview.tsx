@@ -28,6 +28,8 @@ interface ChangeRequest {
   processedAt?: string;
 }
 
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function HRChangeRequestReview() {
   const { canListChangeRequests, canReviewChangeRequests } = useCanAccess();
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
@@ -58,7 +60,7 @@ export default function HRChangeRequestReview() {
 
     try {
       const response = await fetch(
-        'http://localhost:3000/employees/change-requests',
+        `${URL}/employees/change-requests`,
         {
           credentials: 'include',
         }
@@ -80,7 +82,7 @@ export default function HRChangeRequestReview() {
   const handleReview = async (id: string, approve: boolean) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/employees/change-requests/${id}/review`,
+        `${URL}/employees/change-requests/${id}/review`,
         {
           method: 'PATCH',
           credentials: 'include',

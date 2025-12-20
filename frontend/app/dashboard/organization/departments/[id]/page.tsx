@@ -62,11 +62,12 @@ export default function DepartmentDetailPage() {
         setLoading(true);
         setError(null);
         const data = await getDepartmentById(deptId);
-        setDepartment(data);
+        const department = data as Department;
+        setDepartment(department);
         setEditFormData({
-          name: data.name,
-          description: data.description || '',
-          headPositionId: data.headPositionId || '',
+          name: department.name,
+          description: department.description || '',
+          headPositionId: department.headPositionId || '',
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load department');
@@ -88,10 +89,11 @@ export default function DepartmentDetailPage() {
 
         // Load all positions
         const positionsData = await getPositions();
-        setPositions(positionsData);
+        const positions = positionsData as Position[];
+        setPositions(positions);
 
         // Filter positions for this department
-        const deptPositions = positionsData.filter(
+        const deptPositions = positions.filter(
           (p: Position) => p.departmentId === deptId || p.departmentId === department?._id
         );
         setDepartmentPositions(deptPositions);
@@ -126,7 +128,7 @@ export default function DepartmentDetailPage() {
 
       // Refresh department data
       const updated = await getDepartmentById(deptId);
-      setDepartment(updated);
+      setDepartment(updated as Department);
       setIsEditingModal(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update department');
@@ -147,7 +149,7 @@ export default function DepartmentDetailPage() {
 
       // Refresh department data
       const updated = await getDepartmentById(deptId);
-      setDepartment(updated);
+      setDepartment(updated as Department);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to deactivate department');
     } finally {

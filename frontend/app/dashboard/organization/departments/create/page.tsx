@@ -26,7 +26,7 @@ export default function CreateDepartmentPage() {
       try {
         setLoadingPositions(true);
         const data = await getPositions();
-        setPositions(data);
+        setPositions(data as Position[]);
       } catch (err) {
         // Handle error silently
       } finally {

@@ -85,8 +85,9 @@ export default function UpdateStagePage() {
 
   const fetchApplication = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/applications/${applicationId}`
+        `${URL}/applications/${applicationId}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -116,8 +117,9 @@ export default function UpdateStagePage() {
     setError('');
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/applications/${applicationId}/stage/${selectedStage}`,
+        `${URL}/applications/${applicationId}/stage/${selectedStage}`,
         {
           method: 'PUT',
           headers: {

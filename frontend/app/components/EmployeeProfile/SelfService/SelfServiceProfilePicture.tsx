@@ -17,12 +17,14 @@ export default function SelfServiceProfilePicture() {
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   // Fetch existing profile picture on mount
   useEffect(() => {
     const fetchProfilePicture = async () => {
       try {
         console.log('[SelfServiceProfilePicture] Fetching profile...');
-        const response = await fetch('http://localhost:3000/employees/me', {
+        const response = await fetch(`${URL}/employees/me`, {
           method: 'GET',
           credentials: 'include',
         });
@@ -33,7 +35,7 @@ export default function SelfServiceProfilePicture() {
           if (data.profilePictureUrl) {
             const fullUrl = data.profilePictureUrl.startsWith('http')
               ? data.profilePictureUrl
-              : `http://localhost:3000${data.profilePictureUrl}`;
+              : `${URL}${data.profilePictureUrl}`;
             console.log('[SelfServiceProfilePicture] Setting existing picture:', fullUrl);
             setExistingPicture(fullUrl);
           } else {
@@ -59,7 +61,7 @@ export default function SelfServiceProfilePicture() {
       // Refresh profile picture
       const fetchProfilePicture = async () => {
         try {
-          const response = await fetch('http://localhost:3000/employees/me', {
+          const response = await fetch(`${URL}/employees/me`, {
             method: 'GET',
             credentials: 'include',
           });
@@ -69,7 +71,7 @@ export default function SelfServiceProfilePicture() {
             if (data.profilePictureUrl) {
               const fullUrl = data.profilePictureUrl.startsWith('http')
                 ? data.profilePictureUrl
-                : `http://localhost:3000${data.profilePictureUrl}`;
+                : `${URL}${data.profilePictureUrl}`;
               setExistingPicture(fullUrl);
             }
           }
@@ -126,7 +128,7 @@ export default function SelfServiceProfilePicture() {
       const fileName = `profile-${user?.id || Date.now()}.jpg`;
 
       console.log('[SelfServiceProfilePicture] Uploading profile picture...');
-      const response = await fetch('http://localhost:3000/employees/me/profile-picture', {
+      const response = await fetch(`${URL}/employees/me/profile-picture`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -150,7 +152,7 @@ export default function SelfServiceProfilePicture() {
       
       // Refetch profile to get the updated profile picture URL
       try {
-        const profileResponse = await fetch('http://localhost:3000/employees/me', {
+        const profileResponse = await fetch(`${URL}/employees/me`, {
           method: 'GET',
           credentials: 'include',
         });
@@ -161,7 +163,7 @@ export default function SelfServiceProfilePicture() {
           if (profileData.profilePictureUrl) {
             const fullUrl = profileData.profilePictureUrl.startsWith('http')
               ? profileData.profilePictureUrl
-              : `http://localhost:3000${profileData.profilePictureUrl}`;
+              : `${URL}${profileData.profilePictureUrl}`;
             console.log('[SelfServiceProfilePicture] Setting picture from refreshed profile:', fullUrl);
             setExistingPicture(fullUrl);
           } else {

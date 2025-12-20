@@ -60,7 +60,8 @@ export default function EmployeeAppraisals({ employeeId, onNotify }: EmployeeApp
   const fetchAppraisals = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3000/api/performance/assignments/my-appraisals', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/my-appraisals`, {
         credentials: 'include',
       });
 
@@ -91,7 +92,8 @@ export default function EmployeeAppraisals({ employeeId, onNotify }: EmployeeApp
 
     try {
       setAcknowledging(true);
-      const response = await fetch('http://localhost:3000/api/performance/assignments/acknowledge', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/acknowledge`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -134,7 +136,8 @@ export default function EmployeeAppraisals({ employeeId, onNotify }: EmployeeApp
 
     try {
       setFilingDispute(true);
-      const response = await fetch('http://localhost:3000/api/performance/disputes', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/disputes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -173,8 +176,9 @@ export default function EmployeeAppraisals({ employeeId, onNotify }: EmployeeApp
     if (!archivingRecordId) return;
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/api/performance/assignments/records/${archivingRecordId}/archive`,
+        `${URL}/api/performance/assignments/records/${archivingRecordId}/archive`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

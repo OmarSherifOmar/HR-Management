@@ -41,15 +41,17 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
   const fetchReports = async () => {
     setLoading(true);
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // Always use the employeeId-specific endpoint
-      const url = `http://localhost:3000/api/performance/reporting/history/${employeeId}`;
+      const url = `${URL}/api/performance/reporting/history/${employeeId}`;
       
       const response = await fetch(url, {
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        // Access denied is ok for non-HR roles
+        // Access denied - show message for users who need access
+        onNotify?.('Access Denied: You do not have permission to view performance reports. Please contact your administrator if you need access.', 'error');
         setReports([]);
         return;
       }
@@ -72,7 +74,8 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
 
   const fetchCycles = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/performance/cycles', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/cycles`, {
         credentials: 'include',
       });
 
@@ -88,8 +91,9 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
   const handleGenerateReport = async (cycleId: string) => {
     try {
       console.log('[handleGenerateReport] Generating report for cycle:', cycleId);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `http://localhost:3000/api/performance/reporting/outcome-report/${cycleId}`,
+        `${URL}/api/performance/reporting/outcome-report/${cycleId}`,
         {
           credentials: 'include',
         }
@@ -98,7 +102,7 @@ export default function PerformanceReporting({ userRole, employeeId, onNotify }:
       console.log('[handleGenerateReport] Response status:', response.status);
 
       if (response.status === 403) {
-        onNotify?.('You do not have permission to generate reports', 'error');
+        onNotify?.('Access Denied: You do not have permission to generate performance reports. This action requires HR Manager role.', 'error');
         return;
       }
 

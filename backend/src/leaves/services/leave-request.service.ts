@@ -698,28 +698,54 @@ export class LeaveRequestService {
       throw new NotFoundException(`Manager with ID ${managerId} not found`);
     }
 
+    const managerRolesDoc = await this.employeeService.getSystemRoleForEmployee(manager._id);
+    const managerRoles = managerRolesDoc?.roles ?? [];
+
     console.log('[Team Balances] Manager:', {
       _id: manager._id,
       name: `${manager.firstName} ${manager.lastName}`,
-      primaryPositionId: manager.primaryPositionId,
+      roles: managerRoles,
+      primaryDepartmentId: manager.primaryDepartmentId,
     });
 
-    // Build employee query: team members who have supervisorPositionId == manager.primaryPositionId
+    // Build employee query based on role:
+    // - HR Admin: can view all departments
+    // - Department Head: can only view their department
     const employeeModel = this.employeeService['employeeModel'];
     const teamQuery: any = { status: 'ACTIVE' };
-    if (manager.primaryPositionId) {
-      // Normalize primaryPositionId to ObjectId to ensure proper Mongo query matching
-      const normalizedPositionId = new Types.ObjectId(manager.primaryPositionId.toString());
-      teamQuery.supervisorPositionId = normalizedPositionId;
-      console.log('[Team Balances] Normalized manager primaryPositionId:', normalizedPositionId);
+    
+    if (managerRoles.includes(SystemRole.HR_ADMIN)) {
+      // HR Admin sees all departments
+      console.log('[Team Balances] HR Admin - viewing all departments');
+      if (filters?.departmentId) {
+        // Allow filtering by specific department if provided
+        teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
+      }
+      // Otherwise no department filter - show all
+    } else if (managerRoles.includes(SystemRole.DEPARTMENT_HEAD)) {
+      // Department Head sees only their department
+      if (manager.primaryDepartmentId) {
+        const normalizedDeptId = new Types.ObjectId(manager.primaryDepartmentId.toString());
+        teamQuery.primaryDepartmentId = normalizedDeptId;
+        console.log('[Team Balances] Department Head - viewing department:', normalizedDeptId);
+      } else {
+        console.warn('[Team Balances] Department Head has no primaryDepartmentId - will return no employees');
+      }
     } else {
-      console.warn('[Team Balances] Manager has no primaryPositionId - will return no employees');
-    }
-    if (filters?.departmentId) {
-      teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
+      // HR Manager or other roles: fallback to supervisor-based logic
+      if (manager.primaryPositionId) {
+        const normalizedPositionId = new Types.ObjectId(manager.primaryPositionId.toString());
+        teamQuery.supervisorPositionId = normalizedPositionId;
+        console.log('[Team Balances] Using supervisor-based query for position:', normalizedPositionId);
+      } else {
+        console.warn('[Team Balances] Manager has no primaryPositionId - will return no employees');
+      }
+      if (filters?.departmentId) {
+        teamQuery.primaryDepartmentId = new Types.ObjectId(filters.departmentId);
+      }
     }
 
-    console.log('[Team Balances] Query for supervised employees:', teamQuery);
+    console.log('[Team Balances] Query for team employees:', teamQuery);
 
     const teamMembers = await employeeModel
       .find(teamQuery)

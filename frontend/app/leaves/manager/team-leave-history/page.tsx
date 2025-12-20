@@ -123,7 +123,8 @@ export default function TeamLeaveHistoryPage() {
       if (sortOrder) params.append('sortOrder', sortOrder);
       
       const queryString = params.toString();
-      const url = `http://localhost:3000/leave-requests/manager/team-balances${queryString ? `?${queryString}` : ''}`;
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const url = `${URL}/leave-requests/manager/team-balances${queryString ? `?${queryString}` : ''}`;
       
       console.log('Fetching team data from:', url);
       
@@ -164,8 +165,9 @@ export default function TeamLeaveHistoryPage() {
 
   const fetchLeaveTypes = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       console.log('[Team Leave History] Fetching leave types...');
-      const response = await authenticatedFetch('http://localhost:3000/leaves/types');
+      const response = await authenticatedFetch(`${URL}/leaves/types`);
       
       if (response.ok) {
         const types = await response.json();

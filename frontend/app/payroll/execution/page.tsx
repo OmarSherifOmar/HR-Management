@@ -58,20 +58,20 @@ export default function PayrollExecutionPage() {
   }, []);
 
   const fetchCompensations = async (currentEmployees: any[] | null = null) => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     const empList = currentEmployees || employees;
     try {
       setLoading(true);
       setError(null);
 
       console.log('Fetching compensations...');
-      const API_URL = 'http://localhost:3000';
       // Fetch both signing bonuses and termination/resignation benefits
       const [signingResponse, terminationResponse] = await Promise.all([
-        fetch(`${API_URL}/payroll-execution/signing-bonus/pending`, {
+        fetch(`${URL}/payroll-execution/signing-bonus/pending`, {
           method: 'GET',
           credentials: 'include',
         }),
-        fetch(`${API_URL}/payroll-execution/termination-resignation/pending`, {
+        fetch(`${URL}/payroll-execution/termination-resignation/pending`, {
           method: 'GET',
           credentials: 'include',
         })
@@ -190,10 +190,10 @@ export default function PayrollExecutionPage() {
   };
 
   const fetchEmployees = async () => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     try {
       setLoadingEmployees(true);
-      const API_URL = 'http://localhost:3000';
-      const response = await fetch(`${API_URL}/employees/list`, {
+      const response = await fetch(`${URL}/employees/list`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -219,12 +219,12 @@ export default function PayrollExecutionPage() {
   };
 
   const handleDelete = async (id: string) => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     if (!window.confirm(`Are you sure you want to delete this compensation record? This action cannot be undone.`)) {
       return;
     }
 
     try {
-      const API_URL = 'http://localhost:3000';
       const comp = compensations.find(c => c._id === id);
       const endpoint = comp?.type === 'Signing Bonus'
         ? `/payroll-execution/signing-bonus/${id}`
@@ -241,7 +241,7 @@ export default function PayrollExecutionPage() {
         return;
       }
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${URL}${endpoint}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -260,12 +260,12 @@ export default function PayrollExecutionPage() {
   };
 
   const handleApprove = async (id: string) => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     if (!window.confirm('Are you sure you want to approve this compensation?')) {
       return;
     }
 
     try {
-      const API_URL = 'http://localhost:3000';
       const comp = compensations.find(c => c._id === id);
       const endpoint = comp?.type === 'Signing Bonus'
         ? `/payroll-execution/signing-bonus/${id}/approve`
@@ -275,7 +275,7 @@ export default function PayrollExecutionPage() {
         ? { bonusId: id, approverComments: `Approved by ${user?.email || 'system'}` }
         : { benefitId: id, approverComments: `Approved by ${user?.email || 'system'}` };
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -299,6 +299,7 @@ export default function PayrollExecutionPage() {
   };
 
   const handleReject = async (id: string) => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     const reason = window.prompt('Please enter rejection reason (at least 10 characters):');
     if (!reason || reason.length < 10) {
       alert('Rejection reason must be at least 10 characters');
@@ -306,7 +307,6 @@ export default function PayrollExecutionPage() {
     }
 
     try {
-      const API_URL = 'http://localhost:3000';
       const comp = compensations.find(c => c._id === id);
       const endpoint = comp?.type === 'Signing Bonus'
         ? `/payroll-execution/signing-bonus/${id}/reject`
@@ -316,7 +316,7 @@ export default function PayrollExecutionPage() {
         ? { bonusId: id, rejectionReason: reason }
         : { benefitId: id, rejectionReason: reason };
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -357,6 +357,7 @@ export default function PayrollExecutionPage() {
   };
 
   const handleSaveEdit = async () => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     if (!editingId) return;
 
     // Validate form
@@ -368,8 +369,6 @@ export default function PayrollExecutionPage() {
     try {
       setCreating(true);
       setError(null);
-
-      const API_URL = 'http://localhost:3000';
 
       // Determine endpoint based on type
       const isSigningBonus = formData.type === 'Signing Bonus';
@@ -395,7 +394,7 @@ export default function PayrollExecutionPage() {
           currency: formData.currency
         };
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${URL}${endpoint}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -444,6 +443,7 @@ export default function PayrollExecutionPage() {
   };
 
   const handleCreatePayrollRun = async () => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     // If editing, use save edit function instead
     if (editingId) {
       return handleSaveEdit();
@@ -458,8 +458,6 @@ export default function PayrollExecutionPage() {
     try {
       setCreating(true);
       setError(null);
-
-      const API_URL = 'http://localhost:3000';
 
       // Determine endpoint and body based on type
       const isSigningBonus = formData.type === 'Signing Bonus';
@@ -478,7 +476,7 @@ export default function PayrollExecutionPage() {
       };
 
       // Create compensation via API
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

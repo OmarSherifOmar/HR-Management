@@ -19,6 +19,8 @@ interface RoleDocument {
   isActive: boolean;
 }
 
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 const AVAILABLE_ROLES = [
   'department employee',
   'department head',
@@ -61,7 +63,7 @@ export default function HRRoleAssignment({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/employees/${employeeId}/roles`,
+        `${URL}/employees/${employeeId}/roles`,
         {
           credentials: 'include',
         }
@@ -101,7 +103,7 @@ export default function HRRoleAssignment({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/employees/${employeeId}/roles`,
+        `${URL}/employees/${employeeId}/roles`,
         {
           method: 'PATCH',
           credentials: 'include',

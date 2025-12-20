@@ -28,7 +28,7 @@ export default function CreateRequisitionPage() {
   /* ---------------- FETCH MANAGERS (CORRECT ENDPOINT) ---------------- */
   useEffect(() => {
     authenticatedFetch(
-      'http://localhost:3000/employees/searchs?roles=HR Manager,department head'
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/employees/searchs?roles=HR Manager,department head`
     )
       .then(res => {
         if (!res.ok) throw new Error('Failed to load managers');
@@ -57,7 +57,7 @@ export default function CreateRequisitionPage() {
 
     try {
       const res = await authenticatedFetch(
-        'http://localhost:3000/recruitment/job-requisitions',
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/recruitment/job-requisitions`,
         {
           method: 'POST',
           body: JSON.stringify({

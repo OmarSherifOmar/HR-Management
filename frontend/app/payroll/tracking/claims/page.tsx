@@ -56,9 +56,10 @@ export default function ClaimsPage() {
 
   const fetchMyClaims = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/claims/mine`,
+        `${URL}/payroll-tracking/claims/mine`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch claims");
@@ -74,9 +75,10 @@ export default function ClaimsPage() {
 
   const fetchAllClaims = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/claims`,
+        `${URL}/payroll-tracking/claims`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch claims");

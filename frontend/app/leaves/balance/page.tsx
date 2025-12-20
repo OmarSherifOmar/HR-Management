@@ -47,8 +47,9 @@ export default function MyBalancePage() {
 
   const fetchBalance = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
-      const response = await fetch('http://localhost:3000/leaves/entitlements/my-balance', {
+      const response = await fetch(`${URL}/leaves/entitlements/my-balance`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',

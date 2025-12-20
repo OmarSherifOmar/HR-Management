@@ -2,7 +2,7 @@
 
 import { useAuth } from '../../../../context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { ArrowLeft, Save, Tag, Folder } from 'lucide-react';
 
 type LeaveCategory = {
@@ -15,6 +15,14 @@ type LeaveCategory = {
 type AttachmentType = 'medical' | 'document' | 'other';
 
 export default function CreateLeaveTypePage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <CreateLeaveTypeContent />
+    </Suspense>
+  );
+}
+
+function CreateLeaveTypeContent() {
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,7 +72,8 @@ export default function CreateLeaveTypePage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3000/leaves/types/categories', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/leaves/types/categories`, {
         credentials: 'include',
       });
 
@@ -79,10 +88,11 @@ export default function CreateLeaveTypePage() {
 
   const fetchExistingData = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const endpoint = formType === 'type' 
-        ? `http://localhost:3000/leaves/types/${editId}`
-        : `http://localhost:3000/leaves/types/categories/${editId}`;
+        ? `${URL}/leaves/types/${editId}`
+        : `${URL}/leaves/types/categories/${editId}`;
 
       const response = await fetch(endpoint, {
         credentials: 'include',
@@ -135,9 +145,10 @@ export default function CreateLeaveTypePage() {
         maxDurationDays: maxDurationDays !== '' ? Number(maxDurationDays) : undefined,
       };
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const url = editId 
-        ? `http://localhost:3000/leaves/types/${editId}`
-        : 'http://localhost:3000/leaves/types';
+        ? `${URL}/leaves/types/${editId}`
+        : `${URL}/leaves/types`;
       
       const method = editId ? 'PUT' : 'POST';
 
@@ -175,9 +186,10 @@ export default function CreateLeaveTypePage() {
         description: categoryDescription || undefined,
       };
 
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const url = editId 
-        ? `http://localhost:3000/leaves/types/categories/${editId}`
-        : 'http://localhost:3000/leaves/types/categories';
+        ? `${URL}/leaves/types/categories/${editId}`
+        : `${URL}/leaves/types/categories`;
       
       const method = editId ? 'PUT' : 'POST';
 

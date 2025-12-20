@@ -45,7 +45,7 @@ export default function AttendanceExceptionsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
 
   // Set default dates (last 7 days)
   useEffect(() => {

@@ -87,13 +87,15 @@ export default function InterviewDetailPage() {
 
   const fetchInterviewDetails = async () => {
     try {
-      const res = await authenticatedFetch(`http://localhost:3000/interviews/${id}`);
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await authenticatedFetch(`${URL}/interviews/${id}`);
       const data = await res.json();
       setInterview(data);
       
       // If feedback exists, fetch it
       if (data.feedbackId) {
-        const feedbackRes = await authenticatedFetch(`http://localhost:3000/feedback/${data.feedbackId}`);
+        const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const feedbackRes = await authenticatedFetch(`${URL}/feedback/${data.feedbackId}`);
         const feedbackData = await feedbackRes.json();
         setFeedback(feedbackData);
       }
@@ -151,7 +153,8 @@ export default function InterviewDetailPage() {
 
   const handleMarkComplete = async () => {
     try {
-      await authenticatedFetch(`http://localhost:3000/interviews/${id}/status/completed`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      await authenticatedFetch(`${URL}/interviews/${id}/status/completed`, {
         method: 'PUT',
       });
       fetchInterviewDetails();
@@ -163,7 +166,8 @@ export default function InterviewDetailPage() {
   const handleCancelInterview = async () => {
     if (confirm('Are you sure you want to cancel this interview?')) {
       try {
-        await authenticatedFetch(`http://localhost:3000/interviews/${id}/status/cancelled`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        await authenticatedFetch(`${URL}/interviews/${id}/status/cancelled`, {
           method: 'PUT',
         });
         fetchInterviewDetails();
@@ -184,7 +188,7 @@ export default function InterviewDetailPage() {
 
   if (loading) {
     return (
-      <RecruitmentLayout title="Interview Details" description="View interview details">
+      <RecruitmentLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-white">Loading interview details...</div>
         </div>
@@ -194,7 +198,7 @@ export default function InterviewDetailPage() {
 
   if (!interview) {
     return (
-      <RecruitmentLayout title="Interview Not Found" description="The requested interview was not found">
+      <RecruitmentLayout>
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
             <Calendar className="w-8 h-8 text-gray-400" />
@@ -213,7 +217,7 @@ export default function InterviewDetailPage() {
   }
 
   return (
-    <RecruitmentLayout title="Interview Details" description={`Interview with ${interview.applicationId.candidateId.name}`}>
+    <RecruitmentLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">

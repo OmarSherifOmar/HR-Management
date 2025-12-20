@@ -36,8 +36,13 @@ export default function ChangeRequestsPage() {
       const data = await getChangeRequests();
       setAllRequests(Array.isArray(data) ? data : []);
       setIsAdmin(true);
-    } catch (err) {
-      // If it fails, user is probably not authorized - that's okay
+    } catch (err: any) {
+      // Show error message to user
+      if (err?.status === 403 || err?.message?.includes('Access Denied') || err?.message?.includes('403')) {
+        setAdminError('Access Denied: You do not have permission to view change requests. This feature requires HR Manager or System Admin role.');
+      } else {
+        setAdminError(err?.message || 'Failed to load change requests. Please try again.');
+      }
       setIsAdmin(false);
     } finally {
       setAdminLoading(false);
@@ -137,6 +142,19 @@ export default function ChangeRequestsPage() {
             Create Request
           </button>
         </div>
+
+        {/* ===================== ACCESS ERROR DISPLAY ===================== */}
+        {!isAdmin && adminError && (
+          <div className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6">
+            <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg flex items-start gap-3">
+              <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-medium text-red-300">Access Denied</h3>
+                <p className="text-sm mt-1">{adminError}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ===================== ADMIN APPROVAL CARD ===================== */}
         {isAdmin && (

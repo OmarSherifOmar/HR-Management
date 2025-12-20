@@ -16,7 +16,7 @@ import {
 import DashboardLayout from '../../components/DashboardLayout';
 
 // Default to a different port than the Next dev server to avoid hitting the frontend itself
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 const CORRECTIONS_BASE = `${API_BASE_URL}/time-management/corrections`;
 
 function ApprovalsContent() {

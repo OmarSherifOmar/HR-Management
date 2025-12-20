@@ -56,7 +56,8 @@ export default function DepartmentProgressTracker({ userRole, onNotify }: Depart
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/departments', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/org/departments`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch departments');
@@ -76,7 +77,8 @@ export default function DepartmentProgressTracker({ userRole, onNotify }: Depart
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/performance/assignments/department/progress', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/api/performance/assignments/department/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

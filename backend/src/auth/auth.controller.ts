@@ -60,8 +60,8 @@ export class AuthController {
       
       res.cookie('token', result.access_token, {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax', // Keep it simple - use 'lax' for both dev and prod
+        secure: true,
+        sameSite: 'none',
         maxAge: (() => {
           const exp = process.env.JWT_EXPIRES_IN ?? '1h';
           if (/^\d+$/.test(exp)) return Number(exp) * 1000;
@@ -167,8 +167,8 @@ export class AuthController {
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('token', '', {
       httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax', // Match the login cookie settings
+      secure: true,
+      sameSite: 'none',
       expires: new Date(0),
     });
     return { message: 'Logged out successfully' };

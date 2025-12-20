@@ -22,8 +22,9 @@ export default function CandidatesPage() {
 
   async function loadCandidates() {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const res = await authenticatedFetch(
-        'http://localhost:3000/employees/candidates/list/all'
+        `${URL}/employees/candidates/list/all`
       );
 
       const data = await res.json();

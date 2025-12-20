@@ -1,7 +1,7 @@
 'use client';
 
 import RecruitmentLayout from '../../layout';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authenticatedFetch } from '@/app/context/AuthContext';
 
@@ -19,6 +19,14 @@ type Requisition = {
 };
 
 export default function CreateApplicationPage() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <CreateApplicationContent />
+    </Suspense>
+  );
+}
+
+function CreateApplicationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -37,9 +45,10 @@ export default function CreateApplicationPage() {
 
   /* ---------------- FETCH DATA ---------------- */
   useEffect(() => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     Promise.all([
-      authenticatedFetch('http://localhost:3000/employees/candidates/list/all'),
-      authenticatedFetch('http://localhost:3000/recruitment/job-requisitions'),
+      authenticatedFetch(`${URL}/employees/candidates/list/all`),
+      authenticatedFetch(`${URL}/recruitment/job-requisitions`),
     ])
       .then(async ([cRes, rRes]) => {
         const cJson = await cRes.json();
@@ -73,8 +82,9 @@ export default function CreateApplicationPage() {
     setLoading(true);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const res = await authenticatedFetch(
-        'http://localhost:3000/applications',
+        `${URL}/applications`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -99,10 +109,7 @@ export default function CreateApplicationPage() {
 
   /* ---------------- UI ---------------- */
   return (
-    <RecruitmentLayout
-      title="Create Application"
-      description="Submit a candidate application for a job requisition"
-    >
+    <RecruitmentLayout>
       <div className="max-w-xl">
         {error && (
           <div className="mb-4 text-red-400 bg-red-900/20 p-3 rounded">

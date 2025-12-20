@@ -57,8 +57,9 @@ export default function ScheduleInterviewPage() {
 
   const fetchApplication = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await authenticatedFetch(
-        `http://localhost:3000/applications/${applicationId}`
+        `${URL}/applications/${applicationId}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -73,9 +74,10 @@ export default function ScheduleInterviewPage() {
 
   const fetchEmployees = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       // This endpoint would need to be created - fetching employees for panel
       const response = await authenticatedFetch(
-        'http://localhost:3000/employees?role=Manager&role=HR'
+        `${URL}/employees?role=Manager&role=HR`
       );
       if (response.ok) {
         const data = await response.json();
@@ -105,7 +107,8 @@ export default function ScheduleInterviewPage() {
         status: 'scheduled',
       };
 
-      const response = await authenticatedFetch('http://localhost:3000/interviews', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/interviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

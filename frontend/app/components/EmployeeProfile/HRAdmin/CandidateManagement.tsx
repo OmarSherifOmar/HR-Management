@@ -267,7 +267,7 @@ export default function CandidateManagement() {
   const fetchDepartments = async () => {
     setDepartmentsLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/org/departments?active=true', {
+      const response = await fetch(`${URL}/api/org/departments?active=true`, {
         credentials: 'include',
       });
 
@@ -290,7 +290,7 @@ export default function CandidateManagement() {
 
     setPositionsLoading(true);
     try {
-      const response = await fetch(`http://localhost:3000/api/org/positions?departmentId=${departmentId}&active=true`, {
+      const response = await fetch(`${URL}/api/org/positions?departmentId=${departmentId}&active=true`, {
         credentials: 'include',
       });
 
@@ -310,7 +310,7 @@ export default function CandidateManagement() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:3000/employees/candidates/list/all', {
+      const response = await fetch(`${URL}/employees/candidates/list/all`, {
         credentials: 'include',
       });
 
@@ -338,6 +338,8 @@ export default function CandidateManagement() {
     }
   };
 
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const handleConvertCandidate = async (formData: any) => {
     if (!selectedCandidate) return;
 
@@ -353,7 +355,7 @@ export default function CandidateManagement() {
     });
 
     try {
-      const response = await fetch(`http://localhost:3000/employees/candidates/${selectedCandidate._id}/convert`, {
+      const response = await fetch(`${URL}/employees/candidates/${selectedCandidate._id}/convert`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

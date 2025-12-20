@@ -64,6 +64,7 @@ interface LeaveRequest {
 }
 
 export default function HRPendingReviewsPage() {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
@@ -128,9 +129,10 @@ export default function HRPendingReviewsPage() {
 
   const fetchPendingRequests = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       setError('');
-      const response = await authenticatedFetch('http://localhost:3000/leave-requests/hr/pending-reviews');
+      const response = await authenticatedFetch(`${URL}/leave-requests/hr/pending-reviews`);
       
       if (response.ok) {
         const result = await response.json();
@@ -149,7 +151,8 @@ export default function HRPendingReviewsPage() {
 
   const fetchRejectedRequests = async () => {
     try {
-      const response = await authenticatedFetch('http://localhost:3000/leave-requests/hr/rejected-requests');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/leave-requests/hr/rejected-requests`);
       
       if (response.ok) {
         const result = await response.json();
@@ -162,9 +165,10 @@ export default function HRPendingReviewsPage() {
 
   const handleApprove = async (requestId: string, requestComments?: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        `http://localhost:3000/leave-requests/${requestId}/hr/finalize`,
+        `${URL}/leave-requests/${requestId}/hr/finalize`,
         {
           method: 'PATCH',
           headers: {
@@ -195,9 +199,10 @@ export default function HRPendingReviewsPage() {
 
   const handleReject = async (requestId: string, requestComments?: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        `http://localhost:3000/leave-requests/${requestId}/hr/reject`,
+        `${URL}/leave-requests/${requestId}/hr/reject`,
         {
           method: 'PATCH',
           headers: {
@@ -228,9 +233,10 @@ export default function HRPendingReviewsPage() {
 
   const handleOverride = async (requestId: string, requestComments?: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        `http://localhost:3000/leave-requests/${requestId}/hr/override`,
+        `${URL}/leave-requests/${requestId}/hr/override`,
         {
           method: 'PATCH',
           headers: {
@@ -310,9 +316,10 @@ export default function HRPendingReviewsPage() {
 
   const handleBulkApprove = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        'http://localhost:3000/leave-requests/hr/bulk-finalize',
+        `${URL}/leave-requests/hr/bulk-finalize`,
         {
           method: 'POST',
           headers: {
@@ -345,9 +352,10 @@ export default function HRPendingReviewsPage() {
 
   const handleBulkReject = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        'http://localhost:3000/leave-requests/hr/bulk-reject',
+        `${URL}/leave-requests/hr/bulk-reject`,
         {
           method: 'POST',
           headers: {
@@ -380,9 +388,10 @@ export default function HRPendingReviewsPage() {
 
   const handleBulkOverride = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        'http://localhost:3000/leave-requests/hr/bulk-override',
+        `${URL}/leave-requests/hr/bulk-override`,
         {
           method: 'POST',
           headers: {
@@ -415,9 +424,10 @@ export default function HRPendingReviewsPage() {
 
   const handleBulkConfirmReject = async () => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setActionLoading(true);
       const response = await authenticatedFetch(
-        'http://localhost:3000/leave-requests/hr/bulk-confirm-reject',
+        `${URL}/leave-requests/hr/bulk-confirm-reject`,
         {
           method: 'POST',
           headers: {
@@ -739,7 +749,7 @@ export default function HRPendingReviewsPage() {
                               </div>
                             </div>
                             <a
-                              href={`http://localhost:3000/attachments/${request.attachmentId._id}/download`}
+                              href={`${backendUrl}/attachments/${request.attachmentId._id}/download`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"

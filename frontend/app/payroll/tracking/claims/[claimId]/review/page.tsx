@@ -37,9 +37,10 @@ export default function ReviewClaimPage() {
 
   const fetchClaimDetail = async (id: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/claims/${id}`,
+        `${URL}/payroll-tracking/claims/${id}`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch claim");
@@ -59,6 +60,7 @@ export default function ReviewClaimPage() {
     setError(null);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setSubmitting(true);
 
       const role = user?.role || "";
@@ -66,8 +68,8 @@ export default function ReviewClaimPage() {
       const isManager = normalizedRole.includes("manager");
 
       const endpoint = isManager
-        ? `http://localhost:3000/payroll-tracking/claims/${claimId}/manager-decision`
-        : `http://localhost:3000/payroll-tracking/claims/${claimId}/specialist-decision`;
+        ? `${URL}/payroll-tracking/claims/${claimId}/manager-decision`
+        : `${URL}/payroll-tracking/claims/${claimId}/specialist-decision`;
 
       const response = await fetch(endpoint, {
         method: "PUT",

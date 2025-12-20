@@ -46,16 +46,24 @@ export default function SelfServiceContactInfo() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const fetchProfile = useCallback(async () => {
     setIsFetching(true);
     try {
-      const response = await fetch('http://localhost:3000/employees/me', {
+      const response = await fetch(`${URL}/employees/me`, {
         credentials: 'include',
       });
       
       if (response.status === 401) {
         console.warn('Authentication expired. Please log in again.');
         setError('Your session has expired. Please log in again.');
+        return;
+      }
+      
+      if (response.status === 403) {
+        console.warn('Access denied to profile.');
+        setError('Access Denied: You do not have permission to view this profile. Please contact your administrator.');
         return;
       }
       
@@ -126,7 +134,7 @@ export default function SelfServiceContactInfo() {
         personalEmail: contactData.personalEmail,
       });
 
-      const response = await fetch('http://localhost:3000/employees/me/contact', {
+      const response = await fetch(`${URL}/employees/me/contact`, {
         method: 'PATCH',
         credentials: 'include',
         headers: {

@@ -41,7 +41,8 @@ export default function SettlementsPage() {
 
   const fetchSettlements = async () => {
     try {
-      const response = await fetch('http://localhost:3000/offboarding/settlement', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/offboarding/settlement`, {
         credentials: 'include',
       });
 
@@ -58,7 +59,8 @@ export default function SettlementsPage() {
 
   const triggerSettlement = async (clearanceId: string) => {
     try {
-      const response = await fetch('http://localhost:3000/offboarding/settlement/trigger', {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/offboarding/settlement/trigger`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +79,8 @@ export default function SettlementsPage() {
 
   const processPayment = async (settlementId: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/offboarding/settlement/${settlementId}/process`, {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${URL}/offboarding/settlement/${settlementId}/process`, {
         method: 'PATCH',
         credentials: 'include',
       });

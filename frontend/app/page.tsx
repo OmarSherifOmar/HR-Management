@@ -37,13 +37,13 @@ export default function Home() {
     notes: '',
     status: 'APPLIED',
   });
-
+  const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   // Fetch departments on component mount
   useEffect(() => {
     const fetchDepartments = async () => {
       setDepartmentsLoading(true);
       try {
-        const response = await fetch('http://localhost:3000/api/org/departments?active=true', {
+        const response = await fetch(`${URL}/api/org/departments?active=true`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export default function Home() {
       setPositionsLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:3000/api/org/positions?departmentId=${signupData.departmentId}&active=true`,
+          `${URL}/api/org/positions?departmentId=${signupData.departmentId}&active=true`,
           {
             method: 'GET',
             headers: {
@@ -166,7 +166,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch(`${URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,7 +209,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/register', {
+      const response = await fetch(`${URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -20,6 +20,8 @@ const AVAILABLE_ROLES = [
   'Payroll Manager',
 ];
 
+const backend_url = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 interface Employee {
   _id: string;
   employeeNumber?: string;
@@ -353,7 +355,7 @@ export default function HREmployeeManagement() {
     setError('');
     try {
       const query = search ? `?query=${encodeURIComponent(search)}` : '';
-      const url = `http://localhost:3000/employees/searchs${query}`;
+      const url = `${backend_url}/employees/searchs${query}`;
       console.log('[HREmployeeManagement] Fetching from:', url);
       
       const response = await fetch(url, {
@@ -368,7 +370,7 @@ export default function HREmployeeManagement() {
       }
 
       if (response.status === 403) {
-        setError('You do not have permission to search employees. Only HR_ADMIN role can access this.');
+        setError('Access Denied: You do not have permission to search employees. This feature requires HR Admin role. Please contact your administrator.');
         return;
       }
 
@@ -396,12 +398,12 @@ export default function HREmployeeManagement() {
 
   const handleViewEmployee = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/employees/${id}`, {
+      const response = await fetch(`${backend_url}/employees/${id}`, {
         credentials: 'include',
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to view employee details.');
+        setError('Access Denied: You do not have permission to view employee details. This feature requires HR Admin role.');
         return;
       }
 
@@ -421,7 +423,7 @@ export default function HREmployeeManagement() {
     if (!editingEmployee) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/employees/${editingEmployee._id}`, {
+      const response = await fetch(`${backend_url}/employees/${editingEmployee._id}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -429,7 +431,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to edit employees');
+        setError('Access Denied: You do not have permission to edit employee information. This feature requires HR Admin role.');
         return;
       }
 
@@ -451,7 +453,7 @@ export default function HREmployeeManagement() {
     if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/employees/${id}`, {
+      const response = await fetch(`${backend_url}/employees/${id}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -459,7 +461,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to change employee status');
+        setError('Access Denied: You do not have permission to change employee status. This feature requires HR Admin role.');
         return;
       }
 
@@ -483,7 +485,7 @@ export default function HREmployeeManagement() {
     if (!assigningRolesEmployee) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/employees/${assigningRolesEmployee._id}/roles`, {
+      const response = await fetch(`${backend_url}/employees/${assigningRolesEmployee._id}/roles`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -491,7 +493,7 @@ export default function HREmployeeManagement() {
       });
 
       if (response.status === 403) {
-        setError('You do not have permission to assign roles');
+        setError('Access Denied: You do not have permission to assign roles. This feature requires System Admin role.');
         return;
       }
 

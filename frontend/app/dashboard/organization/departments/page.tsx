@@ -30,8 +30,8 @@ export default function DepartmentsPage() {
           getDepartments(token, undefined),
           getPositions(token, { active: undefined }),
         ]);
-        setDepartments(deptsData);
-        setPositions(positionsData);
+        setDepartments(deptsData as Department[]);
+        setPositions(positionsData as Position[]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load departments');
       } finally {
@@ -52,7 +52,7 @@ export default function DepartmentsPage() {
       setLoading(true);
       const token = localStorage.getItem('token') || undefined;
       const data = await getDepartments(token, undefined);
-      setDepartments(data);
+      setDepartments(data as Department[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh departments');
     } finally {

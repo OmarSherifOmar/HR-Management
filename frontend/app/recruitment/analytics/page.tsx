@@ -20,9 +20,10 @@ export default function RecruitmentAnalyticsPage() {
 
   /* ---------------- FETCH DATA ---------------- */
   useEffect(() => {
+    const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
     Promise.all([
-      authenticatedFetch('http://localhost:3000/employees/candidates/list/all'),
-      authenticatedFetch('http://localhost:3000/recruitment/job-requisitions'),
+      authenticatedFetch(`${URL}/employees/candidates/list/all`),
+      authenticatedFetch(`${URL}/recruitment/job-requisitions`),
     ])
       .then(async ([candRes, reqRes]) => {
         if (!candRes.ok || !reqRes.ok) {

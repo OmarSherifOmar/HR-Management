@@ -37,9 +37,10 @@ export default function ReviewDisputePage() {
 
   const fetchDisputeDetail = async (dId: string) => {
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/payroll-tracking/disputes/${dId}`,
+        `${URL}/payroll-tracking/disputes/${dId}`,
         { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch dispute");
@@ -57,6 +58,7 @@ export default function ReviewDisputePage() {
     setError(null);
 
     try {
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       setSubmitting(true);
 
       // Determine the endpoint based on role
@@ -65,8 +67,8 @@ export default function ReviewDisputePage() {
       const isManager = normalizedRole.includes("manager");
 
       const endpoint = isManager
-        ? `http://localhost:3000/payroll-tracking/disputes/${disputeId}/manager-decision`
-        : `http://localhost:3000/payroll-tracking/disputes/${disputeId}/specialist-decision`;
+        ? `${URL}/payroll-tracking/disputes/${disputeId}/manager-decision`
+        : `${URL}/payroll-tracking/disputes/${disputeId}/specialist-decision`;
 
       const response = await fetch(endpoint, {
         method: "PUT",

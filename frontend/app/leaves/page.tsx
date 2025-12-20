@@ -61,8 +61,9 @@ export default function LeaveRequestsPage() {
     try {
       setCancellingRequest(true);
       setCancelError('');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
       
-      const response = await authenticatedFetch(`http://localhost:3000/leave-requests/${requestId}/cancel`, {
+      const response = await authenticatedFetch(`${URL}/leave-requests/${requestId}/cancel`, {
         method: 'PATCH',
       });
 
@@ -85,7 +86,8 @@ export default function LeaveRequestsPage() {
   const fetchLeaveRequests = async () => {
     try {
       setLoadingRequests(true);
-      const response = await authenticatedFetch('http://localhost:3000/leave-requests/my-history');
+      const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await authenticatedFetch(`${URL}/leave-requests/my-history`);
       
       if (response.ok) {
         const result = await response.json();
