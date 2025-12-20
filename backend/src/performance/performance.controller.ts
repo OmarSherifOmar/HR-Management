@@ -1,10 +1,6 @@
 import { Controller, Get, Post, Put, Param, Body, Query, Req, UseGuards, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
-import { TemplateService } from './services/template.service';
-import { CycleService } from './services/cycle.service';
-import { AssignmentService } from './services/assignment.service';
-import { AppraisalService } from './services/appraisal.service';
-import { DisputeService } from './services/dispute.service';
-import { ReportingService } from './services/reporting.service';
+
+import { PerformanceService } from './performance.service';
 import { CreateTemplateDto, UpdateTemplateDto } from './dtos/create-template.dto';
 import { CreateCycleDto, UpdateCycleDto } from './dtos/create-cycle.dto';
 import { CreateAssignmentDto, BulkAssignmentDto } from './dtos/create-assignment.dto';
@@ -24,7 +20,7 @@ import { Role, Roles } from '../auth/decorators/roles.decorator';
 @UseGuards(AuthGuard)
 @Controller('api/performance/templates')
 export class TemplateController {
-  constructor(private readonly templateService: TemplateService) {}
+  constructor(private readonly performanceService: PerformanceService) {}
 
   @Post()
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
@@ -32,7 +28,7 @@ export class TemplateController {
   async create(@Body() dto: CreateTemplateDto, @Req() req) {
     try {
       console.log('TemplateController.create called with dto:', dto);
-      const result = await this.templateService.create(dto, req.user?.employeeId);
+      const result = await this.performanceService.createTemplate(dto, req.user?.employeeId);
       console.log('TemplateController.create succeeded:', result._id);
       return result;
     } catch (error) {
@@ -47,20 +43,20 @@ export class TemplateController {
   @Get()
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findAll(@Query() filters: any) {
-    return this.templateService.findAll(filters);
+    return this.performanceService.findAllTemplates(filters);
   }
 
   @Get(':id')
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findById(@Param('id') id: string) {
-    return this.templateService.findById(id);
+    return this.performanceService.findTemplateById(id);
   }
 
   @Put(':id')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async update(@Param('id') id: string, @Body() dto: UpdateTemplateDto, @Req() req) {
     try {
-      return await this.templateService.update(id, dto, req.user?.employeeId);
+      return await this.performanceService.updateTemplate(id, dto, req.user?.employeeId);
     } catch (error) {
       console.error('TemplateController.update error:', error);
       if (error instanceof BadRequestException) {
@@ -74,7 +70,7 @@ export class TemplateController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async deactivate(@Param('id') id: string, @Req() req) {
     try {
-      return await this.templateService.deactivate(id, req.user?.employeeId);
+      return await this.performanceService.deactivateTemplate(id, req.user?.employeeId);
     } catch (error) {
       console.error('TemplateController.deactivate error:', error);
       if (error instanceof BadRequestException) {
@@ -91,14 +87,14 @@ export class TemplateController {
 @UseGuards(AuthGuard)
 @Controller('api/performance/cycles')
 export class CycleController {
-  constructor(private readonly cycleService: CycleService) {}
+  constructor(private readonly performanceService: PerformanceService) {}
 
   @Post()
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async create(@Body() dto: CreateCycleDto, @Req() req) {
     try {
       console.log('CycleController.create called with dto:', dto);
-      const result = await this.cycleService.create(dto, req.user?.employeeId);
+      const result = await this.performanceService.createCycle(dto, req.user?.employeeId);
       console.log('CycleController.create succeeded:', result._id);
       return result;
     } catch (error) {
@@ -114,7 +110,7 @@ export class CycleController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findAll(@Query() filters: any) {
     console.log('CycleController.findAll called with filters:', filters);
-    const result = await this.cycleService.findAll(filters);
+    const result = await this.performanceService.findAllCycles(filters);
     console.log('CycleController.findAll returning:', result.length, 'cycles');
     return result;
   }
@@ -122,14 +118,14 @@ export class CycleController {
   @Get(':id')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findById(@Param('id') id: string) {
-    return this.cycleService.findById(id);
+    return this.performanceService.findCycleById(id);
   }
 
   @Put(':id')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async update(@Param('id') id: string, @Body() dto: UpdateCycleDto, @Req() req) {
     try {
-      return await this.cycleService.update(id, dto, req.user?.employeeId);
+      return await this.performanceService.updateCycle(id, dto, req.user?.employeeId);
     } catch (error) {
       console.error('CycleController.update error:', error);
       if (error instanceof BadRequestException) {
@@ -143,7 +139,7 @@ export class CycleController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async activate(@Param('id') id: string, @Req() req) {
     try {
-      return await this.cycleService.activate(id, req.user?.employeeId);
+      return await this.performanceService.activateCycle(id, req.user?.employeeId);
     } catch (error) {
       console.error('CycleController.activate error:', error);
       if (error instanceof BadRequestException) {
@@ -157,7 +153,7 @@ export class CycleController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async close(@Param('id') id: string, @Req() req) {
     try {
-      return await this.cycleService.close(id, req.user?.employeeId);
+      return await this.performanceService.closeCycle(id, req.user?.employeeId);
     } catch (error) {
       console.error('CycleController.close error:', error);
       if (error instanceof BadRequestException) {
@@ -174,14 +170,14 @@ export class CycleController {
 @UseGuards(AuthGuard)
 @Controller('api/performance/assignments')
 export class AssignmentController {
-  constructor(private readonly assignmentService: AssignmentService) {}
+  constructor(private readonly performanceService: PerformanceService) {}
 
   // Get all assignments (for debugging/HR view)
   @Get()
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findAll(@Req() req) {
     console.log('[AssignmentController] GET /api/performance/assignments called by user:', req.user?.employeeId, 'role:', req.user?.role);
-    const result = await this.assignmentService.findAll();
+    const result = await this.performanceService.findAll();
     console.log('[AssignmentController] findAll returned:', result?.length || 0, 'assignments');
     return result;
   }
@@ -189,13 +185,13 @@ export class AssignmentController {
   @Post()
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async create(@Body() dto: CreateAssignmentDto, @Req() req) {
-    return this.assignmentService.create(dto, req.user?.employeeId);
+    return this.performanceService.create(dto, req.user?.employeeId);
   }
 
   @Post('bulk')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async bulkAssign(@Body() dto: BulkAssignmentDto, @Req() req) {
-    return this.assignmentService.bulkAssign(dto, req.user?.employeeId);
+    return this.performanceService.bulkAssign(dto, req.user?.employeeId);
   }
 
   // IMPORTANT: 'manager/me' must come BEFORE 'manager/:managerId' to avoid route conflicts
@@ -203,14 +199,14 @@ export class AssignmentController {
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async findByManagerMe(@Req() req) {
     console.log('[AssignmentController] manager/me called, user:', req.user?.employeeId);
-    return this.assignmentService.findByManager(req.user?.employeeId);
+    return this.performanceService.findByManager(req.user?.employeeId);
   }
 
   @Get('manager/:managerId')
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findByManager(@Param('managerId') managerId: string, @Query('cycleId') cycleId?: string) {
     console.log('[AssignmentController] manager/:managerId called with:', managerId);
-    const result = await this.assignmentService.findByManager(managerId, cycleId);
+    const result = await this.performanceService.findByManager(managerId, cycleId);
     console.log('[AssignmentController] Result count:', result?.length || 0);
     return result;
   }
@@ -220,7 +216,7 @@ export class AssignmentController {
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getMyAppraisals(@Req() req) {
     console.log('[AssignmentController] GET /my-appraisals for user:', req.user?.employeeId);
-    return this.assignmentService.getEmployeeAppraisals(req.user?.employeeId);
+    return this.performanceService.getEmployeeAppraisals(req.user?.employeeId);
   }
 
   // Get employee's appraisals (MUST come before :id route)
@@ -228,25 +224,25 @@ export class AssignmentController {
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getEmployeeAppraisals(@Param('employeeId') employeeId: string) {
     console.log('[AssignmentController] GET /employee/:employeeId/appraisals for:', employeeId);
-    return this.assignmentService.getEmployeeAppraisals(employeeId);
+    return this.performanceService.getEmployeeAppraisals(employeeId);
   }
 
   @Get(':id')
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findById(@Param('id') id: string) {
-    return this.assignmentService.findById(id);
+    return this.performanceService.findById(id);
   }
 
   @Put('submit')
   @Roles(Role.DEPARTMENT_HEAD, Role.DEPARTMENT_EMPLOYEE, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async submit(@Body() dto: SubmitAppraisalDto) {
-    return this.assignmentService.submit(dto);
+    return this.performanceService.submit(dto);
   }
 
   @Post('submit')
   @Roles(Role.DEPARTMENT_HEAD, Role.DEPARTMENT_EMPLOYEE, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async submitPost(@Body() dto: SubmitAppraisalDto) {
-    return this.assignmentService.submit(dto);
+    return this.performanceService.submit(dto);
   }
 
   @Put('publish')
@@ -257,7 +253,7 @@ export class AssignmentController {
     if (!dto.publishedByEmployeeId) {
       dto.publishedByEmployeeId = req.user?.employeeId;
     }
-    return this.assignmentService.publish(dto);
+    return this.performanceService.publish(dto);
   }
 
   @Post('publish')
@@ -269,7 +265,7 @@ export class AssignmentController {
     if (!dto.publishedByEmployeeId) {
       dto.publishedByEmployeeId = req.user?.employeeId;
     }
-    return this.assignmentService.publish(dto);
+    return this.performanceService.publish(dto);
   }
 
   @Post('bulk-publish')
@@ -281,7 +277,7 @@ export class AssignmentController {
     if (!dto.publishedByEmployeeId) {
       dto.publishedByEmployeeId = req.user?.employeeId;
     }
-    return this.assignmentService.bulkPublish(dto);
+    return this.performanceService.bulkPublish(dto);
   }
 
   // Manager submits and publishes appraisal in one step
@@ -293,7 +289,7 @@ export class AssignmentController {
     console.log('[AssignmentController] User role:', req.user?.role);
     console.log('[AssignmentController] User roles:', req.user?.roles);
     dto.managerId = req.user?.employeeId;
-    return this.assignmentService.submitAndPublish(dto);
+    return this.performanceService.submitAndPublish(dto);
   }
 
   // Manager publishes their own submitted appraisal
@@ -302,7 +298,7 @@ export class AssignmentController {
   async managerPublish(@Body() dto: PublishAppraisalDto, @Req() req) {
     console.log('[AssignmentController] PUT /manager-publish for record:', dto.recordId);
     dto.publishedByEmployeeId = req.user?.employeeId;
-    return this.assignmentService.managerPublish(dto, req.user?.employeeId);
+    return this.performanceService.managerPublish(dto, req.user?.employeeId);
   }
 
   // Employee acknowledges their published appraisal
@@ -311,7 +307,7 @@ export class AssignmentController {
   async acknowledgeAppraisal(@Body() dto: SubmitAcknowledgeAppraisalDto, @Req() req) {
     console.log('[AssignmentController] PUT /acknowledge for record:', dto.recordId);
     dto.acknowledgedByEmployeeId = req.user?.employeeId;
-    return this.assignmentService.acknowledgeAppraisal(dto);
+    return this.performanceService.acknowledgeAppraisalFromAssignment(dto);
   }
 
   // Archive a single appraisal record
@@ -319,7 +315,7 @@ export class AssignmentController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async archiveRecord(@Param('recordId') recordId: string) {
     console.log('[AssignmentController] PUT /records/:recordId/archive for:', recordId);
-    return this.assignmentService.archiveRecord(recordId);
+    return this.performanceService.archiveRecord(recordId);
   }
 
   // Archive entire cycle and all its assignments
@@ -327,7 +323,7 @@ export class AssignmentController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async archiveCycleAndAssignments(@Param('cycleId') cycleId: string) {
     console.log('[AssignmentController] PUT /cycles/:cycleId/archive-all for:', cycleId);
-    return this.assignmentService.archiveCycleAndAssignments(cycleId);
+    return this.performanceService.archiveCycleAndAssignments(cycleId);
   }
 
   // Track appraisal progress for a department
@@ -336,7 +332,7 @@ export class AssignmentController {
   async getDepartmentProgress(@Body() body: { departmentId: string }, @Req() req) {
     console.log('[AssignmentController] POST /department/progress called by user:', req.user?.employeeId);
     console.log('[AssignmentController] Body:', body);
-    return this.assignmentService.getDepartmentAppraisalProgress(body.departmentId);
+    return this.performanceService.getDepartmentAppraisalProgress(body.departmentId);
   }
 
   // Send reminders to managers for pending assignments
@@ -344,7 +340,7 @@ export class AssignmentController {
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async sendReminder(@Body() body: { cycleId: string; reminderType: string; departmentIds?: string[]; customMessage?: string }, @Req() req) {
     console.log('[AssignmentController] POST /send-reminder');
-    return this.assignmentService.sendReminder(body.cycleId, body.reminderType, body.departmentIds || [], body.customMessage);
+    return this.performanceService.sendReminder(body.cycleId, body.reminderType, body.departmentIds || [], body.customMessage);
   }
 }
 
@@ -354,7 +350,7 @@ export class AssignmentController {
 @UseGuards(AuthGuard)
 @Controller('api/performance/appraisals')
 export class AppraisalController {
-  constructor(private readonly appraisalService: AppraisalService) {}
+  constructor(private readonly performanceService: PerformanceService) {}
 
   // IMPORTANT: Static routes must come before parameterized routes
 
@@ -363,7 +359,7 @@ export class AppraisalController {
   async getProgress(@Body() dto: GetAppraisalProgressDto) {
     try {
       console.log('getProgress called with:', dto);
-      return await this.appraisalService.getProgress(dto);
+      return await this.performanceService.getProgress(dto);
     } catch (error) {
       console.error('getProgress error:', error);
       throw error;
@@ -373,21 +369,21 @@ export class AppraisalController {
   @Post('send-reminders')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async sendReminders(@Body() dto: SendReminderDto, @Req() req) {
-    return this.appraisalService.sendReminders(dto, req.user?.employeeId);
+    return this.performanceService.sendReminders(dto, req.user?.employeeId);
   }
 
   @Get('my-appraisals')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getMyAppraisals(@Req() req) {
     console.log('[AppraisalController] GET /my-appraisals for:', req.user?.employeeId);
-    return this.appraisalService.getMyAppraisals(req.user?.employeeId);
+    return this.performanceService.getMyAppraisals(req.user?.employeeId);
   }
 
   @Get('employee/:employeeId')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getByEmployeeId(@Param('employeeId') employeeId: string) {
     console.log('[AppraisalController] GET /employee/:employeeId for:', employeeId);
-    return this.appraisalService.getMyAppraisals(employeeId);
+    return this.performanceService.getMyAppraisals(employeeId);
   }
 
   // Parameterized routes come after static routes
@@ -395,7 +391,7 @@ export class AppraisalController {
   @Get(':recordId/employee/:employeeId')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async view(@Param('recordId') recordId: string, @Param('employeeId') employeeId: string) {
-    return this.appraisalService.view({ appraisalRecordId: recordId, employeeId });
+    return this.performanceService.view({ appraisalRecordId: recordId, employeeId });
   }
 
   @Put(':recordId/employee/:employeeId/acknowledge')
@@ -405,19 +401,19 @@ export class AppraisalController {
     @Param('employeeId') employeeId: string,
     @Body('comment') comment?: string,
   ) {
-    return this.appraisalService.acknowledge({ appraisalRecordId: recordId, employeeId, comment });
+    return this.performanceService.acknowledge({ appraisalRecordId: recordId, employeeId, comment });
   }
 
   @Put(':id/acknowledge')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async acknowledgeAppraisal(@Param('id') id: string, @Body() body: { comment?: string }, @Req() req) {
-    return this.appraisalService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
+    return this.performanceService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
   }
 
   @Put(':id/employee/me/acknowledge')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async acknowledgeAppraisalMe(@Param('id') id: string, @Body() body: { comment?: string }, @Req() req) {
-    return this.appraisalService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
+    return this.performanceService.acknowledgeAppraisal(id, req.user?.employeeId, body.comment);
   }
 }
 
@@ -427,14 +423,14 @@ export class AppraisalController {
 @UseGuards(AuthGuard)
 @Controller('api/performance/disputes')
 export class DisputeController {
-  constructor(private readonly disputeService: DisputeService) {}
+  constructor(private readonly performanceService: PerformanceService) {}
 
   // Get all disputes (for HR)
   @Get()
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findAll() {
     console.log('[DisputeController] GET /api/performance/disputes - findAll');
-    return this.disputeService.findAll();
+    return this.performanceService.findAllDisputes();
   }
 
   // Create dispute for current user (generic POST endpoint)
@@ -448,7 +444,7 @@ export class DisputeController {
       throw new BadRequestException('Employee ID is required');
     }
     dto.raisedByEmployeeId = req.user?.employeeId;
-    return this.disputeService.create(dto);
+    return this.performanceService.createDispute(dto);
   }
 
   // IMPORTANT: Static routes must come before parameterized routes
@@ -458,7 +454,7 @@ export class DisputeController {
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findByEmployeeMe(@Req() req) {
     console.log('[DisputeController] GET /employee/me for:', req.user?.employeeId);
-    return this.disputeService.findByEmployee(req.user?.employeeId);
+    return this.performanceService.findDisputesByEmployee(req.user?.employeeId);
   }
 
   // Create dispute for current user - any authenticated employee can create
@@ -472,7 +468,7 @@ export class DisputeController {
       throw new BadRequestException('Employee ID is required');
     }
     dto.raisedByEmployeeId = req.user?.employeeId;
-    return this.disputeService.create(dto);
+    return this.performanceService.createDispute(dto);
   }
 
   // Get disputes for employees managed by current user
@@ -480,7 +476,7 @@ export class DisputeController {
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async findByManagerMe(@Req() req) {
     console.log('[DisputeController] GET /manager/me for:', req.user?.employeeId);
-    return this.disputeService.findByManager(req.user?.employeeId);
+    return this.performanceService.findDisputesByManager(req.user?.employeeId);
   }
 
   // Parameterized routes come after static routes
@@ -489,7 +485,7 @@ export class DisputeController {
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.SYSTEM_ADMIN)
   async findByManager(@Param('managerId') managerId: string) {
     console.log('[DisputeController] GET /manager/:managerId for:', managerId);
-    return this.disputeService.findByManager(managerId);
+    return this.performanceService.findDisputesByManager(managerId);
   }
 
   @Post('employee/:employeeId')
@@ -509,13 +505,13 @@ export class DisputeController {
     }
     
     dto.raisedByEmployeeId = employeeId;
-    return this.disputeService.create(dto);
+    return this.performanceService.createDispute(dto);
   }
 
   @Get('cycle/:cycleId')
   @Roles(Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findByCycle(@Param('cycleId') cycleId: string) {
-    return this.disputeService.findByCycle(cycleId);
+    return this.performanceService.findDisputesByCycle(cycleId);
   }
 
   @Put(':id/resolve')
@@ -523,13 +519,13 @@ export class DisputeController {
   async resolve(@Param('id') id: string, @Body() dto: ResolveDisputeDto, @Req() req) {
     dto.disputeId = id;
     dto.resolvedByEmployeeId = req.user?.employeeId;
-    return this.disputeService.resolve(dto);
+    return this.performanceService.resolveDispute(dto);
   }
 
   @Get(':id')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async findById(@Param('id') id: string) {
-    return this.disputeService.findById(id);
+    return this.performanceService.findDisputeById(id);
   }
 }
 
@@ -539,20 +535,20 @@ export class DisputeController {
 @UseGuards(AuthGuard)
 @Controller('api/performance/reporting')
 export class ReportingController {
-  constructor(private readonly reportingService: ReportingService) {}
+  constructor(private readonly performanceService: PerformanceService) {}
 
   @Get('history/:employeeId')
   @Roles(Role.DEPARTMENT_EMPLOYEE, Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async getHistory(@Param('employeeId') employeeId: string) {
     console.log('[ReportingController] GET /history/:employeeId for:', employeeId);
-    return this.reportingService.getHistory(employeeId);
+    return this.performanceService.getHistory(employeeId);
   }
 
   @Get('outcome-report/:cycleId')
   @Roles(Role.DEPARTMENT_HEAD, Role.HR_MANAGER, Role.HR_ADMIN, Role.HR_EMPLOYEE, Role.SYSTEM_ADMIN)
   async generateOutcomeReport(@Param('cycleId') cycleId: string) {
     console.log('[ReportingController] GET /outcome-report/:cycleId for:', cycleId);
-    return this.reportingService.generateOutcomeReport(cycleId);
+    return this.performanceService.generateOutcomeReport(cycleId);
   }
 
   @Get('multi-cycle-trend/:employeeId')
@@ -562,7 +558,7 @@ export class ReportingController {
     @Query('limit') limit?: string
   ) {
     console.log('[ReportingController] GET /multi-cycle-trend/:employeeId for:', employeeId, 'limit:', limit);
-    return this.reportingService.getMultiCycleTrendAnalysis(employeeId, limit ? parseInt(limit) : 10);
+    return this.performanceService.getMultiCycleTrendAnalysis(employeeId, limit ? parseInt(limit) : 10);
   }
 }
 
