@@ -2,6 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 import { seedLeaves } from '../leaves/seed';
+import { seedPayrollConfiguration } from '../payroll-configuration/seed';
+import { seedTimeManagement } from '../time-management/seed';
+import { seedPayrollExecution } from '../payroll-execution/seed';
+import { seedRecruitment } from '../recruitment/seed';
+import { seedPayrollTracking } from '../payroll-tracking/seed';
 
 const loadEnvFile = (envPath: string) => {
   if (!fs.existsSync(envPath)) return;
@@ -34,7 +39,13 @@ const run = async () => {
   const connection = mongoose.connection;
 
   try {
+    await seedTimeManagement(connection);
+    await seedPayrollConfiguration(connection, {});
+    await seedRecruitment(connection);
+    await seedPayrollExecution(connection);
+    await seedPayrollTracking(connection);
     await seedLeaves(connection, {});
+
   } finally {
     await connection.close();
   }

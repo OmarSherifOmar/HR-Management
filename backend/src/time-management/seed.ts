@@ -1,42 +1,67 @@
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { ShiftTypeSchema } from './models/shift-type.schema';
 import { ShiftSchema } from './models/shift.schema';
 import { HolidaySchema } from './models/holiday.schema';
-import { latenessRuleSchema } from './models/lateness-rule.schema';
-import { OvertimeRuleSchema } from './models/overtime-rule.schema';
-import { ScheduleRuleSchema } from './models/schedule-rule.schema';
 import { ShiftAssignmentSchema } from './models/shift-assignment.schema';
-import { PunchPolicy, HolidayType, ShiftAssignmentStatus } from './models/enums/index';
+import { AttendanceRecordSchema } from './models/attendance-record.schema';
+import {
+  HolidayType,
+  PunchPolicy,
+  PunchType,
+  ShiftAssignmentStatus,
+} from './models/enums/index';
+import {
+  EmployeeProfile,
+  EmployeeProfileSchema,
+} from '../employee-profile/models/employee-profile.schema';
 
-export async function seedTimeManagement(connection: mongoose.Connection, employees: any, departments: any, positions: any) {
+const makeDate = (date: string, time?: string) =>
+  new Date(`${date}T${time || '00:00:00.000'}Z`);
+
+const resolveEmployeeId = async (
+  employeeModel: mongoose.Model<EmployeeProfile>,
+  email: string,
+) => {
+  const employee = await employeeModel.findOne({
+    $or: [{ workEmail: email }, { personalEmail: email }],
+  }).exec();
+  if (!employee?._id) {
+    throw new Error(`Employee not found for email: ${email}`);
+  }
+  return employee._id as Types.ObjectId;
+};
+
+export async function seedTimeManagement(
+  connection: mongoose.Connection,
+) {
   const ShiftTypeModel = connection.model('ShiftType', ShiftTypeSchema);
   const ShiftModel = connection.model('Shift', ShiftSchema);
   const HolidayModel = connection.model('Holiday', HolidaySchema);
-  const LatenessRuleModel = connection.model('LatenessRule', latenessRuleSchema);
-  const OvertimeRuleModel = connection.model('OvertimeRule', OvertimeRuleSchema);
-  const ScheduleRuleModel = connection.model('ScheduleRule', ScheduleRuleSchema);
-  const ShiftAssignmentModel = connection.model('ShiftAssignment', ShiftAssignmentSchema);
+  const ShiftAssignmentModel = connection.model(
+    'ShiftAssignment',
+    ShiftAssignmentSchema,
+  );
+  const AttendanceRecordModel = connection.model(
+    'AttendanceRecord',
+    AttendanceRecordSchema,
+  );
+  const EmployeeProfileModel = connection.model(
+    EmployeeProfile.name,
+    EmployeeProfileSchema,
+  );
 
   console.log('Clearing Time Management...');
   await ShiftTypeModel.deleteMany({});
   await ShiftModel.deleteMany({});
   await HolidayModel.deleteMany({});
-  await LatenessRuleModel.deleteMany({});
-  await OvertimeRuleModel.deleteMany({});
-  await ScheduleRuleModel.deleteMany({});
   await ShiftAssignmentModel.deleteMany({});
+  await AttendanceRecordModel.deleteMany({});
 
   console.log('Seeding Shift Types...');
   const morningShiftType = await ShiftTypeModel.create({
     name: 'Morning Shift',
     active: true,
   });
-
-  const nightShiftType = await ShiftTypeModel.create({
-    name: 'Night Shift',
-    active: true,
-  });
-  console.log('Shift Types seeded.');
 
   console.log('Seeding Shifts...');
   const standardMorningShift = await ShiftModel.create({
@@ -51,18 +76,17 @@ export async function seedTimeManagement(connection: mongoose.Connection, employ
     active: true,
   });
 
-  const standardNightShift = await ShiftModel.create({
-    name: 'Standard Night (10-6)',
-    shiftType: nightShiftType._id,
-    startTime: '22:00',
-    endTime: '06:00',
+  const standardDayShift = await ShiftModel.create({
+    name: 'SW@Standard Day (9-5)',
+    shiftType: morningShiftType._id,
+    startTime: '09:00',
+    endTime: '17:00',
     punchPolicy: PunchPolicy.FIRST_LAST,
     graceInMinutes: 15,
     graceOutMinutes: 15,
     requiresApprovalForOvertime: true,
     active: true,
   });
-  console.log('Shifts seeded.');
 
   console.log('Seeding Holidays...');
   await HolidayModel.create({
@@ -71,46 +95,101 @@ export async function seedTimeManagement(connection: mongoose.Connection, employ
     name: 'New Year',
     active: true,
   });
-  console.log('Holidays seeded.');
 
-  console.log('Seeding Lateness Rules...');
-  await LatenessRuleModel.create({
-    name: 'Standard Lateness',
-    gracePeriodMinutes: 15,
-    deductionForEachMinute: 1,
-    active: true,
-  });
-  console.log('Lateness Rules seeded.');
-
-  console.log('Seeding Overtime Rules...');
-  await OvertimeRuleModel.create({
-    name: 'Standard Overtime',
-    active: true,
-    approved: true,
-  });
-  console.log('Overtime Rules seeded.');
-
-  console.log('Seeding Schedule Rules...');
-  await ScheduleRuleModel.create({
-    name: 'Standard Week',
-    pattern: 'Mon-Fri',
-    active: true,
-  });
-  console.log('Schedule Rules seeded.');
+  const linaId = await resolveEmployeeId(
+    EmployeeProfileModel,
+    'lina@company.com',
+  );
+  const charlieId = await resolveEmployeeId(
+    EmployeeProfileModel,
+    'charlie@company.com',
+  );
 
   console.log('Seeding Shift Assignments...');
-  if (employees && employees.bob) {
-    await ShiftAssignmentModel.create({
-      employeeId: employees.bob._id,
-      shiftId: standardMorningShift._id,
-      startDate: new Date('2025-01-01'),
+  await ShiftAssignmentModel.create([
+    {
+      employeeId: linaId,
+      shiftId: standardDayShift._id,
+      startDate: new Date('2025-12-01'),
       status: ShiftAssignmentStatus.APPROVED,
+    },
+    {
+      employeeId: charlieId,
+      shiftId: standardMorningShift._id,
+      startDate: new Date('2025-12-01'),
+      status: ShiftAssignmentStatus.APPROVED,
+    },
+  ]);
+
+  console.log('Seeding Attendance Records...');
+  const attendanceRecords: Array<{
+    employeeId: Types.ObjectId;
+    date: Date;
+    punches: { type: PunchType; time: Date }[];
+    totalWorkMinutes: number;
+    hasMissedPunch: boolean;
+    finalisedForPayroll: boolean;
+  }> = [];
+  const days = [
+    '2025-12-01',
+    '2025-12-02',
+    '2025-12-03',
+    '2025-12-04',
+    '2025-12-05',
+    '2025-12-06',
+    '2025-12-07',
+    '2025-12-08',
+    '2025-12-09',
+    '2025-12-10',
+  ];
+
+  for (const day of days) {
+    const charliePunches =
+      day === '2025-12-05'
+        ? [
+            { type: PunchType.IN, time: makeDate(day, '09:00:00.000') },
+            { type: PunchType.OUT, time: makeDate(day, '13:00:00.000') },
+          ]
+        : ['2025-12-06', '2025-12-07', '2025-12-08', '2025-12-09', '2025-12-10'].includes(day)
+          ? []
+          : [
+              { type: PunchType.IN, time: makeDate(day, '09:00:00.000') },
+              { type: PunchType.OUT, time: makeDate(day, '17:00:00.000') },
+            ];
+
+    const charlieTotal =
+      day === '2025-12-05'
+        ? 240
+        : ['2025-12-06', '2025-12-07', '2025-12-08', '2025-12-09', '2025-12-10'].includes(day)
+          ? 0
+          : 480;
+
+    const charlieMissed =
+      ['2025-12-06', '2025-12-07', '2025-12-08', '2025-12-09', '2025-12-10'].includes(day);
+
+    attendanceRecords.push({
+      employeeId: charlieId,
+      date: makeDate(day),
+      punches: charliePunches,
+      totalWorkMinutes: charlieTotal,
+      hasMissedPunch: charlieMissed,
+      finalisedForPayroll: true,
+    });
+
+    attendanceRecords.push({
+      employeeId: linaId,
+      date: makeDate(day),
+      punches: [
+        { type: PunchType.IN, time: makeDate(day, '09:00:00.000') },
+        { type: PunchType.OUT, time: makeDate(day, '17:00:00.000') },
+      ],
+      totalWorkMinutes: 480,
+      hasMissedPunch: false,
+      finalisedForPayroll: true,
     });
   }
-  console.log('Shift Assignments seeded.');
 
-  return {
-    shiftTypes: { morningShiftType, nightShiftType },
-    shifts: { standardMorningShift, standardNightShift },
-  };
+  await AttendanceRecordModel.insertMany(attendanceRecords);
+
+  console.log('Time Management seeded.');
 }
