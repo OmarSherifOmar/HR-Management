@@ -13,28 +13,7 @@ import {
   terminationAndResignationBenefitsSchema,
 } from './models/terminationAndResignationBenefits';
 import { payGrade, payGradeSchema } from './models/payGrades.schema';
-import { PayrollPoliciesController } from './controllers/payroll-policies.controller';
-import { PayrollPoliciesService } from './services/payroll-policies.service';
-import { SigningBonusesController } from './controllers/signing-bonuses.controller';
-import { SigningBonusesService } from './services/signing-bonuses.service';
-import { TerminationBenefitsController } from './controllers/termination-benefits.controller';
-import { TerminationBenefitsService } from './services/termination-benefits.service';
-import { AllowancesController } from './controllers/allowances.controller';
 import { ConfigurationService } from './payroll-configuration.service';
-import { PayTypesController } from './controllers/pay-types.controller';
-import { PayTypesService } from './services/pay-types.service';
-import { PayGradesController } from './controllers/pay-grades.controller';
-import { PayGradesService } from './services/pay-grades.service';
-import { TaxRulesService } from './services/tax-rules.service';
-import { TaxRulesController } from './controllers/tax-rules.controller';
-import { InsuranceBracketsService } from './services/insurance-brackets.service';
-import { InsuranceBracketsController } from './controllers/insurance-brackets.controller';
-import { CompanyWideSettingsService } from './services/company-wide-settings.service';
-import { CompanyWideSettingsController } from './controllers/company-wide-settings.controller';
-import { BackupService } from './services/backup.service';
-import { BackupController } from './controllers/backup.controller';
-import { ConfigurationApprovalService } from './services/configuration-approval.service';
-import { ConfigurationApprovalsController } from './controllers/configuration-approvals.controller';
 
 @Module({
   imports: [
@@ -53,29 +32,9 @@ import { ConfigurationApprovalsController } from './controllers/configuration-ap
       { name: payGrade.name, schema: payGradeSchema },
     ]),
   ],
-  controllers: [TaxRulesController, InsuranceBracketsController, CompanyWideSettingsController, BackupController, ConfigurationApprovalsController,  AllowancesController,
-    PayTypesController,
-    PayGradesController,PayrollPoliciesController, SigningBonusesController, TerminationBenefitsController],
-  providers: [TaxRulesService, InsuranceBracketsService, CompanyWideSettingsService, BackupService, ConfigurationApprovalService, ConfigurationService,
-    PayTypesService,
-    PayGradesService,PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService],
-  exports:[
-    // re-export the allowance model provider so other modules can inject allowanceModel via @InjectModel
-    MongooseModule.forFeature([{ name: allowance.name, schema: allowanceSchema }]),
-    TaxRulesService,
-    InsuranceBracketsService,
-    CompanyWideSettingsService,
-    BackupService,
-    ConfigurationApprovalService,
-    ConfigurationService,
-    PayTypesService,
-    PayGradesService,PayrollPoliciesService, SigningBonusesService, TerminationBenefitsService]
-
-
-
-
-
-  
- 
+  controllers: [PayrollConfigurationController],
+  providers: [ConfigurationService], // if you have one
+  exports: [MongooseModule, // allows models to be reused
+  ],
 })
 export class PayrollConfigurationModule {}
